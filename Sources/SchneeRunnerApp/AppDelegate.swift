@@ -5,15 +5,24 @@ import UniformTypeIdentifiers
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let animationController = AnimationController()
+    private let cpuMonitor = CPUMonitor()
+
     private var statusItem: NSStatusItem?
+    private var cpuUsageItem: NSMenuItem?
+    private var adaptiveSpeedItem: NSMenuItem?
+    private var latestCPUUpdate: CPUMonitor.Update?
+    private var isCPUAdaptiveSpeedEnabled = true
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         configureStatusItem()
         configureAnimationCallback()
+        configureCPUMonitor()
+        cpuMonitor.start()
     }
 
     func applicationWillTerminate(_: Notification) {
+        cpuMonitor.stop()
         animationController.stop()
     }
 
@@ -33,6 +42,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func configureCPUMonitor() {
+        cpuMonitor.onUpdate = { [weak self] update in
+            guard let self else {
+                return
+            }
+
+            latestCPUUpdate = update
+
+            if isCPUAdaptiveSpeedEnabled {
+                animationController.setFramesPerSecond(update.pace.framesPerSecond)
+            }
+
+            refreshCPUStatus()
+        }
+
+        cpuMonitor.onError = { [weak self] _ in
+            self?.latestCPUUpdate = nil
+            self?.cpuUsageItem?.title = "CPU: unavailable"
+        }
+    }
+
+    private func refreshCPUStatus() {
+        guard let latestCPUUpdate else {
+            return
+        }
+
+        let percentage = Int((latestCPUUpdate.utilization * 100).rounded())
+        let framesPerSecond = Int(animationController.framesPerSecond.rounded())
+
+        if isCPUAdaptiveSpeedEnabled {
+            cpuUsageItem?.title = "CPU: \(percentage)% · \(framesPerSecond) FPS"
+        } else {
+            cpuUsageItem?.title = "CPU: \(percentage)% · Manual \(framesPerSecond) FPS"
+        }
+    }
+
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
 
@@ -44,8 +89,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         loadItem.target = self
         menu.addItem(loadItem)
 
+        let cpuItem = NSMenuItem(title: "CPU: sampling…", action: nil, keyEquivalent: "")
+        cpuItem.isEnabled = false
+        menu.addItem(cpuItem)
+        cpuUsageItem = cpuItem
+
+        let adaptiveItem = NSMenuItem(
+            title: "CPU Adaptive Speed",
+            action: #selector(toggleCPUAdaptiveSpeed),
+            keyEquivalent: ""
+        )
+        adaptiveItem.target = self
+        adaptiveItem.state = .on
+        menu.addItem(adaptiveItem)
+        adaptiveSpeedItem = adaptiveItem
+
         let speedMenu = NSMenu(title: "Animation Speed")
-        for framesPerSecond in [8, 12, 18, 24] {
+        for framesPerSecond in [6, 8, 12, 18, 24] {
             let speedItem = NSMenuItem(
                 title: "\(framesPerSecond) FPS",
                 action: #selector(changeAnimationSpeed(_:)),
@@ -56,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             speedMenu.addItem(speedItem)
         }
 
-        let speedRootItem = NSMenuItem(title: "Animation Speed", action: nil, keyEquivalent: "")
+        let speedRootItem = NSMenuItem(title: "Manual Speed", action: nil, keyEquivalent: "")
         speedRootItem.submenu = speedMenu
         menu.addItem(speedRootItem)
 
@@ -96,8 +156,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc
+    private func toggleCPUAdaptiveSpeed() {
+        isCPUAdaptiveSpeedEnabled.toggle()
+        adaptiveSpeedItem?.state = isCPUAdaptiveSpeedEnabled ? .on : .off
+
+        if isCPUAdaptiveSpeedEnabled, let latestCPUUpdate {
+            animationController.setFramesPerSecond(latestCPUUpdate.pace.framesPerSecond)
+        }
+
+        refreshCPUStatus()
+    }
+
+    @objc
     private func changeAnimationSpeed(_ sender: NSMenuItem) {
+        isCPUAdaptiveSpeedEnabled = false
+        adaptiveSpeedItem?.state = .off
         animationController.setFramesPerSecond(Double(sender.tag))
+        refreshCPUStatus()
     }
 
     @objc
