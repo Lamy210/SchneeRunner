@@ -5,7 +5,7 @@ final class AnimationController: NSObject {
     private var frames: [NSImage] = []
     private var frameIndex = 0
     private var timer: Timer?
-    private var framesPerSecond: Double = 12
+    private(set) var framesPerSecond: Double = 12
 
     var onFrame: ((NSImage) -> Void)?
 
@@ -23,7 +23,7 @@ final class AnimationController: NSObject {
     }
 
     func setFramesPerSecond(_ value: Double) {
-        guard value > 0 else {
+        guard value > 0, value != framesPerSecond else {
             return
         }
 
