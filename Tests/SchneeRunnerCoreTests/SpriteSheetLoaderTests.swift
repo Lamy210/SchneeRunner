@@ -33,7 +33,7 @@ final class SpriteSheetLoaderTests: XCTestCase {
             255, 0, 0, 255,
             255, 0, 0, 255,
             0, 0, 255, 255,
-            0, 0, 255, 255,
+            0, 0, 255, 255
         ]
 
         let data = Data(pixels)
