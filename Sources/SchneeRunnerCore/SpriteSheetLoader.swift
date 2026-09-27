@@ -46,7 +46,7 @@ public struct SpriteSheetLoader {
         return try frameRects.enumerated().map { frameIndex, frame in
             let cropRect = CGRect(
                 x: CGFloat(frame.x),
-                y: CGFloat(bitmap.height - frame.y - frame.height),
+                y: CGFloat(frame.y),
                 width: CGFloat(frame.width),
                 height: CGFloat(frame.height)
             )
