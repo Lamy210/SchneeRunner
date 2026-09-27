@@ -9,7 +9,7 @@ The architecture should preserve these properties:
 - character artwork is data, not application-specific code;
 - animation timing is independent from rendering;
 - system metrics and external events are independent from animation clips;
-- AppKit is kept at the application/rendering boundary;
+- AppKit and Mach APIs stay at the application/platform boundary;
 - imported assets are read-only unless an explicit SchneeRunner-owned copy is introduced later;
 - network access is not required for the core experience.
 
@@ -26,20 +26,31 @@ AppDelegate
      +----> AnimationController
      |
      +----> SpriteSheetLoader
+     |            |
+     |            v
+     |      SpriteSheetGrid
+     |
+     +----> CPUMonitor
                   |
-                  v
-          SpriteSheetGrid
+                  +----> SystemCPUUsageSampler
+                  |
+                  +----> CPUUsageCalculator
+                  +----> ExponentialMovingAverage
+                  +----> AdaptiveAnimationSpeedPolicy
 ```
 
 ### SchneeRunnerCore
 
-Owns deterministic and reusable image-domain behavior:
+Owns deterministic and reusable domain behavior:
 
 - sprite-sheet grid validation;
 - frame geometry;
-- sprite-sheet decoding.
+- sprite-sheet decoding;
+- CPU tick-delta utilization calculation;
+- CPU utilization smoothing;
+- utilization-to-animation-pace policy.
 
-It must not own menu bar state, application lifecycle, or user interaction.
+It must not own menu bar state, application lifecycle, timers, or macOS host-statistics calls.
 
 ### SchneeRunnerApp
 
@@ -49,14 +60,57 @@ Owns macOS integration:
 - `NSStatusItem`;
 - `NSOpenPanel`;
 - animation scheduling;
+- Mach host CPU sampling;
+- CPU sampling timer;
 - menu-bar image sizing;
-- user-facing error presentation.
+- user-facing error/state presentation.
 
 UI mutation stays on the main actor.
 
-## 3. Planned boundaries
+## 3. Metric pipeline
 
-The target model is:
+The CPU pipeline deliberately separates operating-system sampling from policy:
+
+```text
+Mach host_cpu_load_info
+          |
+          v
+SystemCPUUsageSampler
+          |
+          v
+CPUTickSnapshot
+          |
+          v
+CPUUsageCalculator
+          |
+          v
+raw utilization
+          |
+          v
+ExponentialMovingAverage
+          |
+          v
+smoothed utilization
+          |
+          v
+AdaptiveAnimationSpeedPolicy
+          |
+          v
+AnimationPace
+          |
+          v
+AnimationController
+```
+
+The calculator uses differences between cumulative CPU tick snapshots. A counter regression invalidates the current sampling window rather than producing a bogus utilization value.
+
+The default smoother uses an EMA alpha of 0.25.
+
+The speed policy applies hysteresis around its thresholds to avoid rapid pace changes near a boundary.
+
+## 4. Planned boundaries
+
+The target model remains:
 
 ```text
 MetricProvider ----+
@@ -76,9 +130,9 @@ These concepts must remain separable:
 CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 ```
 
-A future CPU provider should therefore emit a metric value rather than directly manipulating an `NSStatusItem`.
+A metric provider emits values. It must not directly manipulate a renderer.
 
-## 4. Asset safety
+## 5. Asset safety
 
 The current PoC reads the user-selected PNG directly and does not mutate it.
 
@@ -86,7 +140,7 @@ Future persistent imports should copy assets only into an explicitly SchneeRunne
 
 Third-party character art is not part of the application distribution by default.
 
-## 5. Failure handling
+## 6. Failure handling
 
 Boundary failures must become actionable errors.
 
@@ -95,34 +149,40 @@ Examples:
 - unreadable image;
 - image without decodable bitmap data;
 - incompatible sprite-sheet dimensions;
-- frame crop failure.
+- frame crop failure;
+- unavailable Mach host statistics.
 
 Loading a bad asset must not terminate the application or replace the last valid animation.
 
-## 6. Performance direction
+A transient CPU sampling failure does not terminate playback. The menu reports CPU availability and keeps the current animation speed.
+
+## 7. Performance direction
 
 Menu bar playback is intentionally small.
 
-Before adding richer formats or additional renderers, measure:
+Measure:
 
 - frame decode time;
 - retained decoded-frame memory;
 - timer wakeups;
 - CPU usage at each supported FPS;
-- impact of metric sampling.
+- impact of one-second metric sampling.
 
-Assets should be decoded on import rather than decoded again for every displayed frame.
+Assets are decoded on import rather than decoded again for every displayed frame.
 
-## 7. Deferred decisions
+The animation timer is not restarted when a CPU sample resolves to the already-active FPS.
 
-The following are deliberately not fixed by the first PoC:
+## 8. Deferred decisions
+
+The following remain deliberately deferred:
 
 - Xcode project layout;
 - sandboxing and entitlements;
 - persistent character-pack schema;
 - GIF/APNG/WebP decoding policy;
-- CPU sampling implementation;
 - launch-at-login mechanism;
-- signed/notarized release configuration.
+- signed/notarized release configuration;
+- generalized metric/event provider protocols;
+- desktop rendering.
 
 Each should be introduced with its own focused change and verification path.
