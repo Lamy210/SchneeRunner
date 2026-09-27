@@ -269,11 +269,25 @@ class ReleaseEnvironmentRuntimeProofTests(unittest.TestCase):
         self.assertIn("refuses the current repository", result.stderr)
 
     def test_refuses_local_checkout_repository(self) -> None:
+        origin = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "remote", "get-url", "origin"],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        repository = origin.removesuffix(".git")
+        if repository.startswith("https://github.com/"):
+            repository = repository.removeprefix("https://github.com/")
+        elif repository.startswith("git@github.com:"):
+            repository = repository.removeprefix("git@github.com:")
+        else:
+            self.fail(f"origin is not a supported GitHub URL: {origin}")
+
         result = run_script(
             "--repository",
-            "Lamy210/template",
+            repository,
             "--confirm-disposable",
-            "Lamy210/template",
+            repository,
             env={"GITHUB_REPOSITORY": ""},
         )
         self.assertEqual(2, result.returncode)
