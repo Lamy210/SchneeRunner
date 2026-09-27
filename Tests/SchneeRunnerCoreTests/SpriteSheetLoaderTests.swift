@@ -1,7 +1,7 @@
-@testable import SchneeRunnerCore
 import AppKit
 import CoreGraphics
 import ImageIO
+@testable import SchneeRunnerCore
 import UniformTypeIdentifiers
 import XCTest
 
