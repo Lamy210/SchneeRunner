@@ -1,0 +1,24 @@
+# MIGRATION ONLY — do not copy this file as a GitHub Actions workflow.
+#
+# The previous single-workflow release example built a tag commit and then called
+# the repository-local privileged release workflow from that same tag context.
+# For same-repository local reusable workflows, that can select privileged
+# release-control code from the tag commit, including an older trusted ancestor.
+#
+# Use the split two-stage release examples instead:
+#
+#   examples/app-release-build.yml
+#     -> copy/adapt as .github/workflows/release-build.yml
+#     -> runs on vX.Y.Z tag pushes
+#     -> secret-free, read-only, produces the unsigned archive + provenance
+#
+#   examples/app-release-publisher.yml
+#     -> copy/adapt as .github/workflows/release-publisher.yml
+#     -> must exist on the default branch
+#     -> workflow_run validates the exact build run/artifact before secrets
+#     -> invokes trusted signing/notarization/publication code only after validation
+#     -> proposes the Homebrew Cask update only after release publication succeeds
+#
+# See docs/RELEASE.md and
+# docs/superpowers/specs/2026-09-14-privileged-release-isolation-design.md
+# for the trust-boundary and migration details.
