@@ -45,7 +45,8 @@ final class CharacterLibraryController {
     }
 
     func recentAssets(limit: Int = 8) throws -> [StoredCharacterAsset] {
-        Array(try store.listAssets().prefix(max(limit, 0)))
+        let assets = try store.listAssets()
+        return Array(assets.prefix(max(limit, 0)))
     }
 
     func frames(for asset: StoredCharacterAsset) throws -> [NSImage] {
