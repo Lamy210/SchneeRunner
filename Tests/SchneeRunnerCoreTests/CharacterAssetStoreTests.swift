@@ -108,6 +108,27 @@ final class CharacterAssetStoreTests: XCTestCase {
         }
     }
 
+    func testRejectsPNGExtensionWithUnreadableContent() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try Data([1, 2, 3]).write(to: fixture.sourceURL)
+
+        XCTAssertThrowsError(
+            try fixture.store.importAsset(
+                from: fixture.sourceURL,
+                kind: .singleImage
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ImageAssetValidationError,
+                .unreadableImage(fixture.sourceURL)
+            )
+        }
+    }
+
     func testRejectsNonPNGSource() throws {
         let fixture = try makeFixture(fileExtension: "jpg")
         defer {
