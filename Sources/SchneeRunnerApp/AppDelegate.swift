@@ -6,10 +6,10 @@ import UniformTypeIdentifiers
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let animationController = AnimationController()
     private let cpuMonitor = CPUMonitor()
+    private let characterLibrary = CharacterLibraryController()
+    private let menuController = StatusMenuController()
 
     private var statusItem: NSStatusItem?
-    private var cpuUsageItem: NSMenuItem?
-    private var adaptiveSpeedItem: NSMenuItem?
     private var latestCPUUpdate: CPUMonitor.Update?
     private var isCPUAdaptiveSpeedEnabled = true
 
@@ -17,7 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.setActivationPolicy(.accessory)
         configureStatusItem()
         configureAnimationCallback()
+        configureMenuCallbacks()
         configureCPUMonitor()
+        refreshRecentCharactersMenu()
         cpuMonitor.start()
     }
 
@@ -32,13 +34,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             systemSymbolName: "figure.run",
             accessibilityDescription: "SchneeRunner"
         )
-        item.menu = makeMenu()
+        item.menu = menuController.menu
         statusItem = item
     }
 
     private func configureAnimationCallback() {
         animationController.onFrame = { [weak self] image in
             self?.statusItem?.button?.image = Self.menuBarImage(from: image)
+        }
+    }
+
+    private func configureMenuCallbacks() {
+        menuController.onLoadSingleImage = { [weak self] in
+            self?.loadImportedCharacter(
+                kind: .singleImage,
+                panelTitle: "Choose an Image"
+            )
+        }
+        menuController.onLoadSpriteSheet = { [weak self] in
+            self?.loadImportedCharacter(
+                kind: .spriteSheet4x2,
+                panelTitle: "Choose a 4x2 Sprite Sheet"
+            )
+        }
+        menuController.onLoadRecentCharacter = { [weak self] id in
+            self?.loadRecentCharacter(id: id)
+        }
+        menuController.onToggleCPUAdaptiveSpeed = { [weak self] in
+            self?.toggleCPUAdaptiveSpeed()
+        }
+        menuController.onManualSpeed = { [weak self] framesPerSecond in
+            self?.changeAnimationSpeed(framesPerSecond)
+        }
+        menuController.onQuit = {
+            NSApplication.shared.terminate(nil)
         }
     }
 
@@ -59,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         cpuMonitor.onError = { [weak self] _ in
             self?.latestCPUUpdate = nil
-            self?.cpuUsageItem?.title = "CPU: unavailable"
+            self?.menuController.setCPUStatus("CPU: unavailable")
         }
     }
 
@@ -72,103 +101,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let framesPerSecond = Int(animationController.framesPerSecond.rounded())
 
         if isCPUAdaptiveSpeedEnabled {
-            cpuUsageItem?.title = "CPU: \(percentage)% · \(framesPerSecond) FPS"
-        } else {
-            cpuUsageItem?.title = "CPU: \(percentage)% · Manual \(framesPerSecond) FPS"
-        }
-    }
-
-    private func makeMenu() -> NSMenu {
-        let menu = NSMenu()
-
-        let singleImageItem = NSMenuItem(
-            title: "Load Single Image…",
-            action: #selector(loadSingleImage),
-            keyEquivalent: "i"
-        )
-        singleImageItem.target = self
-        menu.addItem(singleImageItem)
-
-        let spriteSheetItem = NSMenuItem(
-            title: "Load 4x2 Sprite Sheet…",
-            action: #selector(loadSpriteSheet),
-            keyEquivalent: "o"
-        )
-        spriteSheetItem.target = self
-        menu.addItem(spriteSheetItem)
-
-        menu.addItem(.separator())
-
-        let cpuItem = NSMenuItem(title: "CPU: sampling…", action: nil, keyEquivalent: "")
-        cpuItem.isEnabled = false
-        menu.addItem(cpuItem)
-        cpuUsageItem = cpuItem
-
-        let adaptiveItem = NSMenuItem(
-            title: "CPU Adaptive Speed",
-            action: #selector(toggleCPUAdaptiveSpeed),
-            keyEquivalent: ""
-        )
-        adaptiveItem.target = self
-        adaptiveItem.state = .on
-        menu.addItem(adaptiveItem)
-        adaptiveSpeedItem = adaptiveItem
-
-        let speedMenu = NSMenu(title: "Animation Speed")
-        for framesPerSecond in [6, 8, 12, 18, 24] {
-            let speedItem = NSMenuItem(
-                title: "\(framesPerSecond) FPS",
-                action: #selector(changeAnimationSpeed(_:)),
-                keyEquivalent: ""
+            menuController.setCPUStatus(
+                "CPU: \(percentage)% · \(framesPerSecond) FPS"
             )
-            speedItem.target = self
-            speedItem.tag = framesPerSecond
-            speedMenu.addItem(speedItem)
+        } else {
+            menuController.setCPUStatus(
+                "CPU: \(percentage)% · Manual \(framesPerSecond) FPS"
+            )
         }
-
-        let speedRootItem = NSMenuItem(title: "Manual Speed", action: nil, keyEquivalent: "")
-        speedRootItem.submenu = speedMenu
-        menu.addItem(speedRootItem)
-
-        menu.addItem(.separator())
-
-        let quitItem = NSMenuItem(
-            title: "Quit SchneeRunner",
-            action: #selector(quitApplication),
-            keyEquivalent: "q"
-        )
-        quitItem.target = self
-        menu.addItem(quitItem)
-
-        return menu
     }
 
-    @objc
-    private func loadSingleImage() {
-        guard let url = choosePNG(title: "Choose an Image") else {
+    private func loadImportedCharacter(
+        kind: CharacterAssetKind,
+        panelTitle: String
+    ) {
+        guard let url = choosePNG(title: panelTitle) else {
             return
         }
 
         do {
-            let frames = try ProceduralImageFrameGenerator().frames(from: url)
+            let frames = try characterLibrary.frames(
+                from: url,
+                kind: kind
+            )
             animationController.replaceFrames(frames)
+
+            do {
+                _ = try characterLibrary.persist(
+                    sourceURL: url,
+                    kind: kind
+                )
+                refreshRecentCharactersMenu()
+            } catch {
+                presentPersistenceWarning(error)
+            }
         } catch {
             presentLoadError(error)
         }
     }
 
-    @objc
-    private func loadSpriteSheet() {
-        guard let url = choosePNG(title: "Choose a 4x2 Sprite Sheet") else {
-            return
-        }
-
+    private func loadRecentCharacter(id: UUID) {
         do {
-            let grid = try SpriteSheetGrid(columns: 4, rows: 2)
-            let frames = try SpriteSheetLoader(grid: grid).loadFrames(from: url)
+            let asset = try characterLibrary.asset(id: id)
+            let frames = try characterLibrary.frames(for: asset)
             animationController.replaceFrames(frames)
         } catch {
             presentLoadError(error)
+            refreshRecentCharactersMenu()
+        }
+    }
+
+    private func refreshRecentCharactersMenu() {
+        do {
+            menuController.setRecentCharacters(
+                try characterLibrary.recentAssets()
+            )
+        } catch {
+            menuController.setRecentCharactersUnavailable()
         }
     }
 
@@ -187,10 +176,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return panel.url
     }
 
-    @objc
     private func toggleCPUAdaptiveSpeed() {
         isCPUAdaptiveSpeedEnabled.toggle()
-        adaptiveSpeedItem?.state = isCPUAdaptiveSpeedEnabled ? .on : .off
+        menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
 
         if isCPUAdaptiveSpeedEnabled, let latestCPUUpdate {
             animationController.setFramesPerSecond(latestCPUUpdate.pace.framesPerSecond)
@@ -199,23 +187,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshCPUStatus()
     }
 
-    @objc
-    private func changeAnimationSpeed(_ sender: NSMenuItem) {
+    private func changeAnimationSpeed(_ framesPerSecond: Double) {
         isCPUAdaptiveSpeedEnabled = false
-        adaptiveSpeedItem?.state = .off
-        animationController.setFramesPerSecond(Double(sender.tag))
+        menuController.setAdaptiveSpeedEnabled(false)
+        animationController.setFramesPerSecond(framesPerSecond)
         refreshCPUStatus()
-    }
-
-    @objc
-    private func quitApplication() {
-        NSApplication.shared.terminate(nil)
     }
 
     private func presentLoadError(_ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Could not load image"
+        alert.informativeText = error.localizedDescription
+        alert.runModal()
+    }
+
+    private func presentPersistenceWarning(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Character is running, but was not saved"
         alert.informativeText = error.localizedDescription
         alert.runModal()
     }
