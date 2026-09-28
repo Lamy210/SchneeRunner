@@ -19,12 +19,19 @@ public enum SpriteSheetLoadingError: Error, LocalizedError {
 
 public struct SpriteSheetLoader {
     private let grid: SpriteSheetGrid
+    private let validator: ImageAssetValidator
 
-    public init(grid: SpriteSheetGrid) {
+    public init(
+        grid: SpriteSheetGrid,
+        validator: ImageAssetValidator = .init()
+    ) {
         self.grid = grid
+        self.validator = validator
     }
 
     public func loadFrames(from url: URL) throws -> [NSImage] {
+        _ = try validator.validate(url: url)
+
         guard let image = NSImage(contentsOf: url) else {
             throw SpriteSheetLoadingError.unreadableImage(url)
         }
