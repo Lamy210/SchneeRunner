@@ -19,12 +19,19 @@ public enum ProceduralImageFrameGeneratorError: Error, Equatable, LocalizedError
 
 public struct ProceduralImageFrameGenerator {
     private let outputHeight: CGFloat
+    private let validator: ImageAssetValidator
 
-    public init(outputHeight: CGFloat = 64) {
+    public init(
+        outputHeight: CGFloat = 64,
+        validator: ImageAssetValidator = .init()
+    ) {
         self.outputHeight = max(outputHeight, 16)
+        self.validator = validator
     }
 
     public func frames(from url: URL) throws -> [NSImage] {
+        _ = try validator.validate(url: url)
+
         guard let image = NSImage(contentsOf: url) else {
             throw ProceduralImageFrameGeneratorError.unreadableImage(url)
         }
