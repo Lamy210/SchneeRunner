@@ -29,9 +29,9 @@ final class CharacterLibraryController {
 
         switch kind {
         case .singleImage:
-            try ProceduralImageFrameGenerator().frames(from: sourceURL)
+            return try ProceduralImageFrameGenerator().frames(from: sourceURL)
         case .spriteSheet4x2:
-            try SpriteSheetLoader(
+            return try SpriteSheetLoader(
                 grid: SpriteSheetGrid(columns: 4, rows: 2)
             ).loadFrames(from: sourceURL)
         }
