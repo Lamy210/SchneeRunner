@@ -153,9 +153,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func refreshRecentCharactersMenu() {
         do {
-            menuController.setRecentCharacters(
-                try characterLibrary.recentAssets()
-            )
+            let assets = try characterLibrary.recentAssets()
+            menuController.setRecentCharacters(assets)
         } catch {
             menuController.setRecentCharactersUnavailable()
         }
