@@ -8,7 +8,7 @@ final class CharacterAssetStoreTests: XCTestCase {
             fixture.cleanup()
         }
 
-        let originalData = Data([1, 2, 3, 4])
+        let originalData = try pngData()
         try originalData.write(to: fixture.sourceURL)
 
         let asset = try fixture.store.importAsset(
@@ -33,7 +33,7 @@ final class CharacterAssetStoreTests: XCTestCase {
             fixture.cleanup()
         }
 
-        try Data([1]).write(to: fixture.sourceURL)
+        try pngData().write(to: fixture.sourceURL)
 
         let older = try fixture.store.importAsset(
             from: fixture.sourceURL,
@@ -58,7 +58,7 @@ final class CharacterAssetStoreTests: XCTestCase {
             fixture.cleanup()
         }
 
-        try Data([7, 8, 9]).write(to: fixture.sourceURL)
+        try pngData().write(to: fixture.sourceURL)
         let asset = try fixture.store.importAsset(
             from: fixture.sourceURL,
             kind: .singleImage
@@ -127,6 +127,14 @@ final class CharacterAssetStoreTests: XCTestCase {
                 .unsupportedFileType("jpg")
             )
         }
+    }
+
+    private func pngData() throws -> Data {
+        try XCTUnwrap(
+            Data(
+                base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+            )
+        )
     }
 
     private func makeFixture(
