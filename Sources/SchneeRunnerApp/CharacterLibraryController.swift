@@ -4,7 +4,6 @@ import SchneeRunnerCore
 @MainActor
 final class CharacterLibraryController {
     private let store: CharacterAssetStore
-    private let imageValidator = ImageAssetValidator()
 
     init(fileManager: FileManager = .default) {
         let applicationSupportDirectory = fileManager.urls(
@@ -25,8 +24,6 @@ final class CharacterLibraryController {
         from sourceURL: URL,
         kind: CharacterAssetKind
     ) throws -> [NSImage] {
-        _ = try imageValidator.validate(url: sourceURL)
-
         switch kind {
         case .singleImage:
             return try ProceduralImageFrameGenerator().frames(from: sourceURL)
@@ -41,9 +38,7 @@ final class CharacterLibraryController {
         sourceURL: URL,
         kind: CharacterAssetKind
     ) throws -> StoredCharacterAsset {
-        _ = try imageValidator.validate(url: sourceURL)
-
-        return try store.importAsset(
+        try store.importAsset(
             from: sourceURL,
             kind: kind
         )
