@@ -10,12 +10,10 @@ public struct ExponentialMovingAverage: Sendable {
 
     @discardableResult
     public mutating func add(_ sample: Double) -> Double {
-        let nextValue: Double
-
-        if let value {
-            nextValue = alpha * sample + (1 - alpha) * value
+        let nextValue = if let value {
+            alpha * sample + (1 - alpha) * value
         } else {
-            nextValue = sample
+            sample
         }
 
         value = nextValue
