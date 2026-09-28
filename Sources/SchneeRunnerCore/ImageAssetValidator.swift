@@ -43,6 +43,7 @@ public struct ValidatedImageAsset: Equatable, Sendable {
 public enum ImageAssetValidationError: Error, Equatable, LocalizedError {
     case symbolicLinkNotAllowed(URL)
     case sourceIsNotRegularFile(URL)
+    case fileSizeUnavailable(URL)
     case fileTooLarge(actual: Int, maximum: Int)
     case unreadableImage(URL)
     case unsupportedContentType(String?)
@@ -57,6 +58,8 @@ public enum ImageAssetValidationError: Error, Equatable, LocalizedError {
             "Symbolic links are not allowed for image imports: \(url.lastPathComponent)."
         case let .sourceIsNotRegularFile(url):
             "The selected image is not a regular file: \(url.lastPathComponent)."
+        case let .fileSizeUnavailable(url):
+            "Could not determine the image size: \(url.lastPathComponent)."
         case let .fileTooLarge(actual, maximum):
             "The image is \(actual) bytes, exceeding the \(maximum)-byte import limit."
         case let .unreadableImage(url):
@@ -115,7 +118,9 @@ public struct ImageAssetValidator: Sendable {
             throw ImageAssetValidationError.sourceIsNotRegularFile(url)
         }
 
-        let fileSize = values.fileSize ?? 0
+        guard let fileSize = values.fileSize else {
+            throw ImageAssetValidationError.fileSizeUnavailable(url)
+        }
         guard fileSize <= policy.maximumFileBytes else {
             throw ImageAssetValidationError.fileTooLarge(
                 actual: fileSize,
