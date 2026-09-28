@@ -10,7 +10,7 @@ public struct ImageAssetValidationPolicy: Equatable, Sendable {
 
     public init(
         maximumFileBytes: Int = 32 * 1024 * 1024,
-        maximumPixelDimension: Int = 8_192,
+        maximumPixelDimension: Int = 8192,
         maximumPixelCount: Int = 16_000_000,
         allowsAnimation: Bool = false
     ) {
