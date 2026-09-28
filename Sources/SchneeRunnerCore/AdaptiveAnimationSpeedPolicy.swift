@@ -42,13 +42,11 @@ public struct AdaptiveAnimationSpeedPolicy: Sendable {
         let utilization = min(max(utilization, 0), 1)
         var index = currentPace.rawValue
 
-        while index < Self.thresholds.count,
-              utilization >= Self.thresholds[index] + hysteresis {
+        while index < Self.thresholds.count, utilization >= Self.thresholds[index] + hysteresis {
             index += 1
         }
 
-        while index > 0,
-              utilization < Self.thresholds[index - 1] - hysteresis {
+        while index > 0, utilization < Self.thresholds[index - 1] - hysteresis {
             index -= 1
         }
 
