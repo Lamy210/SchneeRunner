@@ -81,13 +81,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
 
-        let loadItem = NSMenuItem(
+        let singleImageItem = NSMenuItem(
+            title: "Load Single Image…",
+            action: #selector(loadSingleImage),
+            keyEquivalent: "i"
+        )
+        singleImageItem.target = self
+        menu.addItem(singleImageItem)
+
+        let spriteSheetItem = NSMenuItem(
             title: "Load 4x2 Sprite Sheet…",
             action: #selector(loadSpriteSheet),
             keyEquivalent: "o"
         )
-        loadItem.target = self
-        menu.addItem(loadItem)
+        spriteSheetItem.target = self
+        menu.addItem(spriteSheetItem)
+
+        menu.addItem(.separator())
 
         let cpuItem = NSMenuItem(title: "CPU: sampling…", action: nil, keyEquivalent: "")
         cpuItem.isEnabled = false
@@ -134,15 +144,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc
-    private func loadSpriteSheet() {
-        let panel = NSOpenPanel()
-        panel.title = "Choose a 4x2 Sprite Sheet"
-        panel.prompt = "Load"
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.png]
+    private func loadSingleImage() {
+        guard let url = choosePNG(title: "Choose an Image") else {
+            return
+        }
 
-        guard panel.runModal() == .OK, let url = panel.url else {
+        do {
+            let frames = try ProceduralImageFrameGenerator().frames(from: url)
+            animationController.replaceFrames(frames)
+        } catch {
+            presentLoadError(error)
+        }
+    }
+
+    @objc
+    private func loadSpriteSheet() {
+        guard let url = choosePNG(title: "Choose a 4x2 Sprite Sheet") else {
             return
         }
 
@@ -153,6 +170,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             presentLoadError(error)
         }
+    }
+
+    private func choosePNG(title: String) -> URL? {
+        let panel = NSOpenPanel()
+        panel.title = title
+        panel.prompt = "Load"
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.png]
+
+        guard panel.runModal() == .OK else {
+            return nil
+        }
+
+        return panel.url
     }
 
     @objc
@@ -183,19 +215,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func presentLoadError(_ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not load sprite sheet"
+        alert.messageText = "Could not load image"
         alert.informativeText = error.localizedDescription
         alert.runModal()
     }
 
     private static func menuBarImage(from source: NSImage) -> NSImage {
         let image = source.copy() as? NSImage ?? source
+        let sourceWidth = max(source.size.width, 1)
         let sourceHeight = max(source.size.height, 1)
-        let displayHeight: CGFloat = 22
-        let aspectRatio = source.size.width / sourceHeight
-        let displayWidth = min(displayHeight * aspectRatio, 36)
+        let maximumWidth: CGFloat = 36
+        let maximumHeight: CGFloat = 22
+        let scale = min(
+            maximumWidth / sourceWidth,
+            maximumHeight / sourceHeight
+        )
 
-        image.size = NSSize(width: displayWidth, height: displayHeight)
+        image.size = NSSize(
+            width: sourceWidth * scale,
+            height: sourceHeight * scale
+        )
         image.isTemplate = false
         return image
     }
