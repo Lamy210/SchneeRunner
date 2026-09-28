@@ -83,18 +83,39 @@ public struct ImageAssetValidator: Sendable {
     }
 
     public func validate(url: URL) throws -> ValidatedImageAsset {
-        let resourceValues = try url.resourceValues(
+        let fileSize = try validateResource(at: url)
+        let imageSource = try makeImageSource(url: url)
+        let frameCount = try validateContent(imageSource: imageSource)
+        let dimensions = try imageDimensions(
+            imageSource: imageSource,
+            url: url
+        )
+        try validateDimensions(
+            width: dimensions.width,
+            height: dimensions.height
+        )
+
+        return ValidatedImageAsset(
+            width: dimensions.width,
+            height: dimensions.height,
+            fileSize: fileSize,
+            frameCount: frameCount
+        )
+    }
+
+    private func validateResource(at url: URL) throws -> Int {
+        let values = try url.resourceValues(
             forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey]
         )
 
-        guard resourceValues.isSymbolicLink != true else {
+        guard values.isSymbolicLink != true else {
             throw ImageAssetValidationError.symbolicLinkNotAllowed(url)
         }
-        guard resourceValues.isRegularFile == true else {
+        guard values.isRegularFile == true else {
             throw ImageAssetValidationError.sourceIsNotRegularFile(url)
         }
 
-        let fileSize = resourceValues.fileSize ?? 0
+        let fileSize = values.fileSize ?? 0
         guard fileSize <= policy.maximumFileBytes else {
             throw ImageAssetValidationError.fileTooLarge(
                 actual: fileSize,
@@ -102,21 +123,32 @@ public struct ImageAssetValidator: Sendable {
             )
         }
 
-        let sourceOptions = [
+        return fileSize
+    }
+
+    private func makeImageSource(url: URL) throws -> CGImageSource {
+        let options = [
             kCGImageSourceShouldCache: false
         ] as CFDictionary
-        guard
-            let imageSource = CGImageSourceCreateWithURL(
-                url as CFURL,
-                sourceOptions
-            )
-        else {
+
+        guard let imageSource = CGImageSourceCreateWithURL(
+            url as CFURL,
+            options
+        ) else {
             throw ImageAssetValidationError.unreadableImage(url)
         }
 
+        return imageSource
+    }
+
+    private func validateContent(
+        imageSource: CGImageSource
+    ) throws -> Int {
         let typeIdentifier = CGImageSourceGetType(imageSource) as String?
         guard typeIdentifier == UTType.png.identifier else {
-            throw ImageAssetValidationError.unsupportedContentType(typeIdentifier)
+            throw ImageAssetValidationError.unsupportedContentType(
+                typeIdentifier
+            )
         }
 
         let frameCount = CGImageSourceGetCount(imageSource)
@@ -126,14 +158,21 @@ public struct ImageAssetValidator: Sendable {
             )
         }
 
-        let propertiesOptions = [
+        return frameCount
+    }
+
+    private func imageDimensions(
+        imageSource: CGImageSource,
+        url: URL
+    ) throws -> (width: Int, height: Int) {
+        let options = [
             kCGImageSourceShouldCache: false
         ] as CFDictionary
         guard
             let properties = CGImageSourceCopyPropertiesAtIndex(
                 imageSource,
                 0,
-                propertiesOptions
+                options
             ) as? [CFString: Any],
             let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
             let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue
@@ -141,6 +180,13 @@ public struct ImageAssetValidator: Sendable {
             throw ImageAssetValidationError.unreadableImage(url)
         }
 
+        return (width, height)
+    }
+
+    private func validateDimensions(
+        width: Int,
+        height: Int
+    ) throws {
         guard width > 0, height > 0 else {
             throw ImageAssetValidationError.invalidDimensions(
                 width: width,
@@ -164,12 +210,5 @@ public struct ImageAssetValidator: Sendable {
                 maximum: policy.maximumPixelCount
             )
         }
-
-        return ValidatedImageAsset(
-            width: width,
-            height: height,
-            fileSize: fileSize,
-            frameCount: frameCount
-        )
     }
 }
