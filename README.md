@@ -16,6 +16,8 @@ The current vertical slice supports:
 - local PNG import
 - single-image procedural run animation
 - 4x2 sprite sheets with 8 frames
+- persistent local character library under Application Support
+- recent-character reopening from the menu
 - non-even pixel dimensions such as 1774x887
 - manual 6 / 8 / 12 / 18 / 24 FPS playback
 - system CPU usage sampling
@@ -23,7 +25,7 @@ The current vertical slice supports:
 - hysteretic CPU-to-animation-speed mapping
 - local-only operation with no network access
 
-Additional image formats, character packs, persistence, and launch-at-login are intentionally deferred to later changes.
+Additional image formats, character packs, and launch-at-login are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -42,7 +44,7 @@ SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
 Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, or choose **Load 4x2 Sprite Sheet…** for authored animation frames.
 
-Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched.
+Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file.
 
 CPU adaptive speed is enabled by default. Selecting a manual FPS disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again.
 
@@ -108,12 +110,11 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. persistent local character library
-2. PNG sequence and GIF import
-3. character states such as idle / walk / run / sprint
-4. portable character-pack format
-5. battery, memory, build, and local event triggers
-6. optional desktop-pet renderer
+1. PNG sequence and GIF import
+2. character states such as idle / walk / run / sprint
+3. portable character-pack format
+4. battery, memory, build, and local event triggers
+5. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 
