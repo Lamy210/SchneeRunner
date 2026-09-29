@@ -132,7 +132,7 @@ final class AnimationController: NSObject {
         )
     }
 
-    private var playbackRate: Double {
+    var playbackRate: Double {
         framesPerSecond / Self.referenceFramesPerSecond
     }
 
