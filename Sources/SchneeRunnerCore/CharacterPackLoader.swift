@@ -2,9 +2,11 @@ import AppKit
 import Foundation
 
 public enum CharacterPackLoaderError: Error, Equatable, LocalizedError {
+    case invalidPackageExtension(String)
     case packageIsNotDirectory(URL)
     case symbolicLinkNotAllowed(URL)
     case manifestMissing(URL)
+    case manifestSizeUnavailable(URL)
     case manifestTooLarge(actual: Int, maximum: Int)
     case invalidManifest(URL)
     case unsupportedFormatVersion(Int)
@@ -16,16 +18,19 @@ public enum CharacterPackLoaderError: Error, Equatable, LocalizedError {
     case unsafeRelativePath(String)
     case clipMissing(String)
     case wrongClipResourceType(path: String, kind: CharacterPackClipKind)
-    case unsupportedEntry(String)
 
     public var errorDescription: String? {
         switch self {
+        case let .invalidPackageExtension(value):
+            "Character pack must use the .schneerunner extension. Received .\(value)."
         case let .packageIsNotDirectory(url):
             "Character pack is not a directory: \(url.lastPathComponent)."
         case let .symbolicLinkNotAllowed(url):
             "Symbolic links are not allowed in character packs: \(url.lastPathComponent)."
         case let .manifestMissing(url):
             "Character pack manifest is missing: \(url.lastPathComponent)."
+        case let .manifestSizeUnavailable(url):
+            "Could not determine character pack manifest size: \(url.lastPathComponent)."
         case let .manifestTooLarge(actual, maximum):
             "Character pack manifest is \(actual) bytes, exceeding the \(maximum)-byte limit."
         case let .invalidManifest(url):
@@ -48,8 +53,6 @@ public enum CharacterPackLoaderError: Error, Equatable, LocalizedError {
             "Character pack clip is missing: \(path)."
         case let .wrongClipResourceType(path, kind):
             "Character pack clip \(path) is not valid for kind \(kind.rawValue)."
-        case let .unsupportedEntry(path):
-            "Character pack contains an unsupported entry: \(path)."
         }
     }
 }
@@ -111,7 +114,11 @@ public struct CharacterPackLoader {
         let values = try manifestURL.resourceValues(
             forKeys: [.fileSizeKey]
         )
-        let fileSize = values.fileSize ?? 0
+        guard let fileSize = values.fileSize else {
+            throw CharacterPackLoaderError.manifestSizeUnavailable(
+                manifestURL
+            )
+        }
         guard fileSize <= maximumManifestBytes else {
             throw CharacterPackLoaderError.manifestTooLarge(
                 actual: fileSize,
@@ -261,6 +268,13 @@ public struct CharacterPackLoader {
     }
 
     private func validatePackageDirectory(_ url: URL) throws {
+        let fileExtension = url.pathExtension.lowercased()
+        guard fileExtension == "schneerunner" else {
+            throw CharacterPackLoaderError.invalidPackageExtension(
+                fileExtension
+            )
+        }
+
         let values = try url.resourceValues(
             forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
         )
