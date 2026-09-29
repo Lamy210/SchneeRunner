@@ -151,10 +151,11 @@ final class CharacterLibraryController {
     ) throws -> CharacterAnimationLibrary {
         switch asset.kind {
         case .characterPack:
-            return try packStore.load(for: asset).library
+            try packStore.load(for: asset).library
         case .singleImage, .spriteSheet4x2, .pngSequence, .gif:
-            return CharacterAnimationLibrary.single(
-                animation: try animation(for: asset)
+            let animation = try animation(for: asset)
+            CharacterAnimationLibrary.single(
+                animation: animation
             )
         }
     }
