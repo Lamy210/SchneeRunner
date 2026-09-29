@@ -69,6 +69,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onLoadGIF = { [weak self] in
             self?.loadGIF()
         }
+        menuController.onLoadCharacterPack = { [weak self] in
+            self?.loadCharacterPack()
+        }
         menuController.onLoadRecentCharacter = { [weak self] id in
             self?.loadRecentCharacter(id: id)
         }
@@ -133,8 +136,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
     }
+}
 
-    private func loadImportedCharacter(
+private extension AppDelegate {
+    func loadImportedCharacter(
         kind: CharacterAssetKind,
         panelTitle: String
     ) {
@@ -164,7 +169,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func loadPNGSequence() {
+    func loadPNGSequence() {
         guard let urls = importPresenter.choosePNGs(
             title: "Choose PNG Sequence Frames"
         ) else {
@@ -191,7 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func loadGIF() {
+    func loadGIF() {
         guard let url = importPresenter.chooseGIF(
             title: "Choose an Animated GIF"
         ) else {
@@ -218,11 +223,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func loadRecentCharacter(id: UUID) {
+    func loadCharacterPack() {
+        guard let url = importPresenter.chooseCharacterPack(
+            title: "Choose a .schneerunner Character Pack"
+        ) else {
+            return
+        }
+
+        do {
+            let library = try characterLibrary.library(
+                fromCharacterPack: url
+            )
+            play(library)
+
+            do {
+                let asset = try characterLibrary.persistCharacterPack(
+                    sourceURL: url
+                )
+                characterLibrary.rememberSelection(asset)
+                refreshRecentCharactersMenu()
+            } catch {
+                importPresenter.presentPersistenceWarning(error)
+            }
+        } catch {
+            importPresenter.presentLoadError(error)
+        }
+    }
+
+    func loadRecentCharacter(id: UUID) {
         do {
             let asset = try characterLibrary.asset(id: id)
-            let animation = try characterLibrary.animation(for: asset)
-            play(animation)
+            let library = try characterLibrary.library(for: asset)
+            play(library)
             characterLibrary.rememberSelection(asset)
         } catch {
             importPresenter.presentLoadError(error)
@@ -230,7 +262,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func refreshRecentCharactersMenu() {
+    func refreshRecentCharactersMenu() {
         do {
             let assets = try characterLibrary.recentAssets()
             menuController.setRecentCharacters(assets)
@@ -239,34 +271,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func restoreLastCharacter() {
+    func restoreLastCharacter() {
         do {
             guard let asset = try characterLibrary.lastSelectedAsset() else {
                 return
             }
 
-            let animation = try characterLibrary.animation(for: asset)
-            play(animation)
+            let library = try characterLibrary.library(for: asset)
+            play(library)
         } catch {
             characterLibrary.clearLastSelection()
         }
     }
+}
 
-    private func play(frames: [NSImage]) throws {
+private extension AppDelegate {
+    func play(frames: [NSImage]) throws {
         let animation = try LoadedAnimation.uniform(
             frames: frames
         )
         play(animation)
     }
 
-    private func play(_ animation: LoadedAnimation) {
-        let library = CharacterAnimationLibrary.single(
-            animation: animation
+    func play(_ animation: LoadedAnimation) {
+        play(
+            CharacterAnimationLibrary.single(
+                animation: animation
+            )
         )
+    }
+
+    func play(_ library: CharacterAnimationLibrary) {
         characterPlaybackController.install(library)
     }
 
-    private func toggleCPUAdaptiveSpeed() {
+    func toggleCPUAdaptiveSpeed() {
         isCPUAdaptiveSpeedEnabled.toggle()
         menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
 
@@ -283,21 +322,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshCPUStatus()
     }
 
-    private func changeAnimationSpeed(_ framesPerSecond: Double) {
+    func changeAnimationSpeed(_ framesPerSecond: Double) {
         isCPUAdaptiveSpeedEnabled = false
         menuController.setAdaptiveSpeedEnabled(false)
         animationController.setFramesPerSecond(framesPerSecond)
         refreshCPUStatus()
     }
 
-    private static func playbackRateLabel(_ value: Double) -> String {
+    static func playbackRateLabel(_ value: Double) -> String {
         String(
             format: "%.2g×",
             value
         )
     }
 
-    private static func menuBarImage(from source: NSImage) -> NSImage {
+    static func menuBarImage(from source: NSImage) -> NSImage {
         let image = source.copy() as? NSImage ?? source
         let sourceWidth = max(source.size.width, 1)
         let sourceHeight = max(source.size.height, 1)

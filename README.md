@@ -28,9 +28,10 @@ The current vertical slice supports:
 - hysteretic CPU-to-animation-speed mapping
 - CPU-derived idle / walk / run / dash / sprint character states
 - state-aware animation lookup with deterministic default-animation fallback
+- portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - local-only operation with no network access
 
-Multi-state character packs, additional animated image formats, and launch-at-login are intentionally deferred to later changes.
+Additional character-pack clip kinds, additional animated image formats, export tooling, and launch-at-login are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -71,7 +72,15 @@ Current target mapping:
 
 Threshold transitions include a small hysteresis margin.
 
-The state and playback rate are separate values. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. A future multi-state character pack can provide exact animations for idle, walk, run, dash, and sprint without changing the CPU policy or renderer.
+The state and playback rate are separate values. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. Character packs can provide exact animations for idle, walk, run, dash, and sprint without changing the CPU policy or renderer.
+
+## Character Pack v1
+
+Choose **Load Character Pack…** to import a directory ending in `.schneerunner`. A pack can provide separate clips for idle, walk, run, dash, and sprint. Missing states fall back to the pack's declared default state.
+
+Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, and GIF clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible. A pack is capped at 240 decoded frames and 32 million decoded pixels across all state clips.
+
+See [docs/CHARACTER_PACK.md](docs/CHARACTER_PACK.md) for the manifest and layout specification.
 
 ## GIF format
 
@@ -129,7 +138,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. portable character-pack format with authored state-specific clips
+1. character-pack export tooling and builder UI
 2. APNG / WebP animation import
 3. battery, memory, build, and local event triggers
 4. generalized trigger priority and state overrides

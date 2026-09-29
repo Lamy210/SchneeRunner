@@ -112,8 +112,10 @@ final class ProfileMetadataTests: XCTestCase {
 
         XCTAssertThrowsError(try ProfileMetadata.decode(Data(json.utf8)))
     }
+}
 
-    private func makeControlledProfile(appearance: String = "light") -> ControlledProfile {
+private extension ProfileMetadataTests {
+    func makeControlledProfile(appearance: String = "light") -> ControlledProfile {
         ControlledProfile(
             runnerFamily: "macos-26",
             architecture: "arm64",
