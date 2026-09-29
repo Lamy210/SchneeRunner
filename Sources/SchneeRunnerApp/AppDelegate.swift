@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureMenuCallbacks()
         configureCPUMonitor()
         refreshRecentCharactersMenu()
+        restoreLastCharacter()
         cpuMonitor.start()
     }
 
@@ -127,10 +128,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             animationController.replaceFrames(frames)
 
             do {
-                _ = try characterLibrary.persist(
+                let asset = try characterLibrary.persist(
                     sourceURL: url,
                     kind: kind
                 )
+                characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
                 presentPersistenceWarning(error)
@@ -145,6 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let asset = try characterLibrary.asset(id: id)
             let frames = try characterLibrary.frames(for: asset)
             animationController.replaceFrames(frames)
+            characterLibrary.rememberSelection(asset)
         } catch {
             presentLoadError(error)
             refreshRecentCharactersMenu()
@@ -157,6 +160,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menuController.setRecentCharacters(assets)
         } catch {
             menuController.setRecentCharactersUnavailable()
+        }
+    }
+
+    private func restoreLastCharacter() {
+        do {
+            guard let asset = try characterLibrary.lastSelectedAsset() else {
+                return
+            }
+
+            let frames = try characterLibrary.frames(for: asset)
+            animationController.replaceFrames(frames)
+        } catch {
+            characterLibrary.clearLastSelection()
         }
     }
 
