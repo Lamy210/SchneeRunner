@@ -149,15 +149,14 @@ final class CharacterLibraryController {
     func library(
         for asset: StoredCharacterAsset
     ) throws -> CharacterAnimationLibrary {
-        switch asset.kind {
-        case .characterPack:
-            try packStore.load(for: asset).library
-        case .singleImage, .spriteSheet4x2, .pngSequence, .gif:
-            let animation = try animation(for: asset)
-            CharacterAnimationLibrary.single(
-                animation: animation
-            )
+        if asset.kind == .characterPack {
+            return try packStore.load(for: asset).library
         }
+
+        let animation = try animation(for: asset)
+        return CharacterAnimationLibrary.single(
+            animation: animation
+        )
     }
 
     func asset(id: UUID) throws -> StoredCharacterAsset {
