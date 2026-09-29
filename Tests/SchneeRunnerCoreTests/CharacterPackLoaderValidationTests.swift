@@ -209,6 +209,9 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
         }
     }
 
+}
+
+final class CharacterPackLoaderPolicyTests: XCTestCase {
     func testRejectsDuplicateState() throws {
         let fixture = try makePackFixture()
         defer { fixture.cleanup() }
