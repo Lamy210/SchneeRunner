@@ -208,7 +208,6 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
             )
         }
     }
-
 }
 
 final class CharacterPackLoaderPolicyTests: XCTestCase {
