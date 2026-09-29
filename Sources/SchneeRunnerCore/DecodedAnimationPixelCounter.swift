@@ -19,15 +19,13 @@ enum DecodedAnimationPixelCounter {
             lhs.pixelsWide * lhs.pixelsHigh
                 < rhs.pixelsWide * rhs.pixelsHigh
         }
-        if
-            let representation,
-            representation.pixelsWide > 0,
-            representation.pixelsHigh > 0
-        {
-            return (
-                representation.pixelsWide,
-                representation.pixelsHigh
-            )
+        if let representation {
+            let width = representation.pixelsWide
+            let height = representation.pixelsHigh
+
+            if width > 0, height > 0 {
+                return (width, height)
+            }
         }
 
         return (
