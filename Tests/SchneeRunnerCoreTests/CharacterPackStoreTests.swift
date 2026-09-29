@@ -72,6 +72,10 @@ final class CharacterPackStoreTests: XCTestCase {
             .appendingPathComponent("idle.gif")
         try writeGIF(to: idleGIF)
 
+        let walkURL = fixture.packageURL
+            .appendingPathComponent("walk.png")
+        try writePNG(to: walkURL)
+
         let runDirectory = fixture.packageURL
             .appendingPathComponent("run", isDirectory: true)
         try FileManager.default.createDirectory(
@@ -97,6 +101,11 @@ final class CharacterPackStoreTests: XCTestCase {
                         state: .idle,
                         kind: .gif,
                         path: "idle.gif"
+                    ),
+                    CharacterPackClip(
+                        state: .walk,
+                        kind: .singleImage,
+                        path: "walk.png"
                     ),
                     CharacterPackClip(
                         state: .run,
@@ -129,7 +138,7 @@ final class CharacterPackStoreTests: XCTestCase {
         )
         XCTAssertEqual(
             library.availableStates,
-            [.idle, .run]
+            [.idle, .walk, .run]
         )
         XCTAssertEqual(
             library.resolve(requestedState: .sprint).resolvedState,
@@ -158,6 +167,13 @@ final class CharacterPackStoreTests: XCTestCase {
             FileManager.default.fileExists(
                 atPath: ownedPackage
                     .appendingPathComponent("clips/idle/source.gif")
+                    .path
+            )
+        )
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: ownedPackage
+                    .appendingPathComponent("clips/walk/source.png")
                     .path
             )
         )
