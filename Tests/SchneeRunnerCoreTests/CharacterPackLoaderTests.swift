@@ -13,6 +13,10 @@ final class CharacterPackLoaderTests: XCTestCase {
             .appendingPathComponent("idle.gif")
         try writeGIF(to: idleURL)
 
+        let walkURL = fixture.packageURL
+            .appendingPathComponent("walk.png")
+        try writePNG(to: walkURL)
+
         let runDirectory = fixture.packageURL
             .appendingPathComponent("run", isDirectory: true)
         try FileManager.default.createDirectory(
@@ -37,6 +41,11 @@ final class CharacterPackLoaderTests: XCTestCase {
                         path: "idle.gif"
                     ),
                     CharacterPackClip(
+                        state: .walk,
+                        kind: .singleImage,
+                        path: "walk.png"
+                    ),
+                    CharacterPackClip(
                         state: .run,
                         kind: .pngSequence,
                         path: "run"
@@ -52,7 +61,7 @@ final class CharacterPackLoaderTests: XCTestCase {
 
         XCTAssertEqual(
             library.availableStates,
-            [.idle, .run]
+            [.idle, .walk, .run]
         )
         XCTAssertEqual(
             library.resolve(requestedState: .idle).resolvedState,
@@ -61,6 +70,47 @@ final class CharacterPackLoaderTests: XCTestCase {
         XCTAssertEqual(
             library.resolve(requestedState: .sprint).resolvedState,
             .run
+        )
+    }
+
+    func testLoadsSpriteSheetClip() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let spriteURL = fixture.packageURL
+            .appendingPathComponent("run.png")
+        try writePNG(
+            width: 8,
+            height: 4,
+            to: spriteURL
+        )
+        try writeManifest(
+            CharacterPackManifest(
+                name: "Sprite Runner",
+                defaultState: .run,
+                clips: [
+                    CharacterPackClip(
+                        state: .run,
+                        kind: .spriteSheet4x2,
+                        path: "run.png"
+                    )
+                ]
+            ),
+            to: fixture.packageURL
+        )
+
+        let library = try CharacterPackLoader().load(
+            from: fixture.packageURL
+        )
+
+        XCTAssertEqual(
+            library.availableStates,
+            [.run]
+        )
+        XCTAssertEqual(
+            library.resolve(requestedState: .run)
+                .animation.frames.count,
+            8
         )
     }
 
@@ -317,7 +367,11 @@ final class CharacterPackLoaderTests: XCTestCase {
         XCTAssertTrue(CGImageDestinationFinalize(destination))
     }
 
-    private func writePNG(to url: URL) throws {
+    private func writePNG(
+        width: Int = 2,
+        height: Int = 2,
+        to url: URL
+    ) throws {
         let destination = try XCTUnwrap(
             CGImageDestinationCreateWithURL(
                 url as CFURL,
@@ -326,7 +380,11 @@ final class CharacterPackLoaderTests: XCTestCase {
                 nil
             )
         )
-        let image = try makeImage(value: 128)
+        let image = try makeImage(
+            value: 128,
+            width: width,
+            height: height
+        )
         CGImageDestinationAddImage(
             destination,
             image,
@@ -335,10 +393,14 @@ final class CharacterPackLoaderTests: XCTestCase {
         XCTAssertTrue(CGImageDestinationFinalize(destination))
     }
 
-    private func makeImage(value: UInt8) throws -> CGImage {
+    private func makeImage(
+        value: UInt8,
+        width: Int = 2,
+        height: Int = 2
+    ) throws -> CGImage {
         let bytes = Data(
             repeating: value,
-            count: 2 * 2 * 4
+            count: width * height * 4
         )
         let provider = try XCTUnwrap(
             CGDataProvider(data: bytes as CFData)
@@ -346,11 +408,11 @@ final class CharacterPackLoaderTests: XCTestCase {
 
         return try XCTUnwrap(
             CGImage(
-                width: 2,
-                height: 2,
+                width: width,
+                height: height,
                 bitsPerComponent: 8,
                 bitsPerPixel: 32,
-                bytesPerRow: 2 * 4,
+                bytesPerRow: width * 4,
                 space: CGColorSpaceCreateDeviceRGB(),
                 bitmapInfo: CGBitmapInfo(
                     rawValue: CGImageAlphaInfo.last.rawValue
