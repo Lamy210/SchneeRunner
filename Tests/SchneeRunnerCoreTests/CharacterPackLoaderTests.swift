@@ -64,6 +64,57 @@ final class CharacterPackLoaderTests: XCTestCase {
         )
     }
 
+    func testRejectsWrongPackageExtension() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let wrongURL = fixture.rootURL
+            .appendingPathComponent("Wrong.pack", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: wrongURL,
+            withIntermediateDirectories: true
+        )
+
+        XCTAssertThrowsError(
+            try CharacterPackLoader().validatedManifest(
+                from: wrongURL
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackLoaderError,
+                .invalidPackageExtension("pack")
+            )
+        }
+    }
+
+    func testRejectsOversizedManifest() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let manifestURL = fixture.packageURL.appendingPathComponent(
+            CharacterPackLoader.manifestFileName
+        )
+        try Data(repeating: 0x41, count: 32).write(
+            to: manifestURL
+        )
+
+        XCTAssertThrowsError(
+            try CharacterPackLoader(
+                maximumManifestBytes: 16
+            ).validatedManifest(
+                from: fixture.packageURL
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackLoaderError,
+                .manifestTooLarge(
+                    actual: 32,
+                    maximum: 16
+                )
+            )
+        }
+    }
+
     func testRejectsParentTraversalPath() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
