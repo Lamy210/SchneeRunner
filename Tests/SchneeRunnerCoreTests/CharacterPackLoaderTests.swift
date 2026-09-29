@@ -58,6 +58,9 @@ final class CharacterPackLoaderTests: XCTestCase {
         )
     }
 
+}
+
+final class CharacterPackLoaderValidationTests: XCTestCase {
     func testRejectsWrongPackageExtension() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
@@ -261,7 +264,10 @@ final class CharacterPackLoaderTests: XCTestCase {
         }
     }
 
-    private func prepareMixedStatePack(
+}
+
+private extension CharacterPackLoaderTests {
+    func prepareMixedStatePack(
         _ fixture: PackFixture
     ) throws {
         let idleURL = fixture.packageURL
