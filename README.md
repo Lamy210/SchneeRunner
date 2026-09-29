@@ -18,6 +18,7 @@ The current vertical slice supports:
 - 4x2 sprite sheets with 8 frames
 - persistent local character library under Application Support
 - recent-character reopening from the menu
+- automatic restoration of the last selected character on launch
 - non-even pixel dimensions such as 1774x887
 - manual 6 / 8 / 12 / 18 / 24 FPS playback
 - system CPU usage sampling
@@ -44,7 +45,7 @@ SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
 Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, or choose **Load 4x2 Sprite Sheet…** for authored animation frames.
 
-Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
+Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
 
 CPU adaptive speed is enabled by default. Selecting a manual FPS disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again.
 
