@@ -6,7 +6,7 @@ import XCTest
 
 final class CharacterPackLoaderTests: XCTestCase {
     func testLoadsMixedStateClipsAndResolvesFallback() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
         try prepareMixedStatePack(fixture)
@@ -18,17 +18,17 @@ final class CharacterPackLoaderTests: XCTestCase {
     }
 
     func testLoadsSpriteSheetClip() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
         let spriteURL = fixture.packageURL
             .appendingPathComponent("run.png")
-        try writePNG(
+        try writeTestPNG(
             width: 8,
             height: 4,
             to: spriteURL
         )
-        try writeManifest(
+        try writePackManifest(
             CharacterPackManifest(
                 name: "Sprite Runner",
                 defaultState: .run,
@@ -57,12 +57,11 @@ final class CharacterPackLoaderTests: XCTestCase {
             8
         )
     }
-
 }
 
 final class CharacterPackLoaderValidationTests: XCTestCase {
     func testRejectsWrongPackageExtension() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
         let wrongURL = fixture.rootURL
@@ -85,7 +84,7 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
     }
 
     func testRejectsOversizedManifest() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
         let manifestURL = fixture.packageURL.appendingPathComponent(
@@ -113,10 +112,10 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
     }
 
     func testRejectsParentTraversalPath() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
-        try writeManifest(
+        try writePackManifest(
             CharacterPackManifest(
                 name: "Traversal",
                 defaultState: .run,
@@ -144,7 +143,7 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
     }
 
     func testRejectsIntermediateSymlink() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
         let externalDirectory = fixture.rootURL
@@ -155,7 +154,7 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
         )
         let externalGIF = externalDirectory
             .appendingPathComponent("run.gif")
-        try writeGIF(to: externalGIF)
+        try writeTestGIF(to: externalGIF)
 
         let linkedDirectory = fixture.packageURL
             .appendingPathComponent("linked", isDirectory: true)
@@ -164,7 +163,7 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
             withDestinationURL: externalDirectory
         )
 
-        try writeManifest(
+        try writePackManifest(
             CharacterPackManifest(
                 name: "Symlink",
                 defaultState: .run,
@@ -198,10 +197,10 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
     }
 
     func testRejectsDuplicateState() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
-        try writeManifest(
+        try writePackManifest(
             CharacterPackManifest(
                 name: "Duplicate",
                 defaultState: .run,
@@ -234,10 +233,10 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
     }
 
     func testRejectsMissingDefaultStateClip() throws {
-        let fixture = try makeFixture()
+        let fixture = try makePackFixture()
         defer { fixture.cleanup() }
 
-        try writeManifest(
+        try writePackManifest(
             CharacterPackManifest(
                 name: "Missing Default",
                 defaultState: .run,
@@ -263,7 +262,6 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
             )
         }
     }
-
 }
 
 private extension CharacterPackLoaderTests {
@@ -272,11 +270,11 @@ private extension CharacterPackLoaderTests {
     ) throws {
         let idleURL = fixture.packageURL
             .appendingPathComponent("idle.gif")
-        try writeGIF(to: idleURL)
+        try writeTestGIF(to: idleURL)
 
         let walkURL = fixture.packageURL
             .appendingPathComponent("walk.png")
-        try writePNG(to: walkURL)
+        try writeTestPNG(to: walkURL)
 
         let runDirectory = fixture.packageURL
             .appendingPathComponent("run", isDirectory: true)
@@ -284,14 +282,14 @@ private extension CharacterPackLoaderTests {
             at: runDirectory,
             withIntermediateDirectories: true
         )
-        try writePNG(
+        try writeTestPNG(
             to: runDirectory.appendingPathComponent("frame1.png")
         )
-        try writePNG(
+        try writeTestPNG(
             to: runDirectory.appendingPathComponent("frame2.png")
         )
 
-        try writeManifest(
+        try writePackManifest(
             CharacterPackManifest(
                 name: "Test Runner",
                 defaultState: .run,
@@ -334,119 +332,121 @@ private extension CharacterPackLoaderTests {
         )
     }
 
-    private func makeFixture() throws -> PackFixture {
-        let rootURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let packageURL = rootURL
-            .appendingPathComponent("Test.schneerunner", isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: packageURL,
-            withIntermediateDirectories: true
-        )
 
-        return PackFixture(
-            rootURL: rootURL,
-            packageURL: packageURL
-        )
-    }
+}
 
-    private func writeManifest(
-        _ manifest: CharacterPackManifest,
-        to packageURL: URL
-    ) throws {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(manifest).write(
-            to: packageURL.appendingPathComponent(
-                CharacterPackLoader.manifestFileName
-            )
-        )
-    }
+private func makePackFixture() throws -> PackFixture {
+    let rootURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let packageURL = rootURL
+        .appendingPathComponent("Test.schneerunner", isDirectory: true)
+    try FileManager.default.createDirectory(
+        at: packageURL,
+        withIntermediateDirectories: true
+    )
 
-    private func writeGIF(to url: URL) throws {
-        let destination = try XCTUnwrap(
-            CGImageDestinationCreateWithURL(
-                url as CFURL,
-                UTType.gif.identifier as CFString,
-                2,
-                nil
-            )
-        )
+    return PackFixture(
+        rootURL: rootURL,
+        packageURL: packageURL
+    )
+}
 
-        for value in [UInt8(64), UInt8(192)] {
-            let image = try makeImage(value: value)
-            let properties = [
-                kCGImagePropertyGIFDictionary: [
-                    kCGImagePropertyGIFDelayTime: 0.1
-                ]
-            ] as CFDictionary
-            CGImageDestinationAddImage(
-                destination,
-                image,
-                properties
-            )
-        }
-
-        XCTAssertTrue(CGImageDestinationFinalize(destination))
-    }
-
-    private func writePNG(
-        width: Int = 2,
-        height: Int = 2,
-        to url: URL
-    ) throws {
-        let destination = try XCTUnwrap(
-            CGImageDestinationCreateWithURL(
-                url as CFURL,
-                UTType.png.identifier as CFString,
-                1,
-                nil
-            )
+private func writePackManifest(
+    _ manifest: CharacterPackManifest,
+    to packageURL: URL
+) throws {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    try encoder.encode(manifest).write(
+        to: packageURL.appendingPathComponent(
+            CharacterPackLoader.manifestFileName
         )
-        let image = try makeImage(
-            value: 128,
-            width: width,
-            height: height
+    )
+}
+
+private func writeTestGIF(to url: URL) throws {
+    let destination = try XCTUnwrap(
+        CGImageDestinationCreateWithURL(
+            url as CFURL,
+            UTType.gif.identifier as CFString,
+            2,
+            nil
         )
+    )
+
+    for value in [UInt8(64), UInt8(192)] {
+        let image = try makeTestImage(value: value)
+        let properties = [
+            kCGImagePropertyGIFDictionary: [
+                kCGImagePropertyGIFDelayTime: 0.1
+            ]
+        ] as CFDictionary
         CGImageDestinationAddImage(
             destination,
             image,
+            properties
+        )
+    }
+
+    XCTAssertTrue(CGImageDestinationFinalize(destination))
+}
+
+private func writeTestPNG(
+    width: Int = 2,
+    height: Int = 2,
+    to url: URL
+) throws {
+    let destination = try XCTUnwrap(
+        CGImageDestinationCreateWithURL(
+            url as CFURL,
+            UTType.png.identifier as CFString,
+            1,
             nil
         )
-        XCTAssertTrue(CGImageDestinationFinalize(destination))
-    }
+    )
+    let image = try makeTestImage(
+        value: 128,
+        width: width,
+        height: height
+    )
+    CGImageDestinationAddImage(
+        destination,
+        image,
+        nil
+    )
+    XCTAssertTrue(CGImageDestinationFinalize(destination))
+}
 
-    private func makeImage(
-        value: UInt8,
-        width: Int = 2,
-        height: Int = 2
-    ) throws -> CGImage {
-        let bytes = Data(
-            repeating: value,
-            count: width * height * 4
-        )
-        let provider = try XCTUnwrap(
-            CGDataProvider(data: bytes as CFData)
-        )
+private func makeTestImage(
+    value: UInt8,
+    width: Int = 2,
+    height: Int = 2
+) throws -> CGImage {
+    let bytes = Data(
+        repeating: value,
+        count: width * height * 4
+    )
+    let provider = try XCTUnwrap(
+        CGDataProvider(data: bytes as CFData)
+    )
 
-        return try XCTUnwrap(
-            CGImage(
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bitsPerPixel: 32,
-                bytesPerRow: width * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGBitmapInfo(
-                    rawValue: CGImageAlphaInfo.last.rawValue
-                ),
-                provider: provider,
-                decode: nil,
-                shouldInterpolate: false,
-                intent: .defaultIntent
-            )
+    return try XCTUnwrap(
+        CGImage(
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGBitmapInfo(
+                rawValue: CGImageAlphaInfo.last.rawValue
+            ),
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
         )
-    }
+    )
 }
 
 private struct PackFixture {
