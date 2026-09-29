@@ -4,6 +4,7 @@ import SchneeRunnerCore
 @MainActor
 final class CharacterLibraryController {
     private let store: CharacterAssetStore
+    private let sequenceStore: PNGSequenceAssetStore
     private let selectionStore: CharacterSelectionStore
 
     init(
@@ -16,11 +17,16 @@ final class CharacterLibraryController {
             in: .userDomainMask
         ).first ?? fileManager.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support", isDirectory: true)
+        let rootDirectory = applicationSupportDirectory
+            .appendingPathComponent("SchneeRunner", isDirectory: true)
+            .appendingPathComponent("Characters", isDirectory: true)
 
         store = CharacterAssetStore(
-            rootDirectory: applicationSupportDirectory
-                .appendingPathComponent("SchneeRunner", isDirectory: true)
-                .appendingPathComponent("Characters", isDirectory: true),
+            rootDirectory: rootDirectory,
+            fileManager: fileManager
+        )
+        sequenceStore = PNGSequenceAssetStore(
+            rootDirectory: rootDirectory,
             fileManager: fileManager
         )
     }
@@ -36,7 +42,13 @@ final class CharacterLibraryController {
             try SpriteSheetLoader(
                 grid: SpriteSheetGrid(columns: 4, rows: 2)
             ).loadFrames(from: sourceURL)
+        case .pngSequence:
+            throw CharacterAssetStoreError.sequenceRequiresMultipleSources
         }
+    }
+
+    func frames(fromPNGSequence sourceURLs: [URL]) throws -> [NSImage] {
+        try PNGSequenceLoader().frames(from: sourceURLs)
     }
 
     func persist(
@@ -49,16 +61,31 @@ final class CharacterLibraryController {
         )
     }
 
+    func persistPNGSequence(
+        sourceURLs: [URL]
+    ) throws -> StoredCharacterAsset {
+        try sequenceStore.importSequence(from: sourceURLs)
+    }
+
     func recentAssets(limit: Int = 8) throws -> [StoredCharacterAsset] {
         let assets = try store.listAssets()
         return Array(assets.prefix(max(limit, 0)))
     }
 
     func frames(for asset: StoredCharacterAsset) throws -> [NSImage] {
-        try frames(
-            from: store.sourceURL(for: asset),
-            kind: asset.kind
-        )
+        switch asset.kind {
+        case .singleImage, .spriteSheet4x2:
+            let sourceURL = try store.sourceURL(for: asset)
+            return try frames(
+                from: sourceURL,
+                kind: asset.kind
+            )
+        case .pngSequence:
+            let sourceURLs = try sequenceStore.sourceURLs(for: asset)
+            return try PNGSequenceLoader().frames(
+                from: sourceURLs
+            )
+        }
     }
 
     func asset(id: UUID) throws -> StoredCharacterAsset {
