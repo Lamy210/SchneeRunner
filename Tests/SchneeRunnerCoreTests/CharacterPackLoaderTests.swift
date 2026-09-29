@@ -83,6 +83,76 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
         }
     }
 
+    func testRejectsSymlinkedPackageRoot() throws {
+        let fixture = try makePackFixture()
+        defer { fixture.cleanup() }
+
+        let externalPackage = fixture.rootURL
+            .appendingPathComponent("External.schneerunner", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: externalPackage,
+            withIntermediateDirectories: true
+        )
+
+        let linkedPackage = fixture.rootURL
+            .appendingPathComponent("Linked.schneerunner", isDirectory: true)
+        try FileManager.default.createSymbolicLink(
+            at: linkedPackage,
+            withDestinationURL: externalPackage
+        )
+
+        XCTAssertThrowsError(
+            try CharacterPackLoader().validatedManifest(
+                from: linkedPackage
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackLoaderError,
+                .symbolicLinkNotAllowed(linkedPackage)
+            )
+        }
+    }
+
+    func testRejectsUnsafePathForms() throws {
+        let fixture = try makePackFixture()
+        defer { fixture.cleanup() }
+
+        let unsafePaths = [
+            "/tmp/run.gif",
+            "./run.gif",
+            "clips\\run.gif",
+            ""
+        ]
+
+        for path in unsafePaths {
+            try writePackManifest(
+                CharacterPackManifest(
+                    name: "Unsafe Path",
+                    defaultState: .run,
+                    clips: [
+                        CharacterPackClip(
+                            state: .run,
+                            kind: .gif,
+                            path: path
+                        )
+                    ]
+                ),
+                to: fixture.packageURL
+            )
+
+            XCTAssertThrowsError(
+                try CharacterPackLoader().validatedManifest(
+                    from: fixture.packageURL
+                )
+            ) { error in
+                XCTAssertEqual(
+                    error as? CharacterPackLoaderError,
+                    .unsafeRelativePath(path)
+                )
+            }
+        }
+    }
+
     func testRejectsOversizedManifest() throws {
         let fixture = try makePackFixture()
         defer { fixture.cleanup() }
