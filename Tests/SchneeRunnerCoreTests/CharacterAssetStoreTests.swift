@@ -129,6 +129,27 @@ final class CharacterAssetStoreTests: XCTestCase {
         }
     }
 
+    func testRejectsSequenceKindInSingleSourceImporter() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try pngData().write(to: fixture.sourceURL)
+
+        XCTAssertThrowsError(
+            try fixture.store.importAsset(
+                from: fixture.sourceURL,
+                kind: .pngSequence
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterAssetStoreError,
+                .sequenceRequiresMultipleSources
+            )
+        }
+    }
+
     func testRejectsNonPNGSource() throws {
         let fixture = try makeFixture(fileExtension: "jpg")
         defer {
@@ -151,10 +172,10 @@ final class CharacterAssetStoreTests: XCTestCase {
     }
 
     private func pngData() throws -> Data {
-        let encoded = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk" +
-            "+A8AAQUBAScY42YAAAAASUVORK5CYII="
-        return try XCTUnwrap(
-            Data(base64Encoded: encoded)
+        try XCTUnwrap(
+            Data(
+                base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+            )
         )
     }
 
