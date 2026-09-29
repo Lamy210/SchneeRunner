@@ -156,7 +156,8 @@ Default pack-wide limits:
 - maximum total file bytes: 128 MiB;
 - maximum file count: 650;
 - maximum display-name length: 80 characters;
-- maximum clips: five.
+- maximum clips: five;
+- maximum retained decoded pixels across all clips: 32 million.
 
 Each referenced clip must also satisfy the existing validation policy for its own format.
 
