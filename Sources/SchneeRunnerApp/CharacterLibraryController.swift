@@ -26,9 +26,9 @@ final class CharacterLibraryController {
     ) throws -> [NSImage] {
         switch kind {
         case .singleImage:
-            return try ProceduralImageFrameGenerator().frames(from: sourceURL)
+            try ProceduralImageFrameGenerator().frames(from: sourceURL)
         case .spriteSheet4x2:
-            return try SpriteSheetLoader(
+            try SpriteSheetLoader(
                 grid: SpriteSheetGrid(columns: 4, rows: 2)
             ).loadFrames(from: sourceURL)
         }
