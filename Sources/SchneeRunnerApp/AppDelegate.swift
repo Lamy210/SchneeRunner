@@ -1,6 +1,5 @@
 import AppKit
 import SchneeRunnerCore
-import UniformTypeIdentifiers
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -8,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let cpuMonitor = CPUMonitor()
     private let characterLibrary = CharacterLibraryController()
     private let characterStatePolicy = CharacterStatePolicy()
+    private let importPresenter = CharacterImportPresenter()
     private let menuController = StatusMenuController()
 
     private lazy var characterPlaybackController = CharacterPlaybackController(
@@ -138,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         kind: CharacterAssetKind,
         panelTitle: String
     ) {
-        guard let url = choosePNG(title: panelTitle) else {
+        guard let url = importPresenter.choosePNG(title: panelTitle) else {
             return
         }
 
@@ -157,15 +157,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
-                presentPersistenceWarning(error)
+                importPresenter.presentPersistenceWarning(error)
             }
         } catch {
-            presentLoadError(error)
+            importPresenter.presentLoadError(error)
         }
     }
 
     private func loadPNGSequence() {
-        guard let urls = choosePNGs(
+        guard let urls = importPresenter.choosePNGs(
             title: "Choose PNG Sequence Frames"
         ) else {
             return
@@ -184,15 +184,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
-                presentPersistenceWarning(error)
+                importPresenter.presentPersistenceWarning(error)
             }
         } catch {
-            presentLoadError(error)
+            importPresenter.presentLoadError(error)
         }
     }
 
     private func loadGIF() {
-        guard let url = chooseGIF(
+        guard let url = importPresenter.chooseGIF(
             title: "Choose an Animated GIF"
         ) else {
             return
@@ -211,10 +211,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
-                presentPersistenceWarning(error)
+                importPresenter.presentPersistenceWarning(error)
             }
         } catch {
-            presentLoadError(error)
+            importPresenter.presentLoadError(error)
         }
     }
 
@@ -225,7 +225,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             play(animation)
             characterLibrary.rememberSelection(asset)
         } catch {
-            presentLoadError(error)
+            importPresenter.presentLoadError(error)
             refreshRecentCharactersMenu()
         }
     }
@@ -266,51 +266,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         characterPlaybackController.install(library)
     }
 
-    private func choosePNG(title: String) -> URL? {
-        let panel = NSOpenPanel()
-        panel.title = title
-        panel.prompt = "Load"
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.png]
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-
-        return panel.url
-    }
-
-    private func choosePNGs(title: String) -> [URL]? {
-        let panel = NSOpenPanel()
-        panel.title = title
-        panel.prompt = "Load"
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [.png]
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-
-        return panel.urls
-    }
-
-    private func chooseGIF(title: String) -> URL? {
-        let panel = NSOpenPanel()
-        panel.title = title
-        panel.prompt = "Load"
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.gif]
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-
-        return panel.url
-    }
-
     private func toggleCPUAdaptiveSpeed() {
         isCPUAdaptiveSpeedEnabled.toggle()
         menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
@@ -333,22 +288,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.setAdaptiveSpeedEnabled(false)
         animationController.setFramesPerSecond(framesPerSecond)
         refreshCPUStatus()
-    }
-
-    private func presentLoadError(_ error: Error) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Could not load animation"
-        alert.informativeText = error.localizedDescription
-        alert.runModal()
-    }
-
-    private func presentPersistenceWarning(_ error: Error) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Character is running, but was not saved"
-        alert.informativeText = error.localizedDescription
-        alert.runModal()
     }
 
     private static func playbackRateLabel(_ value: Double) -> String {
