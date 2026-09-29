@@ -7,6 +7,9 @@ public enum CharacterPackStoreError: Error, Equatable, LocalizedError {
     case symbolicLinkNotAllowed(URL)
     case fileSizeUnavailable(URL)
     case packageTooLarge(actual: Int, maximum: Int)
+    case invalidExportExtension(String)
+    case exportDestinationExists(URL)
+    case invalidExportDirectory(URL)
 
     public var errorDescription: String? {
         switch self {
@@ -22,6 +25,12 @@ public enum CharacterPackStoreError: Error, Equatable, LocalizedError {
             "Could not determine character pack file size: \(url.lastPathComponent)."
         case let .packageTooLarge(actual, maximum):
             "Character pack uses \(actual) bytes, exceeding the \(maximum)-byte limit."
+        case let .invalidExportExtension(value):
+            "Character pack exports must use the .schneerunner extension. Received .\(value)."
+        case let .exportDestinationExists(url):
+            "Character pack export destination already exists: \(url.lastPathComponent)."
+        case let .invalidExportDirectory(url):
+            "Character pack export directory is invalid: \(url.lastPathComponent)."
         }
     }
 }
@@ -95,22 +104,64 @@ public struct CharacterPackStore {
     public func library(
         for asset: StoredCharacterAsset
     ) throws -> CharacterAnimationLibrary {
-        guard asset.kind == .characterPack else {
-            throw CharacterPackStoreError.wrongAssetKind(asset.kind)
+        let packageURL = try storedPackageURL(for: asset)
+        return try loader.load(from: packageURL)
+    }
+
+    public func exportPack(
+        for asset: StoredCharacterAsset,
+        to destinationURL: URL
+    ) throws {
+        let fileExtension = destinationURL.pathExtension.lowercased()
+        guard fileExtension == "schneerunner" else {
+            throw CharacterPackStoreError.invalidExportExtension(
+                fileExtension
+            )
+        }
+        guard !fileManager.fileExists(atPath: destinationURL.path) else {
+            throw CharacterPackStoreError.exportDestinationExists(
+                destinationURL
+            )
         }
 
-        let directory = assetDirectory(id: asset.id)
-        guard fileManager.fileExists(atPath: directory.path) else {
-            throw CharacterPackStoreError.assetDirectoryMissing(asset.id)
-        }
-        try validateDirectory(directory)
+        let exportDirectory = destinationURL.deletingLastPathComponent()
+        try validateExportDirectory(exportDirectory)
 
-        let packageURL = directory.appendingPathComponent(
-            Self.packageDirectoryName,
+        let sourcePackageURL = try storedPackageURL(for: asset)
+        let manifest = try loader.validatedManifest(
+            from: sourcePackageURL
+        )
+        _ = try loader.load(from: sourcePackageURL)
+
+        let stagingURL = exportDirectory.appendingPathComponent(
+            ".schneerunner-export-\(UUID().uuidString).schneerunner",
             isDirectory: true
         )
-        try validateDirectory(packageURL)
-        return try loader.load(from: packageURL)
+        try? fileManager.removeItem(at: stagingURL)
+        try fileManager.createDirectory(
+            at: stagingURL,
+            withIntermediateDirectories: false
+        )
+
+        do {
+            let canonicalManifest = try canonicalizer.copyReferencedClips(
+                manifest,
+                sourcePackageURL: sourcePackageURL,
+                destinationPackageURL: stagingURL
+            )
+            try writePackManifest(
+                canonicalManifest,
+                packageURL: stagingURL
+            )
+            _ = try loader.load(from: stagingURL)
+            try fileManager.moveItem(
+                at: stagingURL,
+                to: destinationURL
+            )
+        } catch {
+            try? fileManager.removeItem(at: stagingURL)
+            throw error
+        }
     }
 
     private func persist(
@@ -200,6 +251,39 @@ public struct CharacterPackStore {
             ),
             options: .atomic
         )
+    }
+
+    private func storedPackageURL(
+        for asset: StoredCharacterAsset
+    ) throws -> URL {
+        guard asset.kind == .characterPack else {
+            throw CharacterPackStoreError.wrongAssetKind(asset.kind)
+        }
+
+        let directory = assetDirectory(id: asset.id)
+        guard fileManager.fileExists(atPath: directory.path) else {
+            throw CharacterPackStoreError.assetDirectoryMissing(asset.id)
+        }
+        try validateDirectory(directory)
+
+        let packageURL = directory.appendingPathComponent(
+            Self.packageDirectoryName,
+            isDirectory: true
+        )
+        try validateDirectory(packageURL)
+        return packageURL
+    }
+
+    private func validateExportDirectory(_ url: URL) throws {
+        let values = try url.resourceValues(
+            forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
+        )
+        guard values.isSymbolicLink != true else {
+            throw CharacterPackStoreError.symbolicLinkNotAllowed(url)
+        }
+        guard values.isDirectory == true else {
+            throw CharacterPackStoreError.invalidExportDirectory(url)
+        }
     }
 
     private static func normalizedTimestamp(_ date: Date) -> Date {
