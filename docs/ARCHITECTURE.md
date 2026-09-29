@@ -24,6 +24,9 @@ AppDelegate
      +----> NSStatusItem
      |
      +----> AnimationController
+     |            |
+     |            v
+     |      AnimationSchedule
      |
      +----> SpriteSheetLoader
      |            |
@@ -70,7 +73,8 @@ Owns deterministic and reusable domain behavior:
 - pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
 - CPU utilization smoothing;
-- utilization-to-animation-pace policy.
+- utilization-to-animation-pace policy;
+- validated animation frame timing schedules and playback-rate scaling.
 
 It must not own menu bar state, application lifecycle, timers, or macOS host-statistics calls.
 
@@ -194,7 +198,7 @@ Measure:
 
 Assets are decoded on import rather than decoded again for every displayed frame. Single-image mode renders a bounded 64-point-high working animation instead of retaining eight full-resolution copies of the source.
 
-The animation timer is not restarted when a CPU sample resolves to the already-active FPS.
+The animation timer is not restarted when a CPU sample resolves to the already-active FPS. Playback uses one-shot frame timers derived from an immutable base schedule and a separate playback-rate multiplier. Uniform frame animations use a 12 FPS reference schedule, so the existing 6 / 8 / 12 / 18 / 24 FPS controls preserve their current effective timing while authored per-frame durations can be introduced without changing the renderer.
 
 ## 8. Deferred decisions
 
