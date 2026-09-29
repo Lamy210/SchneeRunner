@@ -117,7 +117,9 @@ Character Pack v1 rejects:
 - duplicate states;
 - missing default-state clips;
 - invalid GIF or PNG Sequence resources;
-- aggregate referenced clip data above 128 MiB.
+- aggregate referenced clip data above 128 MiB;
+- more than 240 decoded frames across the pack;
+- more than 32 million decoded pixels across all state clips.
 
 Only manifest-referenced clip files are copied. Extra files in the source package are ignored.
 
