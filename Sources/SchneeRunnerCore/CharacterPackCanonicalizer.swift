@@ -158,7 +158,27 @@ struct CharacterPackCanonicalizer {
         destinationURL: URL,
         copiedBytes: inout Int
     ) throws {
-        let values = try sourceURL.resourceValues(
+        let sourceSize = try validatedFileSize(sourceURL)
+        try validateAggregateSize(
+            adding: sourceSize,
+            copiedBytes: copiedBytes
+        )
+
+        try fileManager.copyItem(
+            at: sourceURL,
+            to: destinationURL
+        )
+
+        let copiedSize = try validatedFileSize(destinationURL)
+        try validateAggregateSize(
+            adding: copiedSize,
+            copiedBytes: copiedBytes
+        )
+        copiedBytes += copiedSize
+    }
+
+    private func validatedFileSize(_ url: URL) throws -> Int {
+        let values = try url.resourceValues(
             forKeys: [
                 .fileSizeKey,
                 .isRegularFileKey,
@@ -166,16 +186,22 @@ struct CharacterPackCanonicalizer {
             ]
         )
         guard values.isSymbolicLink != true else {
-            throw CharacterPackStoreError.symbolicLinkNotAllowed(sourceURL)
+            throw CharacterPackStoreError.symbolicLinkNotAllowed(url)
         }
         guard values.isRegularFile == true else {
-            throw CharacterPackStoreError.invalidAssetDirectory(sourceURL)
+            throw CharacterPackStoreError.invalidAssetDirectory(url)
         }
         guard let fileSize = values.fileSize else {
-            throw CharacterPackStoreError.fileSizeUnavailable(
-                sourceURL
-            )
+            throw CharacterPackStoreError.fileSizeUnavailable(url)
         }
+
+        return fileSize
+    }
+
+    private func validateAggregateSize(
+        adding fileSize: Int,
+        copiedBytes: Int
+    ) throws {
         guard
             fileSize <= maximumPackageBytes,
             copiedBytes <= maximumPackageBytes - fileSize
@@ -185,11 +211,5 @@ struct CharacterPackCanonicalizer {
                 maximum: maximumPackageBytes
             )
         }
-
-        try fileManager.copyItem(
-            at: sourceURL,
-            to: destinationURL
-        )
-        copiedBytes += fileSize
     }
 }
