@@ -42,11 +42,14 @@ final class CharacterAnimationLibraryTests: XCTestCase {
     }
 
     func testAvailableStatesFollowCanonicalStateOrder() throws {
+        let sprint = try animation(frameCount: 1)
+        let idle = try animation(frameCount: 1)
+        let run = try animation(frameCount: 1)
         let library = try CharacterAnimationLibrary(
             animations: [
-                .sprint: try animation(frameCount: 1),
-                .idle: try animation(frameCount: 1),
-                .run: try animation(frameCount: 1)
+                .sprint: sprint,
+                .idle: idle,
+                .run: run
             ],
             defaultState: .run
         )
