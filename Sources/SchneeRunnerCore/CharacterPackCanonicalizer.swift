@@ -40,14 +40,13 @@ struct CharacterPackCanonicalizer {
                 withIntermediateDirectories: true
             )
 
-            canonicalClips.append(
-                try copyClip(
-                    clip,
-                    sourceURL: sourceURL,
-                    destinationDirectory: clipDirectory,
-                    copiedBytes: &copiedBytes
-                )
+            let canonicalClip = try copyClip(
+                clip,
+                sourceURL: sourceURL,
+                destinationDirectory: clipDirectory,
+                copiedBytes: &copiedBytes
             )
+            canonicalClips.append(canonicalClip)
         }
 
         return CharacterPackManifest(
