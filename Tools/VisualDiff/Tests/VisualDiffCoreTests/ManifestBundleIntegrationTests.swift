@@ -174,7 +174,9 @@ private final class RollingBundleFixture {
     func writeCurrent(_ image: PixelImage, testCase: VisualCase) throws {
         try image.writePNG(to: root.appendingPathComponent(testCase.current))
     }
+}
 
+private extension RollingBundleFixture {
     func writeBundle(
         profileFingerprint: String,
         images: [String: PixelImage]
@@ -214,7 +216,7 @@ private final class RollingBundleFixture {
         try writeJSON(bundle, to: rollingRoot.appendingPathComponent("bundle-manifest.json"))
     }
 
-    private func writeJSON(_ value: some Encodable, to url: URL) throws {
+    func writeJSON(_ value: some Encodable, to url: URL) throws {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
