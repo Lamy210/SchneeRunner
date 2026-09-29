@@ -28,9 +28,10 @@ The current vertical slice supports:
 - hysteretic CPU-to-animation-speed mapping
 - CPU-derived idle / walk / run / dash / sprint character states
 - state-aware animation lookup with deterministic default-animation fallback
+- portable .schneerunnerpack bundles with authored state-specific clips
 - local-only operation with no network access
 
-Multi-state character packs, additional animated image formats, and launch-at-login are intentionally deferred to later changes.
+Additional animated image formats, archived pack transport, and launch-at-login are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -47,7 +48,7 @@ swift run SchneeRunner
 
 SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
-Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, **Load PNG Sequence…** to select multiple authored frame PNGs, or **Load GIF…** to preserve an animated GIF's authored frame timing.
+Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, **Load PNG Sequence…** to select multiple authored frame PNGs, **Load GIF…** to preserve an animated GIF's authored frame timing, or **Load Character Pack…** for a multi-state .schneerunnerpack bundle.
 
 Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. If that stored selection can no longer be loaded, SchneeRunner clears the saved selection and continues launching with the placeholder. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
 
@@ -72,6 +73,14 @@ Current target mapping:
 Threshold transitions include a small hysteresis margin.
 
 The state and playback rate are separate values. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. A future multi-state character pack can provide exact animations for idle, walk, run, dash, and sprint without changing the CPU policy or renderer.
+
+## Character pack format
+
+A `.schneerunnerpack` is a portable directory bundle with a root `manifest.json`. It can provide separate clips for idle, walk, run, dash, and sprint while declaring one required default state for deterministic fallback.
+
+Pack clips can reuse the existing single-image, 4x2 sprite-sheet, PNG-sequence, and GIF loaders. Imported packs are copied into SchneeRunner-owned Application Support storage, participate in Recent Characters and launch restoration, and keep their state-specific animations after reopening.
+
+See [docs/CHARACTER_PACKS.md](docs/CHARACTER_PACKS.md) for the schema and safety rules.
 
 ## GIF format
 
@@ -129,10 +138,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. portable character-pack format with authored state-specific clips
-2. APNG / WebP animation import
-3. battery, memory, build, and local event triggers
-4. generalized trigger priority and state overrides
+1. APNG / WebP animation import
+2. battery, memory, build, and local event triggers
+3. generalized trigger priority and state overrides
+4. archived character-pack transport
 5. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
