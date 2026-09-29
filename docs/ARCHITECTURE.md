@@ -23,6 +23,11 @@ AppDelegate
      |
      +----> NSStatusItem
      |
+     +----> CharacterPlaybackController
+     |            |
+     |            +----> CharacterAnimationLibrary
+     |            |
+     |            v
      +----> AnimationController
      |            |
      |            v
@@ -59,6 +64,9 @@ AppDelegate
                   +----> CPUUsageCalculator
                   +----> ExponentialMovingAverage
                   +----> AdaptiveAnimationSpeedPolicy
+                               |
+                               v
+                         CharacterStatePolicy
 ```
 
 ### SchneeRunnerCore
@@ -73,6 +81,8 @@ Owns deterministic and reusable domain behavior:
 - ordered multi-file PNG sequence loading;
 - GIF frame decoding with authored per-frame timing;
 - frame/schedule pairing through `LoadedAnimation`;
+- character state modeling and CPU-pace-to-state policy;
+- state-aware animation lookup with deterministic default fallback;
 - character metadata and owned-copy persistence;
 - multi-file sequence persistence;
 - GIF owned-copy persistence;
@@ -93,6 +103,7 @@ Owns macOS integration:
 - `NSStatusItem`;
 - `NSOpenPanel`;
 - animation scheduling;
+- requested-state playback coordination;
 - Mach host CPU sampling;
 - CPU sampling timer;
 - menu-bar image sizing;
@@ -132,6 +143,17 @@ AdaptiveAnimationSpeedPolicy
 AnimationPace
           |
           v
+CharacterStatePolicy
+          |
+          v
+CharacterState
+          |
+          v
+CharacterPlaybackController
+          |
+          +----> CharacterAnimationLibrary
+          |
+          v
 AnimationController
 ```
 
@@ -164,6 +186,8 @@ CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 ```
 
 A metric provider emits values. It must not directly manipulate a renderer.
+
+Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 
 ## 5. Asset safety
 
