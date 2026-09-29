@@ -35,6 +35,11 @@ AppDelegate
      |            v
      |      ProceduralRunCycle
      |
+     +----> CharacterLibraryController
+     |            |
+     |            v
+     |      CharacterAssetStore
+     |
      +----> CPUMonitor
                   |
                   +----> SystemCPUUsageSampler
@@ -53,6 +58,7 @@ Owns deterministic and reusable domain behavior:
 - sprite-sheet decoding;
 - single-image procedural frame generation;
 - procedural run-cycle transforms;
+- character metadata and owned-copy persistence;
 - CPU tick-delta utilization calculation;
 - CPU utilization smoothing;
 - utilization-to-animation-pace policy.
@@ -143,7 +149,9 @@ A metric provider emits values. It must not directly manipulate a renderer.
 
 The current PoC reads the user-selected PNG directly and does not mutate it.
 
-Future persistent imports should copy assets only into an explicitly SchneeRunner-owned application-support directory. Source images must never be moved, renamed, overwritten, or deleted as part of import.
+Imported assets are copied into a SchneeRunner-owned Application Support directory using a staging directory followed by a final directory move. Source images are never moved, renamed, overwritten, or deleted as part of import.
+
+Each stored character uses a UUID directory containing a fixed-name source image and a JSON manifest. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running.
 
 Third-party character art is not part of the application distribution by default.
 
