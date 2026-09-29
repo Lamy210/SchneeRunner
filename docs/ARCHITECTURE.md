@@ -47,6 +47,8 @@ AppDelegate
      |
      +----> GIFAnimationLoader ----> LoadedAnimation
      |
+     +----> CharacterPackLoader ----> CharacterAnimationLibrary
+     |
      +----> CharacterLibraryController
      |            |
      |            +----> CharacterAssetStore
@@ -54,6 +56,8 @@ AppDelegate
      |            +----> PNGSequenceAssetStore
      |            |
      |            +----> GIFAssetStore
+     |            |
+     |            +----> CharacterPackStore
      |            |
      |            +----> CharacterSelectionStore
      |
@@ -81,11 +85,13 @@ Owns deterministic and reusable domain behavior:
 - ordered multi-file PNG sequence loading;
 - GIF frame decoding with authored per-frame timing;
 - frame/schedule pairing through `LoadedAnimation`;
+- portable character-pack manifest validation and state-specific clip loading;
 - character state modeling and CPU-pace-to-state policy;
 - state-aware animation lookup with deterministic default fallback;
 - character metadata and owned-copy persistence;
 - multi-file sequence persistence;
 - GIF owned-copy persistence;
+- staged character-pack owned-copy persistence;
 - last-selected character preference persistence;
 - pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
@@ -195,7 +201,7 @@ The current PoC reads the user-selected PNG directly and does not mutate it.
 
 Imported assets are copied into a SchneeRunner-owned Application Support directory using a staging directory followed by a final directory move. Source images are never moved, renamed, overwritten, or deleted as part of import.
 
-Each stored character uses a UUID directory and a JSON manifest. Single-image and sprite-sheet assets use `source.png`, GIF assets use `source.gif`, and PNG sequences use a `frames/` directory with zero-padded frame names. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running. Image imports are inspected with ImageIO before decode; type, frame count, file size, dimensions, and pixel count must satisfy the configured validation policy. PNG sequences also enforce aggregate file-byte and decoded-pixel budgets across all frames and revalidate the owned copies before the staged directory becomes visible. GIFs enforce file, frame-count, dimension, and aggregate decoded-pixel limits; the copied GIF is fully decoded before its staged directory is committed.
+Each stored character uses a UUID directory and a JSON manifest. Single-image and sprite-sheet assets use `source.png`, GIF assets use `source.gif`, PNG sequences use a `frames/` directory with zero-padded frame names, and character packs use an owned `pack.schneerunnerpack/` bundle. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running. Image imports are inspected with ImageIO before decode; type, frame count, file size, dimensions, and pixel count must satisfy the configured validation policy. PNG sequences also enforce aggregate file-byte and decoded-pixel budgets across all frames and revalidate the owned copies before the staged directory becomes visible. GIFs enforce file, frame-count, dimension, and aggregate decoded-pixel limits; the copied GIF is fully decoded before its staged directory is committed. Character packs reject unsafe relative paths and symbolic links, enforce pack-wide byte and file-count budgets, and reload the copied bundle before its staged directory is committed.
 
 Third-party character art is not part of the application distribution by default.
 
@@ -237,7 +243,7 @@ The following remain deliberately deferred:
 
 - Xcode project layout;
 - sandboxing and entitlements;
-- persistent character-pack schema;
+- archived character-pack transport;
 - APNG/WebP decoding policy;
 - launch-at-login mechanism;
 - signed/notarized release configuration;
