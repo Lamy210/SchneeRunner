@@ -315,14 +315,20 @@ public struct CharacterPackLoader {
             let decodedPixels = DecodedAnimationPixelCounter.pixels(
                 in: animation
             )
+            let maximumDecodedPixels =
+                policy.maximumTotalDecodedPixels
+            guard decodedPixels <= maximumDecodedPixels else {
+                throw CharacterPackLoaderError.decodedPixelBudgetExceeded(
+                    actual: decodedPixels,
+                    maximum: maximumDecodedPixels
+                )
+            }
             guard
-                decodedPixels <= policy.maximumTotalDecodedPixels,
-                totalDecodedPixels <=
-                    policy.maximumTotalDecodedPixels - decodedPixels
+                totalDecodedPixels <= maximumDecodedPixels - decodedPixels
             else {
                 throw CharacterPackLoaderError.decodedPixelBudgetExceeded(
                     actual: totalDecodedPixels + decodedPixels,
-                    maximum: policy.maximumTotalDecodedPixels
+                    maximum: maximumDecodedPixels
                 )
             }
 
