@@ -14,6 +14,7 @@ The current vertical slice supports:
 - Swift 6 / Swift Package Manager
 - native AppKit menu bar UI
 - local PNG import
+- single-image procedural run animation
 - 4x2 sprite sheets with 8 frames
 - non-even pixel dimensions such as 1774x887
 - manual 6 / 8 / 12 / 18 / 24 FPS playback
@@ -39,7 +40,9 @@ swift run SchneeRunner
 
 SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
-Choose **Load 4x2 Sprite Sheet…** and select a PNG.
+Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, or choose **Load 4x2 Sprite Sheet…** for authored animation frames.
+
+Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor.
 
 CPU adaptive speed is enabled by default. Selecting a manual FPS disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again.
 
@@ -95,7 +98,7 @@ SchneeRunnerApp
 SchneeRunnerCore
 ```
 
-`SchneeRunnerCore` owns deterministic sprite-sheet geometry, CPU utilization calculation, smoothing, and animation-speed policy.
+`SchneeRunnerCore` owns deterministic sprite-sheet geometry, procedural single-image frame generation, CPU utilization calculation, smoothing, and animation-speed policy.
 
 `SchneeRunnerApp` owns AppKit lifecycle, the status item, file selection, Mach CPU sampling, timers, and user-facing state.
 
