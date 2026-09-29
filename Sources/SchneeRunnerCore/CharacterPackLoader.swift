@@ -283,9 +283,36 @@ public struct CharacterPackLoader {
         )
 
         switch clip.kind {
+        case .singleImage:
+            try validateRegularNonSymlinkFile(
+                url,
+                kind: clip.kind
+            )
+            let frames = try ProceduralImageFrameGenerator()
+                .frames(from: url)
+            return try LoadedAnimation.uniform(
+                frames: frames
+            )
+
+        case .spriteSheet4x2:
+            try validateRegularNonSymlinkFile(
+                url,
+                kind: clip.kind
+            )
+            let frames = try SpriteSheetLoader(
+                grid: SpriteSheetGrid(columns: 4, rows: 2)
+            ).loadFrames(from: url)
+            return try LoadedAnimation.uniform(
+                frames: frames
+            )
+
         case .gif:
-            try validateRegularNonSymlinkFile(url)
+            try validateRegularNonSymlinkFile(
+                url,
+                kind: clip.kind
+            )
             return try GIFAnimationLoader().load(from: url)
+
         case .pngSequence:
             try validateDirectory(url)
             let urls = try fileManager.contentsOfDirectory(
@@ -340,7 +367,8 @@ public struct CharacterPackLoader {
     }
 
     private func validateRegularNonSymlinkFile(
-        _ url: URL
+        _ url: URL,
+        kind: CharacterPackClipKind
     ) throws {
         let values = try url.resourceValues(
             forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
@@ -351,7 +379,7 @@ public struct CharacterPackLoader {
         guard values.isRegularFile == true else {
             throw CharacterPackLoaderError.wrongClipResourceType(
                 path: url.lastPathComponent,
-                kind: .gif
+                kind: kind
             )
         }
     }
