@@ -173,6 +173,27 @@ final class CharacterAssetStoreTests: XCTestCase {
         }
     }
 
+    func testRejectsGIFKindInPNGStore() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try pngData().write(to: fixture.sourceURL)
+
+        XCTAssertThrowsError(
+            try fixture.store.importAsset(
+                from: fixture.sourceURL,
+                kind: .gif
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterAssetStoreError,
+                .gifRequiresDedicatedStore
+            )
+        }
+    }
+
     func testRejectsNonPNGSource() throws {
         let fixture = try makeFixture(fileExtension: "jpg")
         defer {
