@@ -124,7 +124,7 @@ final class CharacterAssetStoreTests: XCTestCase {
         ) { error in
             XCTAssertEqual(
                 error as? ImageAssetValidationError,
-                .unreadableImage(fixture.sourceURL)
+                .unsupportedContentType(nil)
             )
         }
     }
