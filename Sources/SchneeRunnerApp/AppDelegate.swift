@@ -147,7 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 from: url,
                 kind: kind
             )
-            animationController.replaceFrames(frames)
+            try play(frames: frames)
 
             do {
                 let asset = try characterLibrary.persist(
@@ -175,7 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let frames = try characterLibrary.frames(
                 fromPNGSequence: urls
             )
-            animationController.replaceFrames(frames)
+            try play(frames: frames)
 
             do {
                 let asset = try characterLibrary.persistPNGSequence(
@@ -250,6 +250,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             characterLibrary.clearLastSelection()
         }
+    }
+
+    private func play(frames: [NSImage]) throws {
+        let animation = try LoadedAnimation.uniform(
+            frames: frames
+        )
+        play(animation)
     }
 
     private func play(_ animation: LoadedAnimation) {
