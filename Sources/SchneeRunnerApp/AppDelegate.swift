@@ -7,7 +7,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let animationController = AnimationController()
     private let cpuMonitor = CPUMonitor()
     private let characterLibrary = CharacterLibraryController()
+    private let characterStatePolicy = CharacterStatePolicy()
     private let menuController = StatusMenuController()
+
+    private lazy var characterPlaybackController = CharacterPlaybackController(
+        animationController: animationController
+    )
 
     private var statusItem: NSStatusItem?
     private var latestCPUUpdate: CPUMonitor.Update?
@@ -87,7 +92,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             latestCPUUpdate = update
 
             if isCPUAdaptiveSpeedEnabled {
-                animationController.setFramesPerSecond(update.pace.framesPerSecond)
+                let state = characterStatePolicy.state(
+                    for: update.pace
+                )
+                characterPlaybackController.requestState(state)
+                animationController.setFramesPerSecond(
+                    update.pace.framesPerSecond
+                )
             }
 
             refreshCPUStatus()
@@ -108,14 +119,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let playbackRate = Self.playbackRateLabel(
             animationController.playbackRate
         )
+        let state = characterPlaybackController
+            .requestedState
+            .displayName
 
         if isCPUAdaptiveSpeedEnabled {
             menuController.setCPUStatus(
-                "CPU: \(percentage)% · \(playbackRate)"
+                "CPU: \(percentage)% · \(state) · \(playbackRate)"
             )
         } else {
             menuController.setCPUStatus(
-                "CPU: \(percentage)% · Manual \(playbackRate)"
+                "CPU: \(percentage)% · \(state) · Manual \(playbackRate)"
             )
         }
     }
@@ -188,7 +202,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let animation = try characterLibrary.animation(
                 fromGIF: url
             )
-            try play(animation)
+            play(animation)
 
             do {
                 let asset = try characterLibrary.persistGIF(
@@ -208,7 +222,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             let asset = try characterLibrary.asset(id: id)
             let animation = try characterLibrary.animation(for: asset)
-            try play(animation)
+            play(animation)
             characterLibrary.rememberSelection(asset)
         } catch {
             presentLoadError(error)
@@ -232,17 +246,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             let animation = try characterLibrary.animation(for: asset)
-            try play(animation)
+            play(animation)
         } catch {
             characterLibrary.clearLastSelection()
         }
     }
 
-    private func play(_ animation: LoadedAnimation) throws {
-        try animationController.replaceFrames(
-            animation.frames,
-            schedule: animation.schedule
+    private func play(_ animation: LoadedAnimation) {
+        let library = CharacterAnimationLibrary.single(
+            animation: animation
         )
+        characterPlaybackController.install(library)
     }
 
     private func choosePNG(title: String) -> URL? {
@@ -295,7 +309,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
 
         if isCPUAdaptiveSpeedEnabled, let latestCPUUpdate {
-            animationController.setFramesPerSecond(latestCPUUpdate.pace.framesPerSecond)
+            let state = characterStatePolicy.state(
+                for: latestCPUUpdate.pace
+            )
+            characterPlaybackController.requestState(state)
+            animationController.setFramesPerSecond(
+                latestCPUUpdate.pace.framesPerSecond
+            )
         }
 
         refreshCPUStatus()
