@@ -7,6 +7,7 @@ final class StatusMenuController: NSObject {
 
     var onLoadSingleImage: (() -> Void)?
     var onLoadSpriteSheet: (() -> Void)?
+    var onLoadPNGSequence: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -88,6 +89,14 @@ final class StatusMenuController: NSObject {
         )
         spriteSheetItem.target = self
         menu.addItem(spriteSheetItem)
+
+        let sequenceItem = NSMenuItem(
+            title: "Load PNG Sequence…",
+            action: #selector(loadPNGSequence),
+            keyEquivalent: ""
+        )
+        sequenceItem.target = self
+        menu.addItem(sequenceItem)
     }
 
     private func addRecentCharactersItem() {
@@ -151,6 +160,8 @@ final class StatusMenuController: NSObject {
             "Single Image"
         case .spriteSheet4x2:
             "4x2 Sprite"
+        case .pngSequence:
+            "PNG Sequence"
         }
 
         return "\(asset.displayName) · \(mode)"
@@ -174,6 +185,11 @@ final class StatusMenuController: NSObject {
     @objc
     private func loadSpriteSheet() {
         onLoadSpriteSheet?()
+    }
+
+    @objc
+    private func loadPNGSequence() {
+        onLoadPNGSequence?()
     }
 
     @objc
