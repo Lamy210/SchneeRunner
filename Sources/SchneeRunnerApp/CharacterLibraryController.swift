@@ -6,6 +6,7 @@ final class CharacterLibraryController {
     private let store: CharacterAssetStore
     private let sequenceStore: PNGSequenceAssetStore
     private let gifStore: GIFAssetStore
+    private let packStore: CharacterPackStore
     private let selectionStore: CharacterSelectionStore
 
     init(
@@ -34,6 +35,10 @@ final class CharacterLibraryController {
             rootDirectory: rootDirectory,
             fileManager: fileManager
         )
+        packStore = CharacterPackStore(
+            rootDirectory: rootDirectory,
+            fileManager: fileManager
+        )
     }
 
     func frames(
@@ -51,6 +56,8 @@ final class CharacterLibraryController {
             throw CharacterAssetStoreError.sequenceRequiresMultipleSources
         case .gif:
             throw CharacterAssetStoreError.gifRequiresDedicatedStore
+        case .characterPack:
+            throw CharacterAssetStoreError.characterPackRequiresDedicatedStore
         }
     }
 
@@ -60,6 +67,14 @@ final class CharacterLibraryController {
 
     func animation(fromGIF sourceURL: URL) throws -> LoadedAnimation {
         try GIFAnimationLoader().load(from: sourceURL)
+    }
+
+    func library(
+        fromCharacterPack sourceURL: URL
+    ) throws -> CharacterAnimationLibrary {
+        try CharacterPackLoader().load(
+            from: sourceURL
+        ).library
     }
 
     func persist(
@@ -84,6 +99,12 @@ final class CharacterLibraryController {
         try gifStore.importGIF(from: sourceURL)
     }
 
+    func persistCharacterPack(
+        sourceURL: URL
+    ) throws -> StoredCharacterAsset {
+        try packStore.importPack(from: sourceURL)
+    }
+
     func recentAssets(limit: Int = 8) throws -> [StoredCharacterAsset] {
         let assets = try store.listAssets()
         return Array(assets.prefix(max(limit, 0)))
@@ -104,6 +125,8 @@ final class CharacterLibraryController {
             )
         case .gif:
             throw CharacterAssetStoreError.gifRequiresDedicatedStore
+        case .characterPack:
+            throw CharacterAssetStoreError.characterPackRequiresDedicatedStore
         }
     }
 
@@ -117,6 +140,21 @@ final class CharacterLibraryController {
         case .singleImage, .spriteSheet4x2, .pngSequence:
             return try LoadedAnimation.uniform(
                 frames: frames(for: asset)
+            )
+        case .characterPack:
+            throw CharacterAssetStoreError.characterPackRequiresDedicatedStore
+        }
+    }
+
+    func library(
+        for asset: StoredCharacterAsset
+    ) throws -> CharacterAnimationLibrary {
+        switch asset.kind {
+        case .characterPack:
+            return try packStore.load(for: asset).library
+        case .singleImage, .spriteSheet4x2, .pngSequence, .gif:
+            return CharacterAnimationLibrary.single(
+                animation: try animation(for: asset)
             )
         }
     }
