@@ -32,6 +32,21 @@ final class CharacterImportPresenter {
         )
     }
 
+    func chooseCharacterPack(title: String) -> URL? {
+        let panel = NSOpenPanel()
+        panel.title = title
+        panel.prompt = "Load"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+
+        guard panel.runModal() == .OK else {
+            return nil
+        }
+
+        return panel.url
+    }
+
     func presentLoadError(_ error: Error) {
         presentWarning(
             title: "Could not load animation",
