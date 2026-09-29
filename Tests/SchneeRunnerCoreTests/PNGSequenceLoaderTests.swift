@@ -81,6 +81,38 @@ final class PNGSequenceLoaderTests: XCTestCase {
         }
     }
 
+    func testRejectsAggregateFileByteBudget() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        let first = fixture.directory.appendingPathComponent("frame1.png")
+        let second = fixture.directory.appendingPathComponent("frame2.png")
+        try writePNG(width: 2, height: 2, to: first)
+        try writePNG(width: 2, height: 2, to: second)
+
+        let combinedSize = try [first, second].reduce(into: 0) { total, url in
+            let values = try url.resourceValues(forKeys: [.fileSizeKey])
+            total += try XCTUnwrap(values.fileSize)
+        }
+        let loader = PNGSequenceLoader(
+            maximumTotalFileBytes: combinedSize - 1
+        )
+
+        XCTAssertThrowsError(
+            try loader.validatedOrderedURLs([first, second])
+        ) { error in
+            XCTAssertEqual(
+                error as? PNGSequenceLoaderError,
+                .totalFileSizeTooLarge(
+                    actual: combinedSize,
+                    maximum: combinedSize - 1
+                )
+            )
+        }
+    }
+
     func testRejectsAggregatePixelBudget() throws {
         let fixture = try makeFixture()
         defer {
