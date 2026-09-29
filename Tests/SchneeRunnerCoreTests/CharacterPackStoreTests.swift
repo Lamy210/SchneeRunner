@@ -161,12 +161,14 @@ final class CharacterPackStoreTests: XCTestCase {
                     .path
             )
         )
+        let frameNames = try FileManager.default.contentsOfDirectory(
+            atPath: ownedPackage
+                .appendingPathComponent("clips/run/frames")
+                .path
+        )
+        .sorted()
         XCTAssertEqual(
-            try FileManager.default.contentsOfDirectory(
-                atPath: ownedPackage
-                    .appendingPathComponent("clips/run/frames")
-                    .path
-            ),
+            frameNames,
             ["0001.png", "0002.png"]
         )
     }
