@@ -36,6 +36,7 @@ public struct CharacterPackStore {
 
     private let fileManager: FileManager
     private let loader: CharacterPackLoader
+    private let canonicalizer: CharacterPackCanonicalizer
     private let encoder: JSONEncoder
 
     public init(
@@ -44,10 +45,17 @@ public struct CharacterPackStore {
         fileManager: FileManager = .default,
         loader: CharacterPackLoader = .init()
     ) {
+        let maximumPackageBytes = max(maximumPackageBytes, 1)
+
         self.rootDirectory = rootDirectory
-        self.maximumPackageBytes = max(maximumPackageBytes, 1)
+        self.maximumPackageBytes = maximumPackageBytes
         self.fileManager = fileManager
         self.loader = loader
+        canonicalizer = CharacterPackCanonicalizer(
+            maximumPackageBytes: maximumPackageBytes,
+            fileManager: fileManager,
+            loader: loader
+        )
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -76,7 +84,6 @@ public struct CharacterPackStore {
             kind: .characterPack,
             createdAt: Self.normalizedTimestamp(createdAt)
         )
-
         try persist(
             asset: asset,
             sourcePackageURL: sourcePackageURL,
@@ -124,27 +131,10 @@ public struct CharacterPackStore {
         )
 
         do {
-            let packageURL = stagingDirectory.appendingPathComponent(
-                Self.packageDirectoryName,
-                isDirectory: true
-            )
-            try fileManager.createDirectory(
-                at: packageURL,
-                withIntermediateDirectories: false
-            )
-
-            let canonicalManifest = try copyReferencedClips(
-                manifest,
-                sourcePackageURL: sourcePackageURL,
-                destinationPackageURL: packageURL
-            )
-            try writePackManifest(
-                canonicalManifest,
-                packageURL: packageURL
-            )
-            _ = try loader.load(from: packageURL)
-            try writeAssetManifest(
+            try writeStagedAsset(
                 asset,
+                sourcePackageURL: sourcePackageURL,
+                manifest: manifest,
                 stagingDirectory: stagingDirectory
             )
             try fileManager.moveItem(
@@ -157,154 +147,35 @@ public struct CharacterPackStore {
         }
     }
 
-    private func copyReferencedClips(
-        _ manifest: CharacterPackManifest,
+    private func writeStagedAsset(
+        _ asset: StoredCharacterAsset,
         sourcePackageURL: URL,
-        destinationPackageURL: URL
-    ) throws -> CharacterPackManifest {
-        var copiedBytes = 0
-        var canonicalClips: [CharacterPackClip] = []
-
-        for clip in manifest.clips {
-            let sourceURL = try loader.resolveClipURL(
-                path: clip.path,
-                packageURL: sourcePackageURL
-            )
-            let clipDirectory = destinationPackageURL
-                .appendingPathComponent("clips", isDirectory: true)
-                .appendingPathComponent(
-                    clip.state.rawValue,
-                    isDirectory: true
-                )
-            try fileManager.createDirectory(
-                at: clipDirectory,
-                withIntermediateDirectories: true
-            )
-
-            let canonicalClip = try copyClip(
-                clip,
-                sourceURL: sourceURL,
-                destinationDirectory: clipDirectory,
-                copiedBytes: &copiedBytes
-            )
-            canonicalClips.append(canonicalClip)
-        }
-
-        return CharacterPackManifest(
-            name: manifest.name,
-            defaultState: manifest.defaultState,
-            clips: canonicalClips
-        )
-    }
-
-    private func copyClip(
-        _ clip: CharacterPackClip,
-        sourceURL: URL,
-        destinationDirectory: URL,
-        copiedBytes: inout Int
-    ) throws -> CharacterPackClip {
-        switch clip.kind {
-        case .gif:
-            let destinationURL = destinationDirectory
-                .appendingPathComponent("source.gif")
-            try accountAndCopyFile(
-                sourceURL,
-                destinationURL: destinationURL,
-                copiedBytes: &copiedBytes
-            )
-            return CharacterPackClip(
-                state: clip.state,
-                kind: .gif,
-                path: "clips/\(clip.state.rawValue)/source.gif"
-            )
-
-        case .pngSequence:
-            let frameURLs = try orderedSequenceURLs(
-                at: sourceURL
-            )
-            let framesDirectory = destinationDirectory
-                .appendingPathComponent("frames", isDirectory: true)
-            try fileManager.createDirectory(
-                at: framesDirectory,
-                withIntermediateDirectories: false
-            )
-
-            for (index, frameURL) in frameURLs.enumerated() {
-                let fileName = String(
-                    format: "%04d.png",
-                    index + 1
-                )
-                try accountAndCopyFile(
-                    frameURL,
-                    destinationURL: framesDirectory
-                        .appendingPathComponent(fileName),
-                    copiedBytes: &copiedBytes
-                )
-            }
-
-            return CharacterPackClip(
-                state: clip.state,
-                kind: .pngSequence,
-                path: "clips/\(clip.state.rawValue)/frames"
-            )
-        }
-    }
-
-    private func orderedSequenceURLs(
-        at directory: URL
-    ) throws -> [URL] {
-        let urls = try fileManager.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [
-                .fileSizeKey,
-                .isRegularFileKey,
-                .isSymbolicLinkKey
-            ],
-            options: [.skipsHiddenFiles]
-        )
-        return try PNGSequenceLoader()
-            .validatedOrderedURLs(urls)
-    }
-
-    private func accountAndCopyFile(
-        _ sourceURL: URL,
-        destinationURL: URL,
-        copiedBytes: inout Int
+        manifest: CharacterPackManifest,
+        stagingDirectory: URL
     ) throws {
-        let values = try sourceURL.resourceValues(
-            forKeys: [
-                .fileSizeKey,
-                .isRegularFileKey,
-                .isSymbolicLinkKey
-            ]
+        let packageURL = stagingDirectory.appendingPathComponent(
+            Self.packageDirectoryName,
+            isDirectory: true
         )
-        guard values.isSymbolicLink != true else {
-            throw CharacterPackStoreError.symbolicLinkNotAllowed(sourceURL)
-        }
-        guard values.isRegularFile == true else {
-            throw CharacterPackStoreError.invalidAssetDirectory(sourceURL)
-        }
-
-        guard let fileSize = values.fileSize else {
-            throw CharacterPackStoreError.fileSizeUnavailable(
-                sourceURL
-            )
-        }
-        guard
-            fileSize <= maximumPackageBytes,
-            copiedBytes <= maximumPackageBytes - fileSize
-        else {
-            throw CharacterPackStoreError.packageTooLarge(
-                actual: copiedBytes + fileSize,
-                maximum: maximumPackageBytes
-            )
-        }
-
-        try fileManager.copyItem(
-            at: sourceURL,
-            to: destinationURL
+        try fileManager.createDirectory(
+            at: packageURL,
+            withIntermediateDirectories: false
         )
-        copiedBytes += fileSize
+
+        let canonicalManifest = try canonicalizer.copyReferencedClips(
+            manifest,
+            sourcePackageURL: sourcePackageURL,
+            destinationPackageURL: packageURL
+        )
+        try writePackManifest(
+            canonicalManifest,
+            packageURL: packageURL
+        )
+        _ = try loader.load(from: packageURL)
+        try writeAssetManifest(
+            asset,
+            stagingDirectory: stagingDirectory
+        )
     }
 
     private func writePackManifest(
