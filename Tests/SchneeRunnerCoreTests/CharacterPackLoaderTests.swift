@@ -232,6 +232,84 @@ final class CharacterPackLoaderValidationTests: XCTestCase {
         }
     }
 
+    func testRejectsPackOverTotalFrameLimit() throws {
+        let fixture = try makePackFixture()
+        defer { fixture.cleanup() }
+
+        let imageURL = fixture.packageURL
+            .appendingPathComponent("run.png")
+        try writeTestPNG(to: imageURL)
+        try writePackManifest(
+            CharacterPackManifest(
+                name: "Frame Budget",
+                defaultState: .run,
+                clips: [
+                    CharacterPackClip(
+                        state: .run,
+                        kind: .singleImage,
+                        path: "run.png"
+                    )
+                ]
+            ),
+            to: fixture.packageURL
+        )
+
+        XCTAssertThrowsError(
+            try CharacterPackLoader(
+                maximumTotalFrameCount: 7
+            ).load(
+                from: fixture.packageURL
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackLoaderError,
+                .tooManyDecodedFrames(
+                    actual: 8,
+                    maximum: 7
+                )
+            )
+        }
+    }
+
+    func testRejectsPackOverDecodedPixelBudget() throws {
+        let fixture = try makePackFixture()
+        defer { fixture.cleanup() }
+
+        let gifURL = fixture.packageURL
+            .appendingPathComponent("run.gif")
+        try writeTestGIF(to: gifURL)
+        try writePackManifest(
+            CharacterPackManifest(
+                name: "Pixel Budget",
+                defaultState: .run,
+                clips: [
+                    CharacterPackClip(
+                        state: .run,
+                        kind: .gif,
+                        path: "run.gif"
+                    )
+                ]
+            ),
+            to: fixture.packageURL
+        )
+
+        XCTAssertThrowsError(
+            try CharacterPackLoader(
+                maximumTotalDecodedPixels: 7
+            ).load(
+                from: fixture.packageURL
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackLoaderError,
+                .decodedPixelBudgetExceeded(
+                    actual: 8,
+                    maximum: 7
+                )
+            )
+        }
+    }
+
     func testRejectsMissingDefaultStateClip() throws {
         let fixture = try makePackFixture()
         defer { fixture.cleanup() }
@@ -331,8 +409,6 @@ private extension CharacterPackLoaderTests {
             .run
         )
     }
-
-
 }
 
 private func makePackFixture() throws -> PackFixture {
