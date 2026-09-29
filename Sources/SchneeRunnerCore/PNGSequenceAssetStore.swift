@@ -150,16 +150,21 @@ public struct PNGSequenceAssetStore {
             withIntermediateDirectories: false
         )
 
+        var copiedURLs: [URL] = []
         for (index, sourceURL) in sourceURLs.enumerated() {
             let fileName = String(
                 format: "%04d.png",
                 index + 1
             )
+            let copiedURL = framesDirectory.appendingPathComponent(fileName)
             try fileManager.copyItem(
                 at: sourceURL,
-                to: framesDirectory.appendingPathComponent(fileName)
+                to: copiedURL
             )
+            copiedURLs.append(copiedURL)
         }
+
+        _ = try loader.validatedOrderedURLs(copiedURLs)
 
         try encoder.encode(asset).write(
             to: stagingDirectory.appendingPathComponent(Self.manifestFileName),
