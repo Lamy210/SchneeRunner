@@ -78,7 +78,7 @@ The state and playback rate are separate values. Existing single-animation asset
 
 Choose **Load Character Pack…** to import a directory ending in `.schneerunner`. A pack can provide separate clips for idle, walk, run, dash, and sprint. Missing states fall back to the pack's declared default state.
 
-Character Pack v1 accepts GIF and PNG Sequence clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible.
+Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, and GIF clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible.
 
 See [docs/CHARACTER_PACK.md](docs/CHARACTER_PACK.md) for the manifest and layout specification.
 
@@ -138,7 +138,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. character-pack export tooling and additional clip kinds
+1. character-pack export tooling and builder UI
 2. APNG / WebP animation import
 3. battery, memory, build, and local event triggers
 4. generalized trigger priority and state overrides
