@@ -26,9 +26,11 @@ The current vertical slice supports:
 - system CPU usage sampling
 - exponential moving average smoothing
 - hysteretic CPU-to-animation-speed mapping
+- CPU-derived idle / walk / run / dash / sprint character states
+- state-aware animation lookup with deterministic default-animation fallback
 - local-only operation with no network access
 
-Additional animated image formats, character packs, and launch-at-login are intentionally deferred to later changes.
+Multi-state character packs, additional animated image formats, and launch-at-login are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -59,7 +61,7 @@ The sampled utilization is smoothed with an exponential moving average before th
 
 Current target mapping:
 
-| Smoothed CPU utilization | Pace | Playback rate |
+| Smoothed CPU utilization | Character state | Playback rate |
 | --- | --- | ---: |
 | below ~15% | idle | 0.5× |
 | ~15–40% | walk | 0.67× |
@@ -68,6 +70,8 @@ Current target mapping:
 | ~90%+ | sprint | 2× |
 
 Threshold transitions include a small hysteresis margin.
+
+The state and playback rate are separate values. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. A future multi-state character pack can provide exact animations for idle, walk, run, dash, and sprint without changing the CPU policy or renderer.
 
 ## GIF format
 
@@ -125,10 +129,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. character states such as idle / walk / run / sprint
-2. portable character-pack format
-3. APNG / WebP animation import
-4. battery, memory, build, and local event triggers
+1. portable character-pack format with authored state-specific clips
+2. APNG / WebP animation import
+3. battery, memory, build, and local event triggers
+4. generalized trigger priority and state overrides
 5. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
