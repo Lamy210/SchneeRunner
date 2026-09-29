@@ -9,6 +9,7 @@ final class StatusMenuController: NSObject {
     var onLoadSpriteSheet: (() -> Void)?
     var onLoadPNGSequence: (() -> Void)?
     var onLoadGIF: (() -> Void)?
+    var onLoadCharacterPack: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -106,6 +107,14 @@ final class StatusMenuController: NSObject {
         )
         gifItem.target = self
         menu.addItem(gifItem)
+
+        let packItem = NSMenuItem(
+            title: "Load Character Pack…",
+            action: #selector(loadCharacterPack),
+            keyEquivalent: ""
+        )
+        packItem.target = self
+        menu.addItem(packItem)
     }
 
     private func addRecentCharactersItem() {
@@ -180,6 +189,8 @@ final class StatusMenuController: NSObject {
             "PNG Sequence"
         case .gif:
             "GIF"
+        case .characterPack:
+            "Character Pack"
         }
 
         return "\(asset.displayName) · \(mode)"
@@ -213,6 +224,11 @@ final class StatusMenuController: NSObject {
     @objc
     private func loadGIF() {
         onLoadGIF?()
+    }
+
+    @objc
+    private func loadCharacterPack() {
+        onLoadCharacterPack?()
     }
 
     @objc
