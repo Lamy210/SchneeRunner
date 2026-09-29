@@ -13,6 +13,8 @@ public enum CharacterPackLoaderError: Error, Equatable, LocalizedError {
     case invalidName
     case emptyClips
     case tooManyClips(actual: Int, maximum: Int)
+    case tooManyDecodedFrames(actual: Int, maximum: Int)
+    case decodedPixelBudgetExceeded(actual: Int, maximum: Int)
     case duplicateState(CharacterState)
     case defaultStateMissing(CharacterState)
     case unsafeRelativePath(String)
@@ -43,6 +45,10 @@ public enum CharacterPackLoaderError: Error, Equatable, LocalizedError {
             "Character pack must contain at least one animation clip."
         case let .tooManyClips(actual, maximum):
             "Character pack contains \(actual) clips, exceeding the \(maximum)-clip limit."
+        case let .tooManyDecodedFrames(actual, maximum):
+            "Character pack decodes \(actual) frames, exceeding the \(maximum)-frame total limit."
+        case let .decodedPixelBudgetExceeded(actual, maximum):
+            "Character pack decodes \(actual) pixels, exceeding the \(maximum)-pixel total limit."
         case let .duplicateState(state):
             "Character pack defines \(state.rawValue) more than once."
         case let .defaultStateMissing(state):
@@ -62,6 +68,8 @@ public struct CharacterPackLoader {
 
     public let maximumManifestBytes: Int
     public let maximumClipCount: Int
+    public let maximumTotalFrameCount: Int
+    public let maximumTotalDecodedPixels: Int
 
     private let fileManager: FileManager
     private let resolver: CharacterPackResourceResolver
@@ -70,12 +78,16 @@ public struct CharacterPackLoader {
     public init(
         maximumManifestBytes: Int = 64 * 1024,
         maximumClipCount: Int = CharacterState.allCases.count,
+        maximumTotalFrameCount: Int = 240,
+        maximumTotalDecodedPixels: Int = 32_000_000,
         fileManager: FileManager = .default
     ) {
         let maximumManifestBytes = max(maximumManifestBytes, 1)
 
         self.maximumManifestBytes = maximumManifestBytes
         self.maximumClipCount = max(maximumClipCount, 1)
+        self.maximumTotalFrameCount = max(maximumTotalFrameCount, 1)
+        self.maximumTotalDecodedPixels = max(maximumTotalDecodedPixels, 1)
         self.fileManager = fileManager
         resolver = CharacterPackResourceResolver(
             maximumManifestBytes: maximumManifestBytes,
@@ -91,12 +103,20 @@ public struct CharacterPackLoader {
             from: packageURL
         )
         var animations: [CharacterState: LoadedAnimation] = [:]
+        var totalFrameCount = 0
+        var totalDecodedPixels = 0
 
         for clip in manifest.clips {
-            animations[clip.state] = try loadClip(
+            let animation = try loadClip(
                 clip,
                 packageURL: packageURL
             )
+            try accountAnimation(
+                animation,
+                totalFrameCount: &totalFrameCount,
+                totalDecodedPixels: &totalDecodedPixels
+            )
+            animations[clip.state] = animation
         }
 
         return try CharacterAnimationLibrary(
@@ -196,6 +216,62 @@ public struct CharacterPackLoader {
                 manifest.defaultState
             )
         }
+    }
+
+    private func accountAnimation(
+        _ animation: LoadedAnimation,
+        totalFrameCount: inout Int,
+        totalDecodedPixels: inout Int
+    ) throws {
+        let nextFrameCount = totalFrameCount + animation.frames.count
+        guard nextFrameCount <= maximumTotalFrameCount else {
+            throw CharacterPackLoaderError.tooManyDecodedFrames(
+                actual: nextFrameCount,
+                maximum: maximumTotalFrameCount
+            )
+        }
+
+        var animationPixels = 0
+        for frame in animation.frames {
+            let pixels = framePixelCount(frame)
+            guard
+                pixels <= maximumTotalDecodedPixels,
+                animationPixels <= maximumTotalDecodedPixels - pixels
+            else {
+                throw CharacterPackLoaderError.decodedPixelBudgetExceeded(
+                    actual: animationPixels + pixels,
+                    maximum: maximumTotalDecodedPixels
+                )
+            }
+            animationPixels += pixels
+        }
+
+        guard totalDecodedPixels <= maximumTotalDecodedPixels - animationPixels else {
+            throw CharacterPackLoaderError.decodedPixelBudgetExceeded(
+                actual: totalDecodedPixels + animationPixels,
+                maximum: maximumTotalDecodedPixels
+            )
+        }
+
+        totalFrameCount = nextFrameCount
+        totalDecodedPixels += animationPixels
+    }
+
+    private func framePixelCount(_ image: NSImage) -> Int {
+        let representation = image.representations.max { lhs, rhs in
+            lhs.pixelsWide * lhs.pixelsHigh
+                < rhs.pixelsWide * rhs.pixelsHigh
+        }
+        let width = max(
+            representation?.pixelsWide ?? 0,
+            Int(image.size.width.rounded(.up))
+        )
+        let height = max(
+            representation?.pixelsHigh ?? 0,
+            Int(image.size.height.rounded(.up))
+        )
+
+        return max(width, 1) * max(height, 1)
     }
 
     private func loadClip(
