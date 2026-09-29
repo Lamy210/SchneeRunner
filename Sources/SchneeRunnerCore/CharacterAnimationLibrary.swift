@@ -48,13 +48,24 @@ public struct CharacterAnimationLibrary {
         self.defaultAnimation = defaultAnimation
     }
 
+    private init(
+        animations: [CharacterState: LoadedAnimation],
+        defaultState: CharacterState,
+        defaultAnimation: LoadedAnimation
+    ) {
+        self.animations = animations
+        self.defaultState = defaultState
+        self.defaultAnimation = defaultAnimation
+    }
+
     public static func single(
         animation: LoadedAnimation,
         state: CharacterState = .run
-    ) throws -> CharacterAnimationLibrary {
-        try CharacterAnimationLibrary(
+    ) -> CharacterAnimationLibrary {
+        CharacterAnimationLibrary(
             animations: [state: animation],
-            defaultState: state
+            defaultState: state,
+            defaultAnimation: animation
         )
     }
 
