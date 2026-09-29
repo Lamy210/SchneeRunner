@@ -150,7 +150,7 @@ public struct CharacterPackLoader {
         guard let enumerator = fileManager.enumerator(
             at: packageURL,
             includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles]
+            options: []
         ) else {
             throw CharacterPackLoaderError.packageEnumerationFailed(
                 packageURL
