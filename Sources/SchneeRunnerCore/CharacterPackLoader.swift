@@ -140,8 +140,10 @@ public struct CharacterPackLoader {
         do {
             manifest = try decoder.decode(
                 CharacterPackManifest.self,
-                from: Data(contentsOf: manifestURL)
+                from: boundedManifestData(from: manifestURL)
             )
+        } catch let error as CharacterPackLoaderError {
+            throw error
         } catch {
             throw CharacterPackLoaderError.invalidManifest(manifestURL)
         }
@@ -155,6 +157,27 @@ public struct CharacterPackLoader {
         }
 
         return manifest
+    }
+
+    private func boundedManifestData(
+        from manifestURL: URL
+    ) throws -> Data {
+        let handle = try FileHandle(forReadingFrom: manifestURL)
+        defer {
+            try? handle.close()
+        }
+
+        let data = try handle.read(
+            upToCount: maximumManifestBytes + 1
+        ) ?? Data()
+        guard data.count <= maximumManifestBytes else {
+            throw CharacterPackLoaderError.manifestTooLarge(
+                actual: data.count,
+                maximum: maximumManifestBytes
+            )
+        }
+
+        return data
     }
 
     func resolveClipURL(
