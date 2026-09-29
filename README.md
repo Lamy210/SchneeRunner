@@ -28,9 +28,10 @@ The current vertical slice supports:
 - hysteretic CPU-to-animation-speed mapping
 - CPU-derived idle / walk / run / dash / sprint character states
 - state-aware animation lookup with deterministic default-animation fallback
+- portable character-pack manifest parsing and state-specific clip loading
 - local-only operation with no network access
 
-Multi-state character packs, additional animated image formats, and launch-at-login are intentionally deferred to later changes.
+Character-pack persistence/UI, additional animated image formats, and launch-at-login are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -72,6 +73,14 @@ Current target mapping:
 Threshold transitions include a small hysteresis margin.
 
 The state and playback rate are separate values. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. A future multi-state character pack can provide exact animations for idle, walk, run, dash, and sprint without changing the CPU policy or renderer.
+
+## Character pack format
+
+Core support exists for directory-based character packs containing `manifest.json` plus state-specific animation resources. The loader supports single PNG, 4x2 sprite sheet, PNG sequence, and GIF clips and resolves them into the same `CharacterAnimationLibrary` used by runtime state playback.
+
+The current change is loader-only: menu import, Application Support persistence, Recent Characters, and launch restoration for packs are not wired yet.
+
+See [docs/CHARACTER_PACK.md](docs/CHARACTER_PACK.md) for the schema and safety rules.
 
 ## GIF format
 
@@ -129,7 +138,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. portable character-pack format with authored state-specific clips
+1. character-pack import, owned-copy persistence, Recent Characters, and restore
 2. APNG / WebP animation import
 3. battery, memory, build, and local event triggers
 4. generalized trigger priority and state overrides
