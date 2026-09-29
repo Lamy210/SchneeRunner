@@ -22,13 +22,17 @@ public struct CharacterPackLoader {
         let manifest = try loadManifest(from: packURL)
         try validateManifest(manifest)
 
+        let resourceResolver = CharacterPackResourceResolver(
+            packURL: packURL,
+            fileManager: fileManager
+        )
         var animations: [CharacterState: LoadedAnimation] = [:]
         var loadedPixelCount = 0
 
         for entry in manifest.animations {
             let animation = try loadAnimation(
                 entry,
-                packURL: packURL
+                resolver: resourceResolver
             )
             try addLoadedPixels(
                 animation,
@@ -159,34 +163,39 @@ public struct CharacterPackLoader {
 
     private func loadAnimation(
         _ entry: CharacterPackAnimationEntry,
-        packURL: URL
+        resolver: CharacterPackResourceResolver
     ) throws -> LoadedAnimation {
-        let resourceURL = try validatedResourceURL(
-            relativePath: entry.path,
-            packURL: packURL
+        let resourceURL = try resolver.resolve(
+            relativePath: entry.path
         )
 
         switch entry.kind {
         case .singleImage:
-            try requireFile(resourceURL, relativePath: entry.path)
+            try resolver.requireFile(
+                resourceURL,
+                relativePath: entry.path
+            )
             let frames = try ProceduralImageFrameGenerator().frames(
                 from: resourceURL
             )
             return try LoadedAnimation.uniform(frames: frames)
 
         case .spriteSheet4x2:
-            try requireFile(resourceURL, relativePath: entry.path)
+            try resolver.requireFile(
+                resourceURL,
+                relativePath: entry.path
+            )
             let frames = try SpriteSheetLoader(
                 grid: SpriteSheetGrid(columns: 4, rows: 2)
             ).loadFrames(from: resourceURL)
             return try LoadedAnimation.uniform(frames: frames)
 
         case .pngSequence:
-            try requireDirectory(
+            try resolver.requireDirectory(
                 resourceURL,
                 relativePath: entry.path
             )
-            let frameURLs = try pngFrameURLs(
+            let frameURLs = try resolver.pngFrameURLs(
                 in: resourceURL
             )
             let frames = try PNGSequenceLoader().frames(
@@ -195,107 +204,13 @@ public struct CharacterPackLoader {
             return try LoadedAnimation.uniform(frames: frames)
 
         case .gif:
-            try requireFile(resourceURL, relativePath: entry.path)
+            try resolver.requireFile(
+                resourceURL,
+                relativePath: entry.path
+            )
             return try GIFAnimationLoader().load(
                 from: resourceURL
             )
-        }
-    }
-
-    private func validatedResourceURL(
-        relativePath: String,
-        packURL: URL
-    ) throws -> URL {
-        let components = relativePath.split(
-            separator: "/",
-            omittingEmptySubsequences: false
-        ).map(String.init)
-
-        guard
-            !relativePath.isEmpty,
-            !relativePath.hasPrefix("/"),
-            !components.contains(where: {
-                $0.isEmpty || $0 == "." || $0 == ".."
-            })
-        else {
-            throw CharacterPackLoaderError.invalidRelativePath(
-                relativePath
-            )
-        }
-
-        let standardizedPackURL = packURL.standardizedFileURL
-        var currentURL = standardizedPackURL
-
-        for component in components {
-            currentURL.appendPathComponent(component)
-
-            guard fileManager.fileExists(atPath: currentURL.path) else {
-                throw CharacterPackLoaderError.resourceNotFound(
-                    relativePath
-                )
-            }
-
-            let values = try currentURL.resourceValues(
-                forKeys: [.isSymbolicLinkKey]
-            )
-            guard values.isSymbolicLink != true else {
-                throw CharacterPackLoaderError.symbolicLinkNotAllowed(
-                    currentURL
-                )
-            }
-        }
-
-        let expectedPrefix = standardizedPackURL.path + "/"
-        guard currentURL.standardizedFileURL.path.hasPrefix(expectedPrefix) else {
-            throw CharacterPackLoaderError.invalidRelativePath(
-                relativePath
-            )
-        }
-
-        return currentURL
-    }
-
-    private func requireFile(
-        _ url: URL,
-        relativePath: String
-    ) throws {
-        let values = try url.resourceValues(
-            forKeys: [.isRegularFileKey]
-        )
-        guard values.isRegularFile == true else {
-            throw CharacterPackLoaderError.expectedFile(
-                relativePath
-            )
-        }
-    }
-
-    private func requireDirectory(
-        _ url: URL,
-        relativePath: String
-    ) throws {
-        let values = try url.resourceValues(
-            forKeys: [.isDirectoryKey]
-        )
-        guard values.isDirectory == true else {
-            throw CharacterPackLoaderError.expectedDirectory(
-                relativePath
-            )
-        }
-    }
-
-    private func pngFrameURLs(
-        in directoryURL: URL
-    ) throws -> [URL] {
-        try fileManager.contentsOfDirectory(
-            at: directoryURL,
-            includingPropertiesForKeys: [
-                .isRegularFileKey,
-                .isSymbolicLinkKey
-            ],
-            options: [.skipsHiddenFiles]
-        )
-        .filter {
-            $0.pathExtension.lowercased() == "png"
         }
     }
 
@@ -325,10 +240,7 @@ public struct CharacterPackLoader {
     }
 
     private func pixelCount(for image: NSImage) -> Int {
-        let representation = image.representations.max {
-            lhs,
-            rhs in
-
+        let representation = image.representations.max { lhs, rhs in
             lhs.pixelsWide * lhs.pixelsHigh
                 < rhs.pixelsWide * rhs.pixelsHigh
         }
