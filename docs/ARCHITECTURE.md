@@ -30,6 +30,11 @@ AppDelegate
      |            v
      |      SpriteSheetGrid
      |
+     +----> ProceduralImageFrameGenerator
+     |            |
+     |            v
+     |      ProceduralRunCycle
+     |
      +----> CPUMonitor
                   |
                   +----> SystemCPUUsageSampler
@@ -46,6 +51,8 @@ Owns deterministic and reusable domain behavior:
 - sprite-sheet grid validation;
 - frame geometry;
 - sprite-sheet decoding;
+- single-image procedural frame generation;
+- procedural run-cycle transforms;
 - CPU tick-delta utilization calculation;
 - CPU utilization smoothing;
 - utilization-to-animation-pace policy.
@@ -168,7 +175,7 @@ Measure:
 - CPU usage at each supported FPS;
 - impact of one-second metric sampling.
 
-Assets are decoded on import rather than decoded again for every displayed frame.
+Assets are decoded on import rather than decoded again for every displayed frame. Single-image mode renders a bounded 64-point-high working animation instead of retaining eight full-resolution copies of the source.
 
 The animation timer is not restarted when a CPU sample resolves to the already-active FPS.
 
