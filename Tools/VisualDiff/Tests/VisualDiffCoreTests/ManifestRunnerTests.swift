@@ -118,7 +118,6 @@ final class ManifestRunnerProfileTests: XCTestCase {
             }
         }
     }
-
 }
 
 final class ManifestRunnerApprovalTests: XCTestCase {
@@ -240,7 +239,6 @@ final class ManifestRunnerApprovalTests: XCTestCase {
         XCTAssertTrue(summary.hasFailures)
         XCTAssertEqual(summary.cases.first?.status, .failed)
     }
-
 }
 
 final class ManifestRunnerRollingBaselineTests: XCTestCase {
