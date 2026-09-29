@@ -17,17 +17,18 @@ The current vertical slice supports:
 - single-image procedural run animation
 - 4x2 sprite sheets with 8 frames
 - ordered multi-file PNG sequences
+- animated GIF import with authored per-frame timing
 - persistent local character library under Application Support
 - recent-character reopening from the menu
 - automatic restoration of the last selected character on launch
 - non-even pixel dimensions such as 1774x887
-- manual 6 / 8 / 12 / 18 / 24 FPS playback
+- manual 0.5× / 0.67× / 1× / 1.5× / 2× playback speed
 - system CPU usage sampling
 - exponential moving average smoothing
 - hysteretic CPU-to-animation-speed mapping
 - local-only operation with no network access
 
-Additional image formats, character packs, and launch-at-login are intentionally deferred to later changes.
+Additional animated image formats, character packs, and launch-at-login are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -44,11 +45,11 @@ swift run SchneeRunner
 
 SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
-Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, or **Load PNG Sequence…** to select multiple authored frame PNGs.
+Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, **Load PNG Sequence…** to select multiple authored frame PNGs, or **Load GIF…** to preserve an animated GIF's authored frame timing.
 
 Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. If that stored selection can no longer be loaded, SchneeRunner clears the saved selection and continues launching with the placeholder. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
 
-CPU adaptive speed is enabled by default. Selecting a manual FPS disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again.
+CPU adaptive speed is enabled by default. Selecting a manual playback rate disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again. The rate scales the animation's base timing, so GIF frame-duration ratios remain intact.
 
 ## CPU adaptive speed
 
@@ -58,15 +59,21 @@ The sampled utilization is smoothed with an exponential moving average before th
 
 Current target mapping:
 
-| Smoothed CPU utilization | Pace | FPS |
+| Smoothed CPU utilization | Pace | Playback rate |
 | --- | --- | ---: |
-| below ~15% | idle | 6 |
-| ~15–40% | walk | 8 |
-| ~40–70% | run | 12 |
-| ~70–90% | dash | 18 |
-| ~90%+ | sprint | 24 |
+| below ~15% | idle | 0.5× |
+| ~15–40% | walk | 0.67× |
+| ~40–70% | run | 1× |
+| ~70–90% | dash | 1.5× |
+| ~90%+ | sprint | 2× |
 
 Threshold transitions include a small hysteresis margin.
+
+## GIF format
+
+GIF mode accepts animated GIFs with 2–120 frames. Authored frame delays are preserved, with extremely short delays clamped to 20 ms to avoid excessive timer wakeups.
+
+GIF imports are limited to 32 MiB, 4096 pixels on either axis, and 16 million decoded pixels across the animation. Every frame's metadata is validated before decode, and the owned copy is fully decoded before its staged character directory is committed. The original GIF remains untouched; the owned copy participates in Recent Characters and last-character restoration.
 
 ## PNG sequence format
 
@@ -118,9 +125,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. GIF import
-2. character states such as idle / walk / run / sprint
-3. portable character-pack format
+1. character states such as idle / walk / run / sprint
+2. portable character-pack format
+3. APNG / WebP animation import
 4. battery, memory, build, and local event triggers
 5. optional desktop-pet renderer
 

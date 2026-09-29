@@ -61,6 +61,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onLoadPNGSequence = { [weak self] in
             self?.loadPNGSequence()
         }
+        menuController.onLoadGIF = { [weak self] in
+            self?.loadGIF()
+        }
         menuController.onLoadRecentCharacter = { [weak self] id in
             self?.loadRecentCharacter(id: id)
         }
@@ -102,15 +105,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let percentage = Int((latestCPUUpdate.utilization * 100).rounded())
-        let framesPerSecond = Int(animationController.framesPerSecond.rounded())
+        let playbackRate = Self.playbackRateLabel(
+            animationController.playbackRate
+        )
 
         if isCPUAdaptiveSpeedEnabled {
             menuController.setCPUStatus(
-                "CPU: \(percentage)% · \(framesPerSecond) FPS"
+                "CPU: \(percentage)% · \(playbackRate)"
             )
         } else {
             menuController.setCPUStatus(
-                "CPU: \(percentage)% · Manual \(framesPerSecond) FPS"
+                "CPU: \(percentage)% · Manual \(playbackRate)"
             )
         }
     }
@@ -172,11 +177,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func loadGIF() {
+        guard let url = chooseGIF(
+            title: "Choose an Animated GIF"
+        ) else {
+            return
+        }
+
+        do {
+            let animation = try characterLibrary.animation(
+                fromGIF: url
+            )
+            try play(animation)
+
+            do {
+                let asset = try characterLibrary.persistGIF(
+                    sourceURL: url
+                )
+                characterLibrary.rememberSelection(asset)
+                refreshRecentCharactersMenu()
+            } catch {
+                presentPersistenceWarning(error)
+            }
+        } catch {
+            presentLoadError(error)
+        }
+    }
+
     private func loadRecentCharacter(id: UUID) {
         do {
             let asset = try characterLibrary.asset(id: id)
-            let frames = try characterLibrary.frames(for: asset)
-            animationController.replaceFrames(frames)
+            let animation = try characterLibrary.animation(for: asset)
+            try play(animation)
             characterLibrary.rememberSelection(asset)
         } catch {
             presentLoadError(error)
@@ -199,11 +231,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let frames = try characterLibrary.frames(for: asset)
-            animationController.replaceFrames(frames)
+            let animation = try characterLibrary.animation(for: asset)
+            try play(animation)
         } catch {
             characterLibrary.clearLastSelection()
         }
+    }
+
+    private func play(_ animation: LoadedAnimation) throws {
+        try animationController.replaceFrames(
+            animation.frames,
+            schedule: animation.schedule
+        )
     }
 
     private func choosePNG(title: String) -> URL? {
@@ -236,6 +275,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return panel.urls
     }
 
+    private func chooseGIF(title: String) -> URL? {
+        let panel = NSOpenPanel()
+        panel.title = title
+        panel.prompt = "Load"
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.gif]
+
+        guard panel.runModal() == .OK else {
+            return nil
+        }
+
+        return panel.url
+    }
+
     private func toggleCPUAdaptiveSpeed() {
         isCPUAdaptiveSpeedEnabled.toggle()
         menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
@@ -257,7 +311,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func presentLoadError(_ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not load image"
+        alert.messageText = "Could not load animation"
         alert.informativeText = error.localizedDescription
         alert.runModal()
     }
@@ -268,6 +322,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = "Character is running, but was not saved"
         alert.informativeText = error.localizedDescription
         alert.runModal()
+    }
+
+    private static func playbackRateLabel(_ value: Double) -> String {
+        String(
+            format: "%.2g×",
+            value
+        )
     }
 
     private static func menuBarImage(from source: NSImage) -> NSImage {

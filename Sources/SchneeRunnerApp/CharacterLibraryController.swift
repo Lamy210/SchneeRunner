@@ -5,6 +5,7 @@ import SchneeRunnerCore
 final class CharacterLibraryController {
     private let store: CharacterAssetStore
     private let sequenceStore: PNGSequenceAssetStore
+    private let gifStore: GIFAssetStore
     private let selectionStore: CharacterSelectionStore
 
     init(
@@ -29,6 +30,10 @@ final class CharacterLibraryController {
             rootDirectory: rootDirectory,
             fileManager: fileManager
         )
+        gifStore = GIFAssetStore(
+            rootDirectory: rootDirectory,
+            fileManager: fileManager
+        )
     }
 
     func frames(
@@ -44,11 +49,17 @@ final class CharacterLibraryController {
             ).loadFrames(from: sourceURL)
         case .pngSequence:
             throw CharacterAssetStoreError.sequenceRequiresMultipleSources
+        case .gif:
+            throw CharacterAssetStoreError.gifRequiresDedicatedStore
         }
     }
 
     func frames(fromPNGSequence sourceURLs: [URL]) throws -> [NSImage] {
         try PNGSequenceLoader().frames(from: sourceURLs)
+    }
+
+    func animation(fromGIF sourceURL: URL) throws -> LoadedAnimation {
+        try GIFAnimationLoader().load(from: sourceURL)
     }
 
     func persist(
@@ -65,6 +76,12 @@ final class CharacterLibraryController {
         sourceURLs: [URL]
     ) throws -> StoredCharacterAsset {
         try sequenceStore.importSequence(from: sourceURLs)
+    }
+
+    func persistGIF(
+        sourceURL: URL
+    ) throws -> StoredCharacterAsset {
+        try gifStore.importGIF(from: sourceURL)
     }
 
     func recentAssets(limit: Int = 8) throws -> [StoredCharacterAsset] {
@@ -84,6 +101,22 @@ final class CharacterLibraryController {
             let sourceURLs = try sequenceStore.sourceURLs(for: asset)
             return try PNGSequenceLoader().frames(
                 from: sourceURLs
+            )
+        case .gif:
+            throw CharacterAssetStoreError.gifRequiresDedicatedStore
+        }
+    }
+
+    func animation(
+        for asset: StoredCharacterAsset
+    ) throws -> LoadedAnimation {
+        switch asset.kind {
+        case .gif:
+            let sourceURL = try gifStore.sourceURL(for: asset)
+            return try GIFAnimationLoader().load(from: sourceURL)
+        case .singleImage, .spriteSheet4x2, .pngSequence:
+            return try LoadedAnimation.uniform(
+                frames: frames(for: asset)
             )
         }
     }
