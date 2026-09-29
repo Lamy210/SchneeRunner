@@ -37,8 +37,9 @@ AppDelegate
      |
      +----> CharacterLibraryController
      |            |
-     |            v
-     |      CharacterAssetStore
+     |            +----> CharacterAssetStore
+     |            |
+     |            +----> CharacterSelectionStore
      |
      +----> CPUMonitor
                   |
@@ -59,6 +60,7 @@ Owns deterministic and reusable domain behavior:
 - single-image procedural frame generation;
 - procedural run-cycle transforms;
 - character metadata and owned-copy persistence;
+- last-selected character preference persistence;
 - pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
 - CPU utilization smoothing;
