@@ -8,7 +8,7 @@ The project does **not** bundle third-party character artwork. Imported images s
 
 Early proof of concept.
 
-The first vertical slice supports:
+The current vertical slice supports:
 
 - macOS 14+
 - Swift 6 / Swift Package Manager
@@ -16,10 +16,13 @@ The first vertical slice supports:
 - local PNG import
 - 4x2 sprite sheets with 8 frames
 - non-even pixel dimensions such as 1774x887
-- 8 / 12 / 18 / 24 FPS playback
-- no network access
+- manual 6 / 8 / 12 / 18 / 24 FPS playback
+- system CPU usage sampling
+- exponential moving average smoothing
+- hysteretic CPU-to-animation-speed mapping
+- local-only operation with no network access
 
-CPU-based animation speed, additional image formats, character packs, persistence, and launch-at-login are intentionally deferred to later changes.
+Additional image formats, character packs, persistence, and launch-at-login are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -37,6 +40,26 @@ swift run SchneeRunner
 SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
 Choose **Load 4x2 Sprite Sheet…** and select a PNG.
+
+CPU adaptive speed is enabled by default. Selecting a manual FPS disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again.
+
+## CPU adaptive speed
+
+SchneeRunner reads system CPU tick counters through the macOS Mach host statistics API.
+
+The sampled utilization is smoothed with an exponential moving average before the animation pace is selected. Hysteresis prevents the animation from rapidly switching speed when CPU usage sits close to a threshold.
+
+Current target mapping:
+
+| Smoothed CPU utilization | Pace | FPS |
+| --- | --- | ---: |
+| below ~15% | idle | 6 |
+| ~15–40% | walk | 8 |
+| ~40–70% | run | 12 |
+| ~70–90% | dash | 18 |
+| ~90%+ | sprint | 24 |
+
+Threshold transitions include a small hysteresis margin.
 
 ## Sprite sheet format
 
@@ -63,7 +86,7 @@ Frame order is top row left-to-right, then bottom row left-to-right.
 
 ## Architecture
 
-The initial dependency direction is:
+The dependency direction is:
 
 ```text
 SchneeRunnerApp
@@ -72,8 +95,9 @@ SchneeRunnerApp
 SchneeRunnerCore
 ```
 
-`SchneeRunnerCore` owns deterministic sprite-sheet geometry and decoding.
-`SchneeRunnerApp` owns AppKit lifecycle, the status item, file selection, and animation scheduling.
+`SchneeRunnerCore` owns deterministic sprite-sheet geometry, CPU utilization calculation, smoothing, and animation-speed policy.
+
+`SchneeRunnerApp` owns AppKit lifecycle, the status item, file selection, Mach CPU sampling, timers, and user-facing state.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -81,13 +105,12 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. CPU load -> animation speed mapping
-2. persistent local character library
-3. PNG sequence and GIF import
-4. character states such as idle / walk / run / sprint
-5. portable character-pack format
-6. battery, memory, build, and local event triggers
-7. optional desktop-pet renderer
+1. persistent local character library
+2. PNG sequence and GIF import
+3. character states such as idle / walk / run / sprint
+4. portable character-pack format
+5. battery, memory, build, and local event triggers
+6. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 
