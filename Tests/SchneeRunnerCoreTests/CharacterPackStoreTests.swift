@@ -70,10 +70,10 @@ final class CharacterPackStoreTests: XCTestCase {
                 "clips/run/frames"
             ]
         )
+        let library = try CharacterPackLoader()
+            .load(from: exportURL)
         XCTAssertEqual(
-            try CharacterPackLoader()
-                .load(from: exportURL)
-                .availableStates,
+            library.availableStates,
             [.idle, .walk, .run]
         )
     }
