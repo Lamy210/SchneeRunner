@@ -55,6 +55,14 @@ A state may appear at most once. The default state must have a clip.
 
 ## Clip kinds
 
+### `singleImage`
+
+`path` points to one static PNG. SchneeRunner generates the normal procedural eight-frame run cycle from that image.
+
+### `spriteSheet4x2`
+
+`path` points to one static PNG containing eight frames in the standard four-column, two-row layout.
+
 ### `gif`
 
 `path` points to one animated GIF.
@@ -115,6 +123,6 @@ Only manifest-referenced clip files are copied. Extra files in the source packag
 
 ## Compatibility
 
-Character Pack v1 currently supports `gif` and `pngSequence` clips.
+Character Pack v1 supports `singleImage`, `spriteSheet4x2`, `pngSequence`, and `gif` clips.
 
 Future format versions may add other clip kinds or metadata. A v1 reader rejects unknown format versions rather than guessing their meaning.
