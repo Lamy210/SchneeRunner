@@ -73,7 +73,7 @@ Threshold transitions include a small hysteresis margin.
 
 GIF mode accepts animated GIFs with 2–120 frames. Authored frame delays are preserved, with extremely short delays clamped to 20 ms to avoid excessive timer wakeups.
 
-GIF imports are limited to 32 MiB, 4096 pixels on either axis, and 16 million decoded pixels across the animation. Every frame's metadata is validated before decode, and the owned copy is fully decoded before its staged character directory is committed.
+GIF imports are limited to 32 MiB, 4096 pixels on either axis, and 16 million decoded pixels across the animation. Every frame's metadata is validated before decode, and the owned copy is fully decoded before its staged character directory is committed. The original GIF remains untouched; the owned copy participates in Recent Characters and last-character restoration.
 
 ## PNG sequence format
 
