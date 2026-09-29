@@ -65,15 +65,18 @@ public struct CharacterAssetStore {
     private static let manifestFileName = "manifest.json"
 
     private let fileManager: FileManager
+    private let imageValidator: ImageAssetValidator
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     public init(
         rootDirectory: URL,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        imageValidator: ImageAssetValidator = .init()
     ) {
         self.rootDirectory = rootDirectory
         self.fileManager = fileManager
+        self.imageValidator = imageValidator
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -104,6 +107,8 @@ public struct CharacterAssetStore {
         guard fileExtension == "png" else {
             throw CharacterAssetStoreError.unsupportedFileType(fileExtension)
         }
+
+        _ = try imageValidator.validate(url: sourceURL)
 
         try fileManager.createDirectory(
             at: rootDirectory,

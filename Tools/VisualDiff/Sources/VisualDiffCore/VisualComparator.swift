@@ -19,7 +19,10 @@ public enum VisualComparator {
             var pixelMaxDelta = 0
 
             for channel in 0 ..< 4 {
-                let delta = abs(Int(expected.rgba[offset + channel]) - Int(actual.rgba[offset + channel]))
+                let delta = abs(
+                    Int(expected.rgba[offset + channel])
+                        - Int(actual.rgba[offset + channel])
+                )
                 pixelMaxDelta = max(pixelMaxDelta, delta)
                 maxChannelDelta = max(maxChannelDelta, delta)
             }
@@ -120,7 +123,10 @@ public enum VisualComparator {
             expectedHeight: expected.height,
             actualWidth: actual.width,
             actualHeight: actual.height,
-            changedPixelCount: max(expected.width * expected.height, actual.width * actual.height),
+            changedPixelCount: max(
+                expected.width * expected.height,
+                actual.width * actual.height
+            ),
             changedPixelRatio: 1,
             maxChannelDelta: 255
         )
