@@ -4,15 +4,21 @@ public struct CharacterPackPolicy: Equatable, Sendable {
     public let maximumTotalFileBytes: Int
     public let maximumFileCount: Int
     public let maximumNameLength: Int
+    public let maximumTotalDecodedPixels: Int
 
     public init(
         maximumTotalFileBytes: Int = 128 * 1024 * 1024,
         maximumFileCount: Int = 650,
-        maximumNameLength: Int = 80
+        maximumNameLength: Int = 80,
+        maximumTotalDecodedPixels: Int = 32_000_000
     ) {
         self.maximumTotalFileBytes = max(maximumTotalFileBytes, 1)
         self.maximumFileCount = max(maximumFileCount, 1)
         self.maximumNameLength = max(maximumNameLength, 1)
+        self.maximumTotalDecodedPixels = max(
+            maximumTotalDecodedPixels,
+            1
+        )
     }
 }
 
@@ -24,6 +30,7 @@ public enum CharacterPackLoaderError: Error, Equatable, LocalizedError {
     case fileSizeUnavailable(URL)
     case tooManyFiles(actual: Int, maximum: Int)
     case packageTooLarge(actual: Int, maximum: Int)
+    case decodedPixelBudgetExceeded(actual: Int, maximum: Int)
     case manifestMissing(URL)
     case invalidManifest(URL)
     case unsupportedSchemaVersion(Int)
@@ -53,6 +60,8 @@ public enum CharacterPackLoaderError: Error, Equatable, LocalizedError {
             "Character pack contains \(actual) files, exceeding the \(maximum)-file limit."
         case let .packageTooLarge(actual, maximum):
             "Character pack uses \(actual) bytes, exceeding the \(maximum)-byte limit."
+        case let .decodedPixelBudgetExceeded(actual, maximum):
+            "Character pack decodes to \(actual) pixels, exceeding the \(maximum)-pixel limit."
         case let .manifestMissing(url):
             "Character pack manifest is missing: \(url.lastPathComponent)."
         case let .invalidManifest(url):
@@ -289,6 +298,7 @@ public struct CharacterPackLoader {
         packageURL: URL
     ) throws -> [CharacterState: LoadedAnimation] {
         var animations: [CharacterState: LoadedAnimation] = [:]
+        var totalDecodedPixels = 0
 
         for clip in manifest.clips {
             let url = packageURL.appendingPathComponent(clip.path)
@@ -298,10 +308,25 @@ public struct CharacterPackLoader {
                 )
             }
 
-            animations[clip.state] = try loadAnimation(
+            let animation = try loadAnimation(
                 clip: clip,
                 url: url
             )
+            let decodedPixels = estimatedDecodedPixels(
+                in: animation
+            )
+            guard
+                totalDecodedPixels <=
+                    policy.maximumTotalDecodedPixels - decodedPixels
+            else {
+                throw CharacterPackLoaderError.decodedPixelBudgetExceeded(
+                    actual: totalDecodedPixels + decodedPixels,
+                    maximum: policy.maximumTotalDecodedPixels
+                )
+            }
+
+            totalDecodedPixels += decodedPixels
+            animations[clip.state] = animation
         }
 
         return animations
@@ -335,6 +360,22 @@ public struct CharacterPackLoader {
         case .gif:
             try validateFile(url, path: clip.path)
             return try GIFAnimationLoader().load(from: url)
+        }
+    }
+
+    private func estimatedDecodedPixels(
+        in animation: LoadedAnimation
+    ) -> Int {
+        animation.frames.reduce(into: 0) { total, image in
+            let width = max(
+                Int(image.size.width.rounded(.up)),
+                1
+            )
+            let height = max(
+                Int(image.size.height.rounded(.up)),
+                1
+            )
+            total += width * height
         }
     }
 
