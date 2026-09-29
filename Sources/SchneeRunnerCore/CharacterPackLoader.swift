@@ -64,6 +64,7 @@ public struct CharacterPackLoader {
     public let maximumClipCount: Int
 
     private let fileManager: FileManager
+    private let resolver: CharacterPackResourceResolver
     private let decoder: JSONDecoder
 
     public init(
@@ -71,9 +72,15 @@ public struct CharacterPackLoader {
         maximumClipCount: Int = CharacterState.allCases.count,
         fileManager: FileManager = .default
     ) {
-        self.maximumManifestBytes = max(maximumManifestBytes, 1)
+        let maximumManifestBytes = max(maximumManifestBytes, 1)
+
+        self.maximumManifestBytes = maximumManifestBytes
         self.maximumClipCount = max(maximumClipCount, 1)
         self.fileManager = fileManager
+        resolver = CharacterPackResourceResolver(
+            maximumManifestBytes: maximumManifestBytes,
+            fileManager: fileManager
+        )
         decoder = JSONDecoder()
     }
 
@@ -101,46 +108,18 @@ public struct CharacterPackLoader {
     public func validatedManifest(
         from packageURL: URL
     ) throws -> CharacterPackManifest {
-        try validatePackageDirectory(packageURL)
-
         let manifestURL = packageURL.appendingPathComponent(
             Self.manifestFileName
         )
-        guard fileManager.fileExists(atPath: manifestURL.path) else {
-            throw CharacterPackLoaderError.manifestMissing(manifestURL)
-        }
-        let values = try manifestURL.resourceValues(
-            forKeys: [
-                .fileSizeKey,
-                .isRegularFileKey,
-                .isSymbolicLinkKey
-            ]
-        )
-        guard values.isSymbolicLink != true else {
-            throw CharacterPackLoaderError.symbolicLinkNotAllowed(
-                manifestURL
-            )
-        }
-        guard values.isRegularFile == true else {
-            throw CharacterPackLoaderError.invalidManifest(manifestURL)
-        }
-        guard let fileSize = values.fileSize else {
-            throw CharacterPackLoaderError.manifestSizeUnavailable(
-                manifestURL
-            )
-        }
-        guard fileSize <= maximumManifestBytes else {
-            throw CharacterPackLoaderError.manifestTooLarge(
-                actual: fileSize,
-                maximum: maximumManifestBytes
-            )
-        }
 
         let manifest: CharacterPackManifest
         do {
+            let data = try resolver.manifestData(
+                from: packageURL
+            )
             manifest = try decoder.decode(
                 CharacterPackManifest.self,
-                from: boundedManifestData(from: manifestURL)
+                from: data
             )
         } catch let error as CharacterPackLoaderError {
             throw error
@@ -159,68 +138,14 @@ public struct CharacterPackLoader {
         return manifest
     }
 
-    private func boundedManifestData(
-        from manifestURL: URL
-    ) throws -> Data {
-        let handle = try FileHandle(forReadingFrom: manifestURL)
-        defer {
-            try? handle.close()
-        }
-
-        let data = try handle.read(
-            upToCount: maximumManifestBytes + 1
-        ) ?? Data()
-        guard data.count <= maximumManifestBytes else {
-            throw CharacterPackLoaderError.manifestTooLarge(
-                actual: data.count,
-                maximum: maximumManifestBytes
-            )
-        }
-
-        return data
-    }
-
     func resolveClipURL(
         path: String,
         packageURL: URL
     ) throws -> URL {
-        let components = path.split(
-            separator: "/",
-            omittingEmptySubsequences: false
+        try resolver.resolveClipURL(
+            path: path,
+            packageURL: packageURL
         )
-
-        guard
-            !path.isEmpty,
-            !path.hasPrefix("/"),
-            !path.contains("\\"),
-            components.allSatisfy({
-                !$0.isEmpty && $0 != "." && $0 != ".."
-            })
-        else {
-            throw CharacterPackLoaderError.unsafeRelativePath(path)
-        }
-
-        var url = packageURL
-        for (index, component) in components.enumerated() {
-            url.appendPathComponent(String(component))
-
-            guard fileManager.fileExists(atPath: url.path) else {
-                throw CharacterPackLoaderError.clipMissing(path)
-            }
-
-            let values = try url.resourceValues(
-                forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
-            )
-            guard values.isSymbolicLink != true else {
-                throw CharacterPackLoaderError.symbolicLinkNotAllowed(url)
-            }
-
-            if index < components.count - 1, values.isDirectory != true {
-                throw CharacterPackLoaderError.unsafeRelativePath(path)
-            }
-        }
-
-        return url
     }
 
     private func validateManifest(
@@ -284,7 +209,7 @@ public struct CharacterPackLoader {
 
         switch clip.kind {
         case .singleImage:
-            try validateRegularNonSymlinkFile(
+            try resolver.validateRegularFile(
                 url,
                 kind: clip.kind
             )
@@ -295,7 +220,7 @@ public struct CharacterPackLoader {
             )
 
         case .spriteSheet4x2:
-            try validateRegularNonSymlinkFile(
+            try resolver.validateRegularFile(
                 url,
                 kind: clip.kind
             )
@@ -307,14 +232,17 @@ public struct CharacterPackLoader {
             )
 
         case .gif:
-            try validateRegularNonSymlinkFile(
+            try resolver.validateRegularFile(
                 url,
                 kind: clip.kind
             )
             return try GIFAnimationLoader().load(from: url)
 
         case .pngSequence:
-            try validateDirectory(url)
+            try resolver.validateDirectory(
+                url,
+                kind: clip.kind
+            )
             let urls = try fileManager.contentsOfDirectory(
                 at: url,
                 includingPropertiesForKeys: [
@@ -328,58 +256,6 @@ public struct CharacterPackLoader {
             )
             return try LoadedAnimation.uniform(
                 frames: frames
-            )
-        }
-    }
-
-    private func validatePackageDirectory(_ url: URL) throws {
-        let fileExtension = url.pathExtension.lowercased()
-        guard fileExtension == "schneerunner" else {
-            throw CharacterPackLoaderError.invalidPackageExtension(
-                fileExtension
-            )
-        }
-
-        let values = try url.resourceValues(
-            forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
-        )
-        guard values.isSymbolicLink != true else {
-            throw CharacterPackLoaderError.symbolicLinkNotAllowed(url)
-        }
-        guard values.isDirectory == true else {
-            throw CharacterPackLoaderError.packageIsNotDirectory(url)
-        }
-    }
-
-    private func validateDirectory(_ url: URL) throws {
-        let values = try url.resourceValues(
-            forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
-        )
-        guard values.isSymbolicLink != true else {
-            throw CharacterPackLoaderError.symbolicLinkNotAllowed(url)
-        }
-        guard values.isDirectory == true else {
-            throw CharacterPackLoaderError.wrongClipResourceType(
-                path: url.lastPathComponent,
-                kind: .pngSequence
-            )
-        }
-    }
-
-    private func validateRegularNonSymlinkFile(
-        _ url: URL,
-        kind: CharacterPackClipKind
-    ) throws {
-        let values = try url.resourceValues(
-            forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
-        )
-        guard values.isSymbolicLink != true else {
-            throw CharacterPackLoaderError.symbolicLinkNotAllowed(url)
-        }
-        guard values.isRegularFile == true else {
-            throw CharacterPackLoaderError.wrongClipResourceType(
-                path: url.lastPathComponent,
-                kind: kind
             )
         }
     }
