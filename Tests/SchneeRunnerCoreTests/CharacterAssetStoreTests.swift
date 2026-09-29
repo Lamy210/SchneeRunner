@@ -172,10 +172,10 @@ final class CharacterAssetStoreTests: XCTestCase {
     }
 
     private func pngData() throws -> Data {
-        try XCTUnwrap(
-            Data(
-                base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-            )
+        let encoded = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk" +
+            "+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        return try XCTUnwrap(
+            Data(base64Encoded: encoded)
         )
     }
 
