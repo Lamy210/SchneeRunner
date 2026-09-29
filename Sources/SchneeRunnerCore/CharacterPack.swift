@@ -1,8 +1,10 @@
 import Foundation
 
 public enum CharacterPackClipKind: String, Codable, Equatable, Sendable {
-    case gif
+    case singleImage
+    case spriteSheet4x2
     case pngSequence
+    case gif
 }
 
 public struct CharacterPackClip: Codable, Equatable, Sendable {
