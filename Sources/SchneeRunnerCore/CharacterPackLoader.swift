@@ -161,12 +161,23 @@ public struct CharacterPackLoader {
         }
 
         var url = packageURL
-        for component in components {
+        for (index, component) in components.enumerated() {
             url.appendPathComponent(String(component))
-        }
 
-        guard fileManager.fileExists(atPath: url.path) else {
-            throw CharacterPackLoaderError.clipMissing(path)
+            guard fileManager.fileExists(atPath: url.path) else {
+                throw CharacterPackLoaderError.clipMissing(path)
+            }
+
+            let values = try url.resourceValues(
+                forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
+            )
+            guard values.isSymbolicLink != true else {
+                throw CharacterPackLoaderError.symbolicLinkNotAllowed(url)
+            }
+
+            if index < components.count - 1, values.isDirectory != true {
+                throw CharacterPackLoaderError.unsafeRelativePath(path)
+            }
         }
 
         return url
