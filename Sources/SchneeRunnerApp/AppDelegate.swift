@@ -333,6 +333,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             value
         )
     }
-
-
 }
