@@ -109,11 +109,21 @@ public struct CharacterPackLoader {
         guard fileManager.fileExists(atPath: manifestURL.path) else {
             throw CharacterPackLoaderError.manifestMissing(manifestURL)
         }
-        try validateRegularNonSymlinkFile(manifestURL)
-
         let values = try manifestURL.resourceValues(
-            forKeys: [.fileSizeKey]
+            forKeys: [
+                .fileSizeKey,
+                .isRegularFileKey,
+                .isSymbolicLinkKey
+            ]
         )
+        guard values.isSymbolicLink != true else {
+            throw CharacterPackLoaderError.symbolicLinkNotAllowed(
+                manifestURL
+            )
+        }
+        guard values.isRegularFile == true else {
+            throw CharacterPackLoaderError.invalidManifest(manifestURL)
+        }
         guard let fileSize = values.fileSize else {
             throw CharacterPackLoaderError.manifestSizeUnavailable(
                 manifestURL
@@ -202,9 +212,13 @@ public struct CharacterPackLoader {
         let name = manifest.name.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
+        let containsControlCharacter = name.unicodeScalars.contains {
+            CharacterSet.controlCharacters.contains($0)
+        }
         guard
             !name.isEmpty,
-            name.count <= 80
+            name.count <= 80,
+            !containsControlCharacter
         else {
             throw CharacterPackLoaderError.invalidName
         }
