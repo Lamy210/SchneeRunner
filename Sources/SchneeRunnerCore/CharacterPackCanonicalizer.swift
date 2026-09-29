@@ -63,6 +63,13 @@ struct CharacterPackCanonicalizer {
         copiedBytes: inout Int
     ) throws -> CharacterPackClip {
         switch clip.kind {
+        case .singleImage, .spriteSheet4x2:
+            try copyPNGSource(
+                clip,
+                sourceURL: sourceURL,
+                destinationDirectory: destinationDirectory,
+                copiedBytes: &copiedBytes
+            )
         case .gif:
             try copyGIF(
                 clip,
@@ -78,6 +85,27 @@ struct CharacterPackCanonicalizer {
                 copiedBytes: &copiedBytes
             )
         }
+    }
+
+    private func copyPNGSource(
+        _ clip: CharacterPackClip,
+        sourceURL: URL,
+        destinationDirectory: URL,
+        copiedBytes: inout Int
+    ) throws -> CharacterPackClip {
+        let destinationURL = destinationDirectory
+            .appendingPathComponent("source.png")
+        try accountAndCopyFile(
+            sourceURL,
+            destinationURL: destinationURL,
+            copiedBytes: &copiedBytes
+        )
+
+        return CharacterPackClip(
+            state: clip.state,
+            kind: clip.kind,
+            path: "clips/\(clip.state.rawValue)/source.png"
+        )
     }
 
     private func copyGIF(
