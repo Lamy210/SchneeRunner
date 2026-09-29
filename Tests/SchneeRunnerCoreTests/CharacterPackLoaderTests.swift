@@ -181,9 +181,15 @@ final class CharacterPackLoaderTests: XCTestCase {
                 from: fixture.packageURL
             )
         ) { error in
+            guard case let .symbolicLinkNotAllowed(actualURL) =
+                error as? CharacterPackLoaderError
+            else {
+                return XCTFail("Expected symlink rejection.")
+            }
+
             XCTAssertEqual(
-                error as? CharacterPackLoaderError,
-                .symbolicLinkNotAllowed(linkedDirectory)
+                actualURL.standardizedFileURL.path,
+                linkedDirectory.standardizedFileURL.path
             )
         }
     }
