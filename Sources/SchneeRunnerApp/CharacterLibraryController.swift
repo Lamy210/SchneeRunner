@@ -75,13 +75,15 @@ final class CharacterLibraryController {
     func frames(for asset: StoredCharacterAsset) throws -> [NSImage] {
         switch asset.kind {
         case .singleImage, .spriteSheet4x2:
-            try frames(
-                from: store.sourceURL(for: asset),
+            let sourceURL = try store.sourceURL(for: asset)
+            return try frames(
+                from: sourceURL,
                 kind: asset.kind
             )
         case .pngSequence:
-            try PNGSequenceLoader().frames(
-                from: sequenceStore.sourceURLs(for: asset)
+            let sourceURLs = try sequenceStore.sourceURLs(for: asset)
+            return try PNGSequenceLoader().frames(
+                from: sourceURLs
             )
         }
     }
