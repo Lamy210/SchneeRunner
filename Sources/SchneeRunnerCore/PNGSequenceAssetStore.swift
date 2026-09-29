@@ -84,13 +84,15 @@ public struct PNGSequenceAssetStore {
             throw PNGSequenceAssetStoreError.wrongAssetKind(asset.kind)
         }
 
-        let directory = rootDirectory
+        let assetDirectory = rootDirectory
             .appendingPathComponent(asset.id.uuidString, isDirectory: true)
+        let directory = assetDirectory
             .appendingPathComponent(Self.framesDirectoryName, isDirectory: true)
         guard fileManager.fileExists(atPath: directory.path) else {
             throw PNGSequenceAssetStoreError.sequenceDirectoryMissing(asset.id)
         }
 
+        try validateDirectory(assetDirectory)
         try validateDirectory(directory)
         let urls = try fileManager.contentsOfDirectory(
             at: directory,
