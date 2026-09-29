@@ -5,6 +5,7 @@ public enum CharacterPackStoreError: Error, Equatable, LocalizedError {
     case assetDirectoryMissing(UUID)
     case invalidAssetDirectory(URL)
     case symbolicLinkNotAllowed(URL)
+    case fileSizeUnavailable(URL)
     case packageTooLarge(actual: Int, maximum: Int)
 
     public var errorDescription: String? {
@@ -17,6 +18,8 @@ public enum CharacterPackStoreError: Error, Equatable, LocalizedError {
             "Character pack asset directory is invalid: \(url.lastPathComponent)."
         case let .symbolicLinkNotAllowed(url):
             "Symbolic links are not allowed for stored character packs: \(url.lastPathComponent)."
+        case let .fileSizeUnavailable(url):
+            "Could not determine character pack file size: \(url.lastPathComponent)."
         case let .packageTooLarge(actual, maximum):
             "Character pack uses \(actual) bytes, exceeding the \(maximum)-byte limit."
         }
@@ -282,8 +285,15 @@ public struct CharacterPackStore {
             throw CharacterPackStoreError.invalidAssetDirectory(sourceURL)
         }
 
-        let fileSize = values.fileSize ?? 0
-        guard copiedBytes <= maximumPackageBytes - fileSize else {
+        guard let fileSize = values.fileSize else {
+            throw CharacterPackStoreError.fileSizeUnavailable(
+                sourceURL
+            )
+        }
+        guard
+            fileSize <= maximumPackageBytes,
+            copiedBytes <= maximumPackageBytes - fileSize
+        else {
             throw CharacterPackStoreError.packageTooLarge(
                 actual: copiedBytes + fileSize,
                 maximum: maximumPackageBytes
