@@ -217,6 +217,7 @@ public struct CharacterPackLoader {
         }
         guard
             !name.isEmpty,
+            name == manifest.name,
             name.count <= 80,
             !containsControlCharacter
         else {
