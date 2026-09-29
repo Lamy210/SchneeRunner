@@ -9,68 +9,12 @@ final class CharacterPackLoaderTests: XCTestCase {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
 
-        let idleURL = fixture.packageURL
-            .appendingPathComponent("idle.gif")
-        try writeGIF(to: idleURL)
-
-        let walkURL = fixture.packageURL
-            .appendingPathComponent("walk.png")
-        try writePNG(to: walkURL)
-
-        let runDirectory = fixture.packageURL
-            .appendingPathComponent("run", isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: runDirectory,
-            withIntermediateDirectories: true
-        )
-        try writePNG(
-            to: runDirectory.appendingPathComponent("frame1.png")
-        )
-        try writePNG(
-            to: runDirectory.appendingPathComponent("frame2.png")
-        )
-
-        try writeManifest(
-            CharacterPackManifest(
-                name: "Test Runner",
-                defaultState: .run,
-                clips: [
-                    CharacterPackClip(
-                        state: .idle,
-                        kind: .gif,
-                        path: "idle.gif"
-                    ),
-                    CharacterPackClip(
-                        state: .walk,
-                        kind: .singleImage,
-                        path: "walk.png"
-                    ),
-                    CharacterPackClip(
-                        state: .run,
-                        kind: .pngSequence,
-                        path: "run"
-                    )
-                ]
-            ),
-            to: fixture.packageURL
-        )
-
+        try prepareMixedStatePack(fixture)
         let library = try CharacterPackLoader().load(
             from: fixture.packageURL
         )
 
-        XCTAssertEqual(
-            library.availableStates,
-            [.idle, .walk, .run]
-        )
-        XCTAssertEqual(
-            library.resolve(requestedState: .idle).resolvedState,
-            .idle
-        )
-        XCTAssertEqual(
-            library.resolve(requestedState: .sprint).resolvedState,
-            .run
-        )
+        assertMixedStateLibrary(library)
     }
 
     func testLoadsSpriteSheetClip() throws {
@@ -309,6 +253,73 @@ final class CharacterPackLoaderTests: XCTestCase {
                 .defaultStateMissing(.run)
             )
         }
+    }
+
+    private func prepareMixedStatePack(
+        _ fixture: PackFixture
+    ) throws {
+        let idleURL = fixture.packageURL
+            .appendingPathComponent("idle.gif")
+        try writeGIF(to: idleURL)
+
+        let walkURL = fixture.packageURL
+            .appendingPathComponent("walk.png")
+        try writePNG(to: walkURL)
+
+        let runDirectory = fixture.packageURL
+            .appendingPathComponent("run", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: runDirectory,
+            withIntermediateDirectories: true
+        )
+        try writePNG(
+            to: runDirectory.appendingPathComponent("frame1.png")
+        )
+        try writePNG(
+            to: runDirectory.appendingPathComponent("frame2.png")
+        )
+
+        try writeManifest(
+            CharacterPackManifest(
+                name: "Test Runner",
+                defaultState: .run,
+                clips: [
+                    CharacterPackClip(
+                        state: .idle,
+                        kind: .gif,
+                        path: "idle.gif"
+                    ),
+                    CharacterPackClip(
+                        state: .walk,
+                        kind: .singleImage,
+                        path: "walk.png"
+                    ),
+                    CharacterPackClip(
+                        state: .run,
+                        kind: .pngSequence,
+                        path: "run"
+                    )
+                ]
+            ),
+            to: fixture.packageURL
+        )
+    }
+
+    private func assertMixedStateLibrary(
+        _ library: CharacterAnimationLibrary
+    ) {
+        XCTAssertEqual(
+            library.availableStates,
+            [.idle, .walk, .run]
+        )
+        XCTAssertEqual(
+            library.resolve(requestedState: .idle).resolvedState,
+            .idle
+        )
+        XCTAssertEqual(
+            library.resolve(requestedState: .sprint).resolvedState,
+            .run
+        )
     }
 
     private func makeFixture() throws -> PackFixture {
