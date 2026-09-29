@@ -4,8 +4,13 @@ import SchneeRunnerCore
 @MainActor
 final class CharacterLibraryController {
     private let store: CharacterAssetStore
+    private let selectionStore: CharacterSelectionStore
 
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        selectionStore: CharacterSelectionStore = .init()
+    ) {
+        self.selectionStore = selectionStore
         let applicationSupportDirectory = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -58,5 +63,21 @@ final class CharacterLibraryController {
 
     func asset(id: UUID) throws -> StoredCharacterAsset {
         try store.asset(id: id)
+    }
+
+    func rememberSelection(_ asset: StoredCharacterAsset) {
+        selectionStore.save(id: asset.id)
+    }
+
+    func lastSelectedAsset() throws -> StoredCharacterAsset? {
+        guard let id = selectionStore.selectedCharacterID() else {
+            return nil
+        }
+
+        return try store.asset(id: id)
+    }
+
+    func clearLastSelection() {
+        selectionStore.clear()
     }
 }
