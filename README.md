@@ -42,7 +42,7 @@ SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
 Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, or choose **Load 4x2 Sprite Sheet…** for authored animation frames.
 
-Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched.
+Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor.
 
 CPU adaptive speed is enabled by default. Selecting a manual FPS disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again.
 
