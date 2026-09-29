@@ -16,6 +16,7 @@ The current vertical slice supports:
 - local PNG import with pre-decode size/type validation
 - single-image procedural run animation
 - 4x2 sprite sheets with 8 frames
+- ordered multi-file PNG sequences
 - persistent local character library under Application Support
 - recent-character reopening from the menu
 - automatic restoration of the last selected character on launch
@@ -43,7 +44,7 @@ swift run SchneeRunner
 
 SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
-Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, or choose **Load 4x2 Sprite Sheet…** for authored animation frames.
+Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, or **Load PNG Sequence…** to select multiple authored frame PNGs.
 
 Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. If that stored selection can no longer be loaded, SchneeRunner clears the saved selection and continues launching with the placeholder. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
 
@@ -66,6 +67,12 @@ Current target mapping:
 | ~90%+ | sprint | 24 |
 
 Threshold transitions include a small hysteresis margin.
+
+## PNG sequence format
+
+PNG Sequence mode accepts 2–120 static PNG files. Frames are sorted by file name using numeric ordering, so names such as `frame2.png` are placed before `frame10.png`.
+
+All sequence frames must have identical pixel dimensions and pass the normal image-import safety limits. A sequence is additionally capped at 64 MiB of source data and 16 million decoded pixels in total. Stored sequences are copied into SchneeRunner-owned `frames/0001.png`, `0002.png`, and so on; the original files remain untouched. Stored sequences participate in Recent Characters and last-character restoration just like single-image and sprite-sheet assets.
 
 ## Sprite sheet format
 
@@ -111,7 +118,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. PNG sequence and GIF import
+1. GIF import
 2. character states such as idle / walk / run / sprint
 3. portable character-pack format
 4. battery, memory, build, and local event triggers

@@ -35,9 +35,13 @@ AppDelegate
      |            v
      |      ProceduralRunCycle
      |
+     +----> PNGSequenceLoader
+     |
      +----> CharacterLibraryController
      |            |
      |            +----> CharacterAssetStore
+     |            |
+     |            +----> PNGSequenceAssetStore
      |            |
      |            +----> CharacterSelectionStore
      |
@@ -59,7 +63,9 @@ Owns deterministic and reusable domain behavior:
 - sprite-sheet decoding;
 - single-image procedural frame generation;
 - procedural run-cycle transforms;
+- ordered multi-file PNG sequence loading;
 - character metadata and owned-copy persistence;
+- multi-file sequence persistence;
 - last-selected character preference persistence;
 - pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
@@ -154,7 +160,7 @@ The current PoC reads the user-selected PNG directly and does not mutate it.
 
 Imported assets are copied into a SchneeRunner-owned Application Support directory using a staging directory followed by a final directory move. Source images are never moved, renamed, overwritten, or deleted as part of import.
 
-Each stored character uses a UUID directory containing a fixed-name source image and a JSON manifest. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running. Image imports are inspected with ImageIO before decode; type, frame count, file size, dimensions, and total pixel count must satisfy the configured validation policy.
+Each stored character uses a UUID directory and a JSON manifest. Single-image and sprite-sheet assets use a fixed-name source image; PNG sequences use a `frames/` directory with zero-padded frame names. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running. Image imports are inspected with ImageIO before decode; type, frame count, file size, dimensions, and pixel count must satisfy the configured validation policy. PNG sequences also enforce aggregate file-byte and decoded-pixel budgets across all frames and revalidate the owned copies before the staged directory becomes visible.
 
 Third-party character art is not part of the application distribution by default.
 

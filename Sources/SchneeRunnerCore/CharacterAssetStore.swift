@@ -3,6 +3,7 @@ import Foundation
 public enum CharacterAssetKind: String, Codable, Equatable, Sendable {
     case singleImage
     case spriteSheet4x2
+    case pngSequence
 }
 
 public struct StoredCharacterAsset: Codable, Equatable, Identifiable, Sendable {
@@ -31,6 +32,7 @@ public enum CharacterAssetStoreError: Error, Equatable, LocalizedError {
     case sourceIsNotRegularFile(URL)
     case symbolicLinkNotAllowed(URL)
     case unsupportedFileType(String)
+    case sequenceRequiresMultipleSources
     case assetNotFound(UUID)
     case invalidManifest(URL)
     case manifestIdentityMismatch(expected: UUID, actual: UUID)
@@ -44,6 +46,8 @@ public enum CharacterAssetStoreError: Error, Equatable, LocalizedError {
             "Symbolic links are not allowed for character assets: \(url.lastPathComponent)."
         case let .unsupportedFileType(fileExtension):
             "Only PNG character sources are currently supported. Received .\(fileExtension)."
+        case .sequenceRequiresMultipleSources:
+            "PNG sequences must be imported through the sequence asset store."
         case let .assetNotFound(id):
             "Character asset \(id.uuidString) was not found."
         case let .invalidManifest(url):
@@ -93,6 +97,10 @@ public struct CharacterAssetStore {
         kind: CharacterAssetKind,
         createdAt: Date = Date()
     ) throws -> StoredCharacterAsset {
+        guard kind != .pngSequence else {
+            throw CharacterAssetStoreError.sequenceRequiresMultipleSources
+        }
+
         let resourceValues = try sourceURL.resourceValues(
             forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
         )
@@ -121,7 +129,7 @@ public struct CharacterAssetStore {
             id: id,
             displayName: sourceURL.deletingPathExtension().lastPathComponent,
             kind: kind,
-            createdAt: createdAt
+            createdAt: Self.normalizedTimestamp(createdAt)
         )
         let stagingDirectory = rootDirectory
             .appendingPathComponent(".staging-\(id.uuidString)", isDirectory: true)
@@ -201,6 +209,10 @@ public struct CharacterAssetStore {
     }
 
     public func sourceURL(for asset: StoredCharacterAsset) throws -> URL {
+        guard asset.kind != .pngSequence else {
+            throw CharacterAssetStoreError.sequenceRequiresMultipleSources
+        }
+
         _ = try self.asset(id: asset.id)
 
         let sourceURL = directoryURL(for: asset.id)
@@ -216,6 +228,14 @@ public struct CharacterAssetStore {
         }
 
         try fileManager.removeItem(at: directory)
+    }
+
+    private static func normalizedTimestamp(_ date: Date) -> Date {
+        Date(
+            timeIntervalSince1970: floor(
+                date.timeIntervalSince1970
+            )
+        )
     }
 
     private func directoryURL(for id: UUID) -> URL {

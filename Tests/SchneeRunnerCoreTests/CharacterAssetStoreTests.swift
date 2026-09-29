@@ -27,6 +27,29 @@ final class CharacterAssetStoreTests: XCTestCase {
         XCTAssertNotEqual(copiedURL, fixture.sourceURL)
     }
 
+    func testImportNormalizesTimestampForManifestRoundTrip() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try pngData().write(to: fixture.sourceURL)
+        let asset = try fixture.store.importAsset(
+            from: fixture.sourceURL,
+            kind: .singleImage,
+            createdAt: Date(timeIntervalSince1970: 100.75)
+        )
+
+        XCTAssertEqual(
+            asset.createdAt,
+            Date(timeIntervalSince1970: 100)
+        )
+        XCTAssertEqual(
+            try fixture.store.asset(id: asset.id),
+            asset
+        )
+    }
+
     func testListAssetsReturnsNewestFirst() throws {
         let fixture = try makeFixture()
         defer {
@@ -125,6 +148,27 @@ final class CharacterAssetStoreTests: XCTestCase {
             XCTAssertEqual(
                 error as? ImageAssetValidationError,
                 .unsupportedContentType(nil)
+            )
+        }
+    }
+
+    func testRejectsSequenceKindInSingleSourceImporter() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try pngData().write(to: fixture.sourceURL)
+
+        XCTAssertThrowsError(
+            try fixture.store.importAsset(
+                from: fixture.sourceURL,
+                kind: .pngSequence
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterAssetStoreError,
+                .sequenceRequiresMultipleSources
             )
         }
     }

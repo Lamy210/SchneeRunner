@@ -58,6 +58,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 panelTitle: "Choose a 4x2 Sprite Sheet"
             )
         }
+        menuController.onLoadPNGSequence = { [weak self] in
+            self?.loadPNGSequence()
+        }
         menuController.onLoadRecentCharacter = { [weak self] id in
             self?.loadRecentCharacter(id: id)
         }
@@ -142,6 +145,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func loadPNGSequence() {
+        guard let urls = choosePNGs(
+            title: "Choose PNG Sequence Frames"
+        ) else {
+            return
+        }
+
+        do {
+            let frames = try characterLibrary.frames(
+                fromPNGSequence: urls
+            )
+            animationController.replaceFrames(frames)
+
+            do {
+                let asset = try characterLibrary.persistPNGSequence(
+                    sourceURLs: urls
+                )
+                characterLibrary.rememberSelection(asset)
+                refreshRecentCharactersMenu()
+            } catch {
+                presentPersistenceWarning(error)
+            }
+        } catch {
+            presentLoadError(error)
+        }
+    }
+
     private func loadRecentCharacter(id: UUID) {
         do {
             let asset = try characterLibrary.asset(id: id)
@@ -189,6 +219,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         return panel.url
+    }
+
+    private func choosePNGs(title: String) -> [URL]? {
+        let panel = NSOpenPanel()
+        panel.title = title
+        panel.prompt = "Load"
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = [.png]
+
+        guard panel.runModal() == .OK else {
+            return nil
+        }
+
+        return panel.urls
     }
 
     private func toggleCPUAdaptiveSpeed() {
