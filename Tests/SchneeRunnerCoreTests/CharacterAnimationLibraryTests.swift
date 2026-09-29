@@ -26,7 +26,7 @@ final class CharacterAnimationLibraryTests: XCTestCase {
 
     func testFallsBackToDefaultStateWhenAnimationIsMissing() throws {
         let run = try animation(frameCount: 2)
-        let library = try CharacterAnimationLibrary.single(
+        let library = CharacterAnimationLibrary.single(
             animation: run,
             state: .run
         )
