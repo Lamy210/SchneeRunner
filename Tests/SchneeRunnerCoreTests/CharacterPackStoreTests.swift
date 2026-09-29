@@ -9,102 +9,19 @@ final class CharacterPackStoreTests: XCTestCase {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
 
-        let idleGIF = fixture.packageURL
-            .appendingPathComponent("idle.gif")
-        try writeGIF(to: idleGIF)
-
-        let runDirectory = fixture.packageURL
-            .appendingPathComponent("run", isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: runDirectory,
-            withIntermediateDirectories: true
-        )
-        try writePNG(
-            to: runDirectory.appendingPathComponent("frame10.png")
-        )
-        try writePNG(
-            to: runDirectory.appendingPathComponent("frame2.png")
-        )
-        try Data("do not copy".utf8).write(
-            to: fixture.packageURL.appendingPathComponent("notes.txt")
-        )
-
-        let manifest = CharacterPackManifest(
-            name: "Portable Runner",
-            defaultState: .run,
-            clips: [
-                CharacterPackClip(
-                    state: .idle,
-                    kind: .gif,
-                    path: "idle.gif"
-                ),
-                CharacterPackClip(
-                    state: .run,
-                    kind: .pngSequence,
-                    path: "run"
-                )
-            ]
-        )
-        try writeManifest(
-            manifest,
-            to: fixture.packageURL
-        )
-
+        try prepareMixedPack(fixture)
         let asset = try fixture.packStore.importPack(
             from: fixture.packageURL,
             createdAt: Date(timeIntervalSince1970: 100.75)
         )
 
-        XCTAssertEqual(asset.kind, .characterPack)
-        XCTAssertEqual(asset.displayName, "Portable Runner")
-        XCTAssertEqual(
-            asset.createdAt,
-            Date(timeIntervalSince1970: 100)
+        try assertImportedAsset(
+            asset,
+            fixture: fixture
         )
-        XCTAssertEqual(
-            try fixture.characterStore.asset(id: asset.id),
-            asset
-        )
-
-        let ownedPackage = fixture.libraryDirectory
-            .appendingPathComponent(asset.id.uuidString, isDirectory: true)
-            .appendingPathComponent(
-                CharacterPackStore.packageDirectoryName,
-                isDirectory: true
-            )
-        XCTAssertFalse(
-            FileManager.default.fileExists(
-                atPath: ownedPackage
-                    .appendingPathComponent("notes.txt")
-                    .path
-            )
-        )
-        XCTAssertTrue(
-            FileManager.default.fileExists(
-                atPath: ownedPackage
-                    .appendingPathComponent("clips/idle/source.gif")
-                    .path
-            )
-        )
-        XCTAssertEqual(
-            try FileManager.default.contentsOfDirectory(
-                atPath: ownedPackage
-                    .appendingPathComponent("clips/run/frames")
-                    .path
-            ),
-            ["0001.png", "0002.png"]
-        )
-
-        let library = try fixture.packStore.library(
-            for: asset
-        )
-        XCTAssertEqual(
-            library.availableStates,
-            [.idle, .run]
-        )
-        XCTAssertEqual(
-            library.resolve(requestedState: .sprint).resolvedState,
-            .run
+        try assertCanonicalPackage(
+            asset,
+            fixture: fixture
         )
     }
 
@@ -146,6 +63,112 @@ final class CharacterPackStoreTests: XCTestCase {
             XCTAssertGreaterThan(actual, 1)
             XCTAssertEqual(maximum, 1)
         }
+    }
+
+    private func prepareMixedPack(
+        _ fixture: CharacterPackStoreFixture
+    ) throws {
+        let idleGIF = fixture.packageURL
+            .appendingPathComponent("idle.gif")
+        try writeGIF(to: idleGIF)
+
+        let runDirectory = fixture.packageURL
+            .appendingPathComponent("run", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: runDirectory,
+            withIntermediateDirectories: true
+        )
+        try writePNG(
+            to: runDirectory.appendingPathComponent("frame10.png")
+        )
+        try writePNG(
+            to: runDirectory.appendingPathComponent("frame2.png")
+        )
+        try Data("do not copy".utf8).write(
+            to: fixture.packageURL.appendingPathComponent("notes.txt")
+        )
+
+        try writeManifest(
+            CharacterPackManifest(
+                name: "Portable Runner",
+                defaultState: .run,
+                clips: [
+                    CharacterPackClip(
+                        state: .idle,
+                        kind: .gif,
+                        path: "idle.gif"
+                    ),
+                    CharacterPackClip(
+                        state: .run,
+                        kind: .pngSequence,
+                        path: "run"
+                    )
+                ]
+            ),
+            to: fixture.packageURL
+        )
+    }
+
+    private func assertImportedAsset(
+        _ asset: StoredCharacterAsset,
+        fixture: CharacterPackStoreFixture
+    ) throws {
+        XCTAssertEqual(asset.kind, .characterPack)
+        XCTAssertEqual(asset.displayName, "Portable Runner")
+        XCTAssertEqual(
+            asset.createdAt,
+            Date(timeIntervalSince1970: 100)
+        )
+        XCTAssertEqual(
+            try fixture.characterStore.asset(id: asset.id),
+            asset
+        )
+
+        let library = try fixture.packStore.library(
+            for: asset
+        )
+        XCTAssertEqual(
+            library.availableStates,
+            [.idle, .run]
+        )
+        XCTAssertEqual(
+            library.resolve(requestedState: .sprint).resolvedState,
+            .run
+        )
+    }
+
+    private func assertCanonicalPackage(
+        _ asset: StoredCharacterAsset,
+        fixture: CharacterPackStoreFixture
+    ) throws {
+        let ownedPackage = fixture.libraryDirectory
+            .appendingPathComponent(asset.id.uuidString, isDirectory: true)
+            .appendingPathComponent(
+                CharacterPackStore.packageDirectoryName,
+                isDirectory: true
+            )
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: ownedPackage
+                    .appendingPathComponent("notes.txt")
+                    .path
+            )
+        )
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: ownedPackage
+                    .appendingPathComponent("clips/idle/source.gif")
+                    .path
+            )
+        )
+        XCTAssertEqual(
+            try FileManager.default.contentsOfDirectory(
+                atPath: ownedPackage
+                    .appendingPathComponent("clips/run/frames")
+                    .path
+            ),
+            ["0001.png", "0002.png"]
+        )
     }
 
     private func makeFixture(
