@@ -72,7 +72,7 @@ Threshold transitions include a small hysteresis margin.
 
 PNG Sequence mode accepts 2–120 static PNG files. Frames are sorted by file name using numeric ordering, so names such as `frame2.png` are placed before `frame10.png`.
 
-All sequence frames must have identical pixel dimensions and pass the normal image-import safety limits. Stored sequences are copied into SchneeRunner-owned `frames/0001.png`, `0002.png`, and so on; the original files remain untouched.
+All sequence frames must have identical pixel dimensions and pass the normal image-import safety limits. A sequence is additionally capped at 64 MiB of source data and 16 million decoded pixels in total. Stored sequences are copied into SchneeRunner-owned `frames/0001.png`, `0002.png`, and so on; the original files remain untouched.
 
 ## Sprite sheet format
 
