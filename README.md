@@ -1,180 +1,109 @@
-# macOS App Development & Release Template
+# SchneeRunner
 
-Reusable baseline for developing and distributing macOS applications with GitHub Actions, code-quality gates, Developer ID signing, Apple notarization, DMG packaging, and Homebrew Cask distribution.
+SchneeRunner is a native macOS menu bar character runner. It is designed to let users load their own character artwork and animate it locally in the menu bar.
 
-## Goals
+The project does **not** bundle third-party character artwork. Imported images stay on the user's Mac.
 
-This repository standardizes the parts that should not be redesigned for every macOS application:
+## Status
 
-- short-lived branch and pull-request workflow
-- explicit coding standards and contribution rules
-- secret-free CI for untrusted pull requests
-- formatter, linter, complexity, workflow, shell, and security quality gates
-- separation of application-source builds from privileged release-control code
-- Developer ID signing and Apple notarization
-- deterministic DMG packaging and release verification
-- immutable GitHub Release and Homebrew Cask hand-off
-- least-privilege GitHub Actions permissions and pinned third-party actions
+Early proof of concept.
 
-The template deliberately separates **what is released** from **which code is trusted to publish it**. A `vX.Y.Z` tag chooses the application source built without release credentials. A separate `workflow_run` publisher, defined on the current default branch, validates the exact build run/artifact before any Apple secret or repository-write permission is available.
+The first vertical slice supports:
 
-## Recommended flow
+- macOS 14+
+- Swift 6 / Swift Package Manager
+- native AppKit menu bar UI
+- local PNG import
+- 4x2 sprite sheets with 8 frames
+- non-even pixel dimensions such as 1774x887
+- 8 / 12 / 18 / 24 FPS playback
+- no network access
 
-```text
-feat/* / fix/* / refactor/*
-          |
-          v
-     Pull Request
-          |
-          +-- SwiftFormat / SwiftLint
-          +-- tests / build
-          +-- actionlint / zizmor
-          +-- ShellCheck / shfmt
-          +-- dependency / security checks
-          |
-          v
-        main
-          |
-          v
-       vX.Y.Z tag
-          |
-          v
- Release Build
- tag source; no secrets; read-only
-          |
-          | exact run-id / attempt artifact
-          | unsigned-macos-app.tar.gz
-          | build-provenance.json
-          v
- Release Publisher / validate
- current default-branch control code
-          |
-          +-- verify workflow/repository/run/attempt
-          +-- verify tag -> SHA and trusted history
-          +-- verify artifact/ZIP/tar/app metadata/digests
-          +-- re-handoff validator-owned archive + metadata
-          |
-          v
- protected `release` Environment
-          |
-          +-- reverify metadata/digest/archive
-          +-- import Developer ID certificate
-          +-- sign .app and DMG
-          +-- notarize + staple
-          +-- verify signature / ticket / Gatekeeper
-          +-- immutable GitHub Release
-          |
-          v
- Homebrew Cask update PR
+CPU-based animation speed, additional image formats, character packs, persistence, and launch-at-login are intentionally deferred to later changes.
+
+## Run locally
+
+Requirements:
+
+- macOS 14 or later
+- a Swift 6 compatible toolchain
+
+Run:
+
+```bash
+swift run SchneeRunner
 ```
 
-The release tag never selects the privileged publisher implementation. This prevents a new tag pointing at an older trusted ancestor from executing stale privileged release logic.
+SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
-## Repository layout
+Choose **Load 4x2 Sprite Sheet…** and select a PNG.
+
+## Sprite sheet format
+
+The current PoC expects exactly eight frames arranged like this:
 
 ```text
-.github/
-  CODEOWNERS
-  dependabot.yml
-  pull_request_template.md
-  workflows/
-    quality.yml
-    release-isolation-tdd.yml
-    swift-quality.yml
-    reusable-homebrew-update.yml
-    reusable-macos-release.yml
-    reusable-swift-quality.yml
-docs/
-  BRANCHING.md
-  CODING_STANDARDS.md
-  HOMEBREW.md
-  QUALITY.md
-  RELEASE.md
-  SECRETS.md
-  SETUP.md
-examples/
-  app-release-build.yml
-  app-release-publisher.yml
-  app-release.yml              # migration pointer only
-scripts/
-  ci/
-  homebrew/
-  release/
-templates/
-  homebrew/
-CONTRIBUTING.md
-.editorconfig
-.swiftformat
-.swiftlint.yml
++---------+---------+---------+---------+
+| frame 1 | frame 2 | frame 3 | frame 4 |
++---------+---------+---------+---------+
+| frame 5 | frame 6 | frame 7 | frame 8 |
++---------+---------+---------+---------+
 ```
 
-## Quality policy
+Requirements:
 
-The default Swift profile makes code-quality failures visible as separate concerns:
+- PNG
+- four columns and two rows
+- transparent backgrounds are recommended
+- keep the character scale and ground baseline consistent between frames
 
-- **formatting** — SwiftFormat
-- **coding-standard/correctness violations** — SwiftLint
-- **complexity** — dedicated SwiftLint metrics gate
-- **optional semantic analysis** — `swiftlint analyze` when the caller provides a clean compiler log
-- **repository automation** — actionlint, zizmor, ShellCheck, and shfmt
-- **release trust boundary** — provenance, exact-artifact, source-binding, workflow-contract, and hostile-archive regression tests; the dedicated Release Isolation TDD suite runs on pull requests and again after merges to `main`
+The image does not need to be evenly divisible by four columns and two rows. SchneeRunner partitions the full pixel extent proportionally, so adjacent cells may differ by one pixel while no source pixels are dropped.
 
-The thresholds and exception policy are documented in [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) and [`docs/QUALITY.md`](docs/QUALITY.md). CI uses strict linting, so warning-level quality thresholds are blocking by default.
+Frame order is top row left-to-right, then bottom row left-to-right.
 
-## Adoption
+## Architecture
 
-1. Create a repository from this template or copy the relevant files into an existing macOS app.
-2. Apply the one-time GitHub settings in [`docs/SETUP.md`](docs/SETUP.md), including the protected `release` Environment and repository Rulesets.
-3. Choose a test policy profile from [`docs/TEST_PROFILES.md`](docs/TEST_PROFILES.md). For example, a SwiftPM project can start with `MACOS_TEST_PROFILE=standard` and `MACOS_TEST_ADAPTER=swiftpm`; a macOS Xcode app can start with `MACOS_TEST_PROFILE=macos-app` and `MACOS_TEST_ADAPTER=xcode`.
-4. Configure repository-specific test topology such as working directory, Xcode project/workspace, scheme, plans, destination, and visual manifest. Existing `MACOS_*` policy variables remain supported as the advanced/manual interface and override profile defaults independently.
-5. Review [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) and adapt thresholds only through an intentional policy change.
-6. Copy/adapt [`examples/app-release-build.yml`](examples/app-release-build.yml) to `.github/workflows/release-build.yml`. Keep this tag-triggered workflow secret-free and read-only.
-7. Copy/adapt [`examples/app-release-publisher.yml`](examples/app-release-publisher.yml) to `.github/workflows/release-publisher.yml` **on the default branch**.
-8. Package the unsigned `.app` into the tar archive produced by `scripts/release/package-app-artifact.sh`; do not upload a raw `.app` directory as the release handoff.
-9. Keep Apple signing/notarization credentials only in the protected `release` Environment. The called privileged macOS workflow reads them there; the publisher caller does not use `secrets: inherit`.
-10. If Homebrew distribution is enabled, pass only the narrow `tap_token` secret to `reusable-homebrew-update.yml` after release publication succeeds.
-11. Configure branch/tag policy according to [`docs/BRANCHING.md`](docs/BRANCHING.md) and review credential handling in [`docs/SECRETS.md`](docs/SECRETS.md).
-12. Run the test-policy/Test Infrastructure suites and release-isolation contract tests before the first production release.
+The initial dependency direction is:
 
-[`examples/app-release.yml`](examples/app-release.yml) is **migration documentation only**. It intentionally does not contain an executable monolithic release workflow.
+```text
+SchneeRunnerApp
+      |
+      v
+SchneeRunnerCore
+```
 
-Operational details are in [`docs/RELEASE.md`](docs/RELEASE.md), Homebrew-specific operation is in [`docs/HOMEBREW.md`](docs/HOMEBREW.md), and test-profile semantics are in [`docs/TEST_PROFILES.md`](docs/TEST_PROFILES.md).
+`SchneeRunnerCore` owns deterministic sprite-sheet geometry and decoding.
+`SchneeRunnerApp` owns AppKit lifecycle, the status item, file selection, and animation scheduling.
 
-## Security invariants
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-The following are design requirements, not recommendations:
+## Product direction
 
-- Pull-request CI and the tag-triggered Release Build must complete without Apple signing/notarization secrets.
-- The tag build has no repository write permission and never declares `environment: release`.
-- A default-branch `workflow_run` publisher independently resolves and validates one exact upstream build run, attempt, source SHA, tag, artifact identity, artifact digest, archive digest, and application identity.
-- Untrusted source artifacts are parsed in the secret-free validation job before a validator-owned handoff is created.
-- Only the privileged reusable macOS release job declares the protected `release` Environment and receives Apple credentials.
-- Privileged publisher control code and entitlements come from the trusted publisher/default-branch checkout, not from the release tag artifact.
-- The privileged job revalidates validator-owned metadata and archive content before importing the certificate.
-- Do not execute pull-request-controlled or release-artifact-controlled scripts in a job that has release secrets.
-- Do not use `pull_request_target` to check out and execute untrusted pull-request code.
-- Default `GITHUB_TOKEN` permissions are empty/read-only; grant write permissions only to the smallest job that needs them.
-- Do not use `secrets: inherit` at the Apple release boundary; non-Environment credentials such as the Homebrew tap token use narrow named-secret interfaces.
-- Pin third-party GitHub Actions to full commit SHAs and update them through Dependabot.
-- A published SemVer tag and its release assets are immutable; fix a release with a new version instead of moving/replacing it.
+Planned increments:
 
-## Policy profiles
+1. CPU load -> animation speed mapping
+2. persistent local character library
+3. PNG sequence and GIF import
+4. character states such as idle / walk / run / sprint
+5. portable character-pack format
+6. battery, memory, build, and local event triggers
+7. optional desktop-pet renderer
 
-### Solo OSS
+The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 
-- PR required for `main`
-- zero required approvals (avoids self-approval deadlock)
-- all required status checks must pass
-- direct push and force push disabled
-- squash merge preferred
+## Development
 
-### Team OSS
+Follow:
 
-- PR required for `main`
-- at least one approval
-- stale approvals dismissed after relevant changes
-- CODEOWNERS review for release/security paths
-- all required status checks must pass
-- direct push and force push disabled
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)
+- [docs/BRANCHING.md](docs/BRANCHING.md)
+- [docs/QUALITY.md](docs/QUALITY.md)
 
-See the documents in [`docs/`](docs/) for the complete operating model.
+Feature work uses short-lived branches and pull requests. Squash merge is preferred.
+
+## Privacy and asset policy
+
+SchneeRunner's core experience is local-first.
+
+The application should not upload imported artwork or telemetry by default. Character artwork from third parties must not be added to the public repository unless its redistribution terms explicitly allow that use.
