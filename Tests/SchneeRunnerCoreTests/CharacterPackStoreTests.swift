@@ -25,6 +25,111 @@ final class CharacterPackStoreTests: XCTestCase {
         )
     }
 
+    func testExportRecanonicalizesOwnedPackAndDropsUnreferencedFiles() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        try prepareMixedPack(fixture)
+        let asset = try fixture.packStore.importPack(
+            from: fixture.packageURL
+        )
+        let ownedPackage = fixture.libraryDirectory
+            .appendingPathComponent(asset.id.uuidString, isDirectory: true)
+            .appendingPathComponent(
+                CharacterPackStore.packageDirectoryName,
+                isDirectory: true
+            )
+        try Data("tampered".utf8).write(
+            to: ownedPackage.appendingPathComponent("tampered.txt")
+        )
+
+        let exportURL = fixture.rootURL
+            .appendingPathComponent("Exported.schneerunner", isDirectory: true)
+        try fixture.packStore.exportPack(
+            for: asset,
+            to: exportURL
+        )
+
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: exportURL
+                    .appendingPathComponent("tampered.txt")
+                    .path
+            )
+        )
+
+        let manifest = try CharacterPackLoader()
+            .validatedManifest(from: exportURL)
+        XCTAssertEqual(manifest.name, "Portable Runner")
+        XCTAssertEqual(manifest.defaultState, .run)
+        XCTAssertEqual(
+            manifest.clips.map(\.path),
+            [
+                "clips/idle/source.gif",
+                "clips/walk/source.png",
+                "clips/run/frames"
+            ]
+        )
+        XCTAssertEqual(
+            try CharacterPackLoader()
+                .load(from: exportURL)
+                .availableStates,
+            [.idle, .walk, .run]
+        )
+    }
+
+    func testExportRequiresCharacterPackExtension() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        try prepareMixedPack(fixture)
+        let asset = try fixture.packStore.importPack(
+            from: fixture.packageURL
+        )
+        let exportURL = fixture.rootURL
+            .appendingPathComponent("Exported.zip")
+
+        XCTAssertThrowsError(
+            try fixture.packStore.exportPack(
+                for: asset,
+                to: exportURL
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackStoreError,
+                .invalidExportExtension("zip")
+            )
+        }
+    }
+
+    func testExportDoesNotOverwriteExistingDestination() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        try prepareMixedPack(fixture)
+        let asset = try fixture.packStore.importPack(
+            from: fixture.packageURL
+        )
+        let exportURL = fixture.rootURL
+            .appendingPathComponent("Exported.schneerunner", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: exportURL,
+            withIntermediateDirectories: false
+        )
+
+        XCTAssertThrowsError(
+            try fixture.packStore.exportPack(
+                for: asset,
+                to: exportURL
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackStoreError,
+                .exportDestinationExists(exportURL)
+            )
+        }
+    }
+
     func testRejectsPackageOverAggregateByteLimit() throws {
         let fixture = try makeFixture(
             maximumPackageBytes: 1
