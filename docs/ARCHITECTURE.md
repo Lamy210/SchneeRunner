@@ -59,6 +59,7 @@ Owns deterministic and reusable domain behavior:
 - single-image procedural frame generation;
 - procedural run-cycle transforms;
 - character metadata and owned-copy persistence;
+- pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
 - CPU utilization smoothing;
 - utilization-to-animation-pace policy.
@@ -151,7 +152,7 @@ The current PoC reads the user-selected PNG directly and does not mutate it.
 
 Imported assets are copied into a SchneeRunner-owned Application Support directory using a staging directory followed by a final directory move. Source images are never moved, renamed, overwritten, or deleted as part of import.
 
-Each stored character uses a UUID directory containing a fixed-name source image and a JSON manifest. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running.
+Each stored character uses a UUID directory containing a fixed-name source image and a JSON manifest. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running. Image imports are inspected with ImageIO before decode; type, frame count, file size, dimensions, and total pixel count must satisfy the configured validation policy.
 
 Third-party character art is not part of the application distribution by default.
 
