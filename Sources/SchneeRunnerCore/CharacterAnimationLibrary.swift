@@ -28,6 +28,7 @@ public struct CharacterAnimationLibrary {
     public let defaultState: CharacterState
 
     private let animations: [CharacterState: LoadedAnimation]
+    private let defaultAnimation: LoadedAnimation
 
     public init(
         animations: [CharacterState: LoadedAnimation],
@@ -36,7 +37,7 @@ public struct CharacterAnimationLibrary {
         guard !animations.isEmpty else {
             throw CharacterAnimationLibraryError.emptyLibrary
         }
-        guard animations[defaultState] != nil else {
+        guard let defaultAnimation = animations[defaultState] else {
             throw CharacterAnimationLibraryError.defaultStateMissing(
                 defaultState
             )
@@ -44,6 +45,7 @@ public struct CharacterAnimationLibrary {
 
         self.animations = animations
         self.defaultState = defaultState
+        self.defaultAnimation = defaultAnimation
     }
 
     public static func single(
@@ -76,7 +78,7 @@ public struct CharacterAnimationLibrary {
         return CharacterAnimationResolution(
             requestedState: requestedState,
             resolvedState: defaultState,
-            animation: animations[defaultState]!
+            animation: defaultAnimation
         )
     }
 }
