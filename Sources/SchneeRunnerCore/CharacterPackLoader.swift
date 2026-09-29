@@ -218,13 +218,15 @@ public struct CharacterPackLoader {
         _ animation: LoadedAnimation,
         total: inout Int
     ) throws {
-        let animationPixels = animation.frames.reduce(into: 0) {
-            partialResult,
-            image in
-
+        var animationPixels = 0
+        for image in animation.frames {
             let pixels = pixelCount(for: image)
-            let sum = partialResult.addingReportingOverflow(pixels)
-            partialResult = sum.overflow ? Int.max : sum.partialValue
+            let sum = animationPixels.addingReportingOverflow(
+                pixels
+            )
+            animationPixels = sum.overflow
+                ? Int.max
+                : sum.partialValue
         }
 
         let sum = total.addingReportingOverflow(animationPixels)
