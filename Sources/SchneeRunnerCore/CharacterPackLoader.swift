@@ -316,6 +316,7 @@ public struct CharacterPackLoader {
                 in: animation
             )
             guard
+                decodedPixels <= policy.maximumTotalDecodedPixels,
                 totalDecodedPixels <=
                     policy.maximumTotalDecodedPixels - decodedPixels
             else {
