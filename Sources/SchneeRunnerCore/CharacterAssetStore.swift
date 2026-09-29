@@ -4,6 +4,7 @@ public enum CharacterAssetKind: String, Codable, Equatable, Sendable {
     case singleImage
     case spriteSheet4x2
     case pngSequence
+    case gif
 }
 
 public struct StoredCharacterAsset: Codable, Equatable, Identifiable, Sendable {
@@ -33,6 +34,7 @@ public enum CharacterAssetStoreError: Error, Equatable, LocalizedError {
     case symbolicLinkNotAllowed(URL)
     case unsupportedFileType(String)
     case sequenceRequiresMultipleSources
+    case gifRequiresDedicatedStore
     case assetNotFound(UUID)
     case invalidManifest(URL)
     case manifestIdentityMismatch(expected: UUID, actual: UUID)
@@ -48,6 +50,8 @@ public enum CharacterAssetStoreError: Error, Equatable, LocalizedError {
             "Only PNG character sources are currently supported. Received .\(fileExtension)."
         case .sequenceRequiresMultipleSources:
             "PNG sequences must be imported through the sequence asset store."
+        case .gifRequiresDedicatedStore:
+            "GIF assets must be imported through the GIF asset store."
         case let .assetNotFound(id):
             "Character asset \(id.uuidString) was not found."
         case let .invalidManifest(url):
@@ -97,8 +101,40 @@ public struct CharacterAssetStore {
         kind: CharacterAssetKind,
         createdAt: Date = Date()
     ) throws -> StoredCharacterAsset {
-        guard kind != .pngSequence else {
+        try validateImportSource(
+            sourceURL,
+            kind: kind
+        )
+        try fileManager.createDirectory(
+            at: rootDirectory,
+            withIntermediateDirectories: true
+        )
+
+        let asset = StoredCharacterAsset(
+            schemaVersion: Self.currentSchemaVersion,
+            id: UUID(),
+            displayName: sourceURL.deletingPathExtension().lastPathComponent,
+            kind: kind,
+            createdAt: Self.normalizedTimestamp(createdAt)
+        )
+        try persistSingleSource(
+            asset: asset,
+            sourceURL: sourceURL
+        )
+        return asset
+    }
+
+    private func validateImportSource(
+        _ sourceURL: URL,
+        kind: CharacterAssetKind
+    ) throws {
+        switch kind {
+        case .pngSequence:
             throw CharacterAssetStoreError.sequenceRequiresMultipleSources
+        case .gif:
+            throw CharacterAssetStoreError.gifRequiresDedicatedStore
+        case .singleImage, .spriteSheet4x2:
+            break
         }
 
         let resourceValues = try sourceURL.resourceValues(
@@ -117,23 +153,17 @@ public struct CharacterAssetStore {
         }
 
         _ = try imageValidator.validate(url: sourceURL)
+    }
 
-        try fileManager.createDirectory(
-            at: rootDirectory,
-            withIntermediateDirectories: true
+    private func persistSingleSource(
+        asset: StoredCharacterAsset,
+        sourceURL: URL
+    ) throws {
+        let stagingDirectory = rootDirectory.appendingPathComponent(
+            ".staging-\(asset.id.uuidString)",
+            isDirectory: true
         )
-
-        let id = UUID()
-        let asset = StoredCharacterAsset(
-            schemaVersion: Self.currentSchemaVersion,
-            id: id,
-            displayName: sourceURL.deletingPathExtension().lastPathComponent,
-            kind: kind,
-            createdAt: Self.normalizedTimestamp(createdAt)
-        )
-        let stagingDirectory = rootDirectory
-            .appendingPathComponent(".staging-\(id.uuidString)", isDirectory: true)
-        let finalDirectory = directoryURL(for: id)
+        let finalDirectory = directoryURL(for: asset.id)
 
         try? fileManager.removeItem(at: stagingDirectory)
         try fileManager.createDirectory(
@@ -142,17 +172,10 @@ public struct CharacterAssetStore {
         )
 
         do {
-            let copiedSourceURL = stagingDirectory
-                .appendingPathComponent(Self.sourceFileName)
-            try fileManager.copyItem(
-                at: sourceURL,
-                to: copiedSourceURL
-            )
-            try validateRegularNonSymlinkFile(at: copiedSourceURL)
-
-            try encoder.encode(asset).write(
-                to: stagingDirectory.appendingPathComponent(Self.manifestFileName),
-                options: .atomic
+            try writeSingleSourceAsset(
+                asset,
+                sourceURL: sourceURL,
+                stagingDirectory: stagingDirectory
             )
             try fileManager.moveItem(
                 at: stagingDirectory,
@@ -162,8 +185,25 @@ public struct CharacterAssetStore {
             try? fileManager.removeItem(at: stagingDirectory)
             throw error
         }
+    }
 
-        return asset
+    private func writeSingleSourceAsset(
+        _ asset: StoredCharacterAsset,
+        sourceURL: URL,
+        stagingDirectory: URL
+    ) throws {
+        let copiedSourceURL = stagingDirectory
+            .appendingPathComponent(Self.sourceFileName)
+        try fileManager.copyItem(
+            at: sourceURL,
+            to: copiedSourceURL
+        )
+        try validateRegularNonSymlinkFile(at: copiedSourceURL)
+
+        try encoder.encode(asset).write(
+            to: stagingDirectory.appendingPathComponent(Self.manifestFileName),
+            options: .atomic
+        )
     }
 
     public func listAssets() throws -> [StoredCharacterAsset] {
@@ -209,8 +249,13 @@ public struct CharacterAssetStore {
     }
 
     public func sourceURL(for asset: StoredCharacterAsset) throws -> URL {
-        guard asset.kind != .pngSequence else {
+        switch asset.kind {
+        case .pngSequence:
             throw CharacterAssetStoreError.sequenceRequiresMultipleSources
+        case .gif:
+            throw CharacterAssetStoreError.gifRequiresDedicatedStore
+        case .singleImage, .spriteSheet4x2:
+            break
         }
 
         _ = try self.asset(id: asset.id)
