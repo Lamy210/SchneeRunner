@@ -8,6 +8,7 @@ final class StatusMenuController: NSObject {
     var onLoadSingleImage: (() -> Void)?
     var onLoadSpriteSheet: (() -> Void)?
     var onLoadPNGSequence: (() -> Void)?
+    var onLoadGIF: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -97,6 +98,14 @@ final class StatusMenuController: NSObject {
         )
         sequenceItem.target = self
         menu.addItem(sequenceItem)
+
+        let gifItem = NSMenuItem(
+            title: "Load GIF…",
+            action: #selector(loadGIF),
+            keyEquivalent: ""
+        )
+        gifItem.target = self
+        menu.addItem(gifItem)
     }
 
     private func addRecentCharactersItem() {
@@ -120,21 +129,28 @@ final class StatusMenuController: NSObject {
     }
 
     private func addManualSpeedItem() {
-        let speedMenu = NSMenu(title: "Animation Speed")
+        let speedMenu = NSMenu(title: "Playback Speed")
+        let speeds = [
+            (framesPerSecond: 6, title: "0.5×"),
+            (framesPerSecond: 8, title: "0.67×"),
+            (framesPerSecond: 12, title: "1×"),
+            (framesPerSecond: 18, title: "1.5×"),
+            (framesPerSecond: 24, title: "2×")
+        ]
 
-        for framesPerSecond in [6, 8, 12, 18, 24] {
+        for speed in speeds {
             let item = NSMenuItem(
-                title: "\(framesPerSecond) FPS",
+                title: speed.title,
                 action: #selector(changeAnimationSpeed(_:)),
                 keyEquivalent: ""
             )
             item.target = self
-            item.tag = framesPerSecond
+            item.tag = speed.framesPerSecond
             speedMenu.addItem(item)
         }
 
         let rootItem = NSMenuItem(
-            title: "Manual Speed",
+            title: "Playback Speed",
             action: nil,
             keyEquivalent: ""
         )
@@ -162,6 +178,8 @@ final class StatusMenuController: NSObject {
             "4x2 Sprite"
         case .pngSequence:
             "PNG Sequence"
+        case .gif:
+            "GIF"
         }
 
         return "\(asset.displayName) · \(mode)"
@@ -190,6 +208,11 @@ final class StatusMenuController: NSObject {
     @objc
     private func loadPNGSequence() {
         onLoadPNGSequence?()
+    }
+
+    @objc
+    private func loadGIF() {
+        onLoadGIF?()
     }
 
     @objc
