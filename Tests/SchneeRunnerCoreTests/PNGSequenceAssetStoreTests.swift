@@ -32,7 +32,9 @@ final class PNGSequenceAssetStoreTests: XCTestCase {
             ["0001.png", "0002.png"]
         )
         XCTAssertEqual(
-            try storedURLs.map(Data.init(contentsOf:)),
+            try storedURLs.map { url in
+                try Data(contentsOf: url)
+            },
             [pngData, pngData]
         )
         XCTAssertTrue(
