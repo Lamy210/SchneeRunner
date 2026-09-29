@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 
 public struct CharacterPackPolicy: Equatable, Sendable {
@@ -313,7 +312,7 @@ public struct CharacterPackLoader {
                 clip: clip,
                 url: url
             )
-            let decodedPixels = estimatedDecodedPixels(
+            let decodedPixels = DecodedAnimationPixelCounter.pixels(
                 in: animation
             )
             guard
@@ -363,41 +362,6 @@ public struct CharacterPackLoader {
             try validateFile(url, path: clip.path)
             return try GIFAnimationLoader().load(from: url)
         }
-    }
-
-    private func estimatedDecodedPixels(
-        in animation: LoadedAnimation
-    ) -> Int {
-        animation.frames.reduce(into: 0) { total, image in
-            let dimensions = decodedPixelDimensions(
-                for: image
-            )
-            total += dimensions.width * dimensions.height
-        }
-    }
-
-    private func decodedPixelDimensions(
-        for image: NSImage
-    ) -> (width: Int, height: Int) {
-        let representation = image.representations.max { lhs, rhs in
-            lhs.pixelsWide * lhs.pixelsHigh
-                < rhs.pixelsWide * rhs.pixelsHigh
-        }
-        if
-            let representation,
-            representation.pixelsWide > 0,
-            representation.pixelsHigh > 0
-        {
-            return (
-                representation.pixelsWide,
-                representation.pixelsHigh
-            )
-        }
-
-        return (
-            max(Int(image.size.width.rounded(.up)), 1),
-            max(Int(image.size.height.rounded(.up)), 1)
-        )
     }
 
     private func validateFile(
