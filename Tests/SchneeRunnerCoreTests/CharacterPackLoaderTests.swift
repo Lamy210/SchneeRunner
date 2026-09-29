@@ -48,6 +48,43 @@ final class CharacterPackLoaderTests: XCTestCase {
         XCTAssertTrue(fallback.usedFallback)
     }
 
+    func testRejectsPackDecodedPixelBudget() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        let packURL = try fixture.makePack(
+            defaultState: .run,
+            clips: [
+                CharacterPackClipManifest(
+                    state: .run,
+                    kind: .singleImage,
+                    path: "run.png"
+                )
+            ]
+        )
+        let loader = CharacterPackLoader(
+            policy: CharacterPackPolicy(
+                maximumTotalDecodedPixels: 1
+            )
+        )
+
+        XCTAssertThrowsError(
+            try loader.load(from: packURL)
+        ) { error in
+            guard case let .decodedPixelBudgetExceeded(
+                actual,
+                maximum
+            ) = error as? CharacterPackLoaderError else {
+                return XCTFail("Expected decoded pixel budget failure.")
+            }
+
+            XCTAssertGreaterThan(actual, 1)
+            XCTAssertEqual(maximum, 1)
+        }
+    }
+
     func testRejectsDuplicateStateDefinitions() throws {
         let fixture = try makeFixture()
         defer {
