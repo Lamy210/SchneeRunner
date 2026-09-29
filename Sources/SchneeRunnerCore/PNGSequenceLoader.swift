@@ -4,6 +4,8 @@ import Foundation
 public enum PNGSequenceLoaderError: Error, Equatable, LocalizedError {
     case insufficientFrames(actual: Int)
     case tooManyFrames(actual: Int, maximum: Int)
+    case totalFileSizeTooLarge(actual: Int, maximum: Int)
+    case totalPixelCountTooLarge(actual: Int, maximum: Int)
     case inconsistentDimensions(
         expectedWidth: Int,
         expectedHeight: Int,
@@ -19,6 +21,10 @@ public enum PNGSequenceLoaderError: Error, Equatable, LocalizedError {
             "PNG sequences require at least two frames. Received \(actual)."
         case let .tooManyFrames(actual, maximum):
             "PNG sequence contains \(actual) frames, exceeding the \(maximum)-frame limit."
+        case let .totalFileSizeTooLarge(actual, maximum):
+            "PNG sequence uses \(actual) bytes, exceeding the \(maximum)-byte total limit."
+        case let .totalPixelCountTooLarge(actual, maximum):
+            "PNG sequence contains \(actual) total pixels, exceeding the \(maximum)-pixel limit."
         case let .inconsistentDimensions(
             expectedWidth,
             expectedHeight,
@@ -35,14 +41,20 @@ public enum PNGSequenceLoaderError: Error, Equatable, LocalizedError {
 
 public struct PNGSequenceLoader {
     public let maximumFrameCount: Int
+    public let maximumTotalFileBytes: Int
+    public let maximumTotalPixelCount: Int
 
     private let validator: ImageAssetValidator
 
     public init(
         maximumFrameCount: Int = 120,
+        maximumTotalFileBytes: Int = 64 * 1024 * 1024,
+        maximumTotalPixelCount: Int = 16_000_000,
         validator: ImageAssetValidator = .init()
     ) {
         self.maximumFrameCount = max(maximumFrameCount, 2)
+        self.maximumTotalFileBytes = max(maximumTotalFileBytes, 1)
+        self.maximumTotalPixelCount = max(maximumTotalPixelCount, 1)
         self.validator = validator
     }
 
@@ -59,37 +71,27 @@ public struct PNGSequenceLoader {
     }
 
     func validatedOrderedURLs(_ sourceURLs: [URL]) throws -> [URL] {
-        guard sourceURLs.count >= 2 else {
-            throw PNGSequenceLoaderError.insufficientFrames(
-                actual: sourceURLs.count
-            )
-        }
-        guard sourceURLs.count <= maximumFrameCount else {
-            throw PNGSequenceLoaderError.tooManyFrames(
-                actual: sourceURLs.count,
-                maximum: maximumFrameCount
-            )
-        }
+        try validateFrameCount(sourceURLs.count)
 
         let orderedURLs = orderedSourceURLs(sourceURLs)
         let firstMetadata = try validator.validate(url: orderedURLs[0])
+        var totalFileBytes = firstMetadata.fileSize
 
         for url in orderedURLs.dropFirst() {
             let metadata = try validator.validate(url: url)
-            guard
-                metadata.width == firstMetadata.width,
-                metadata.height == firstMetadata.height
-            else {
-                throw PNGSequenceLoaderError.inconsistentDimensions(
-                    expectedWidth: firstMetadata.width,
-                    expectedHeight: firstMetadata.height,
-                    actualWidth: metadata.width,
-                    actualHeight: metadata.height,
-                    fileName: url.lastPathComponent
-                )
-            }
+            try validateDimensions(
+                metadata,
+                expected: firstMetadata,
+                fileName: url.lastPathComponent
+            )
+            totalFileBytes += metadata.fileSize
         }
 
+        try validateAggregateLimits(
+            metadata: firstMetadata,
+            frameCount: orderedURLs.count,
+            totalFileBytes: totalFileBytes
+        )
         return orderedURLs
     }
 
@@ -101,6 +103,61 @@ public struct PNGSequenceLoader {
                 range: nil,
                 locale: Locale(identifier: "en_US_POSIX")
             ) == .orderedAscending
+        }
+    }
+
+    private func validateFrameCount(_ count: Int) throws {
+        guard count >= 2 else {
+            throw PNGSequenceLoaderError.insufficientFrames(
+                actual: count
+            )
+        }
+        guard count <= maximumFrameCount else {
+            throw PNGSequenceLoaderError.tooManyFrames(
+                actual: count,
+                maximum: maximumFrameCount
+            )
+        }
+    }
+
+    private func validateDimensions(
+        _ metadata: ValidatedImageAsset,
+        expected: ValidatedImageAsset,
+        fileName: String
+    ) throws {
+        guard
+            metadata.width == expected.width,
+            metadata.height == expected.height
+        else {
+            throw PNGSequenceLoaderError.inconsistentDimensions(
+                expectedWidth: expected.width,
+                expectedHeight: expected.height,
+                actualWidth: metadata.width,
+                actualHeight: metadata.height,
+                fileName: fileName
+            )
+        }
+    }
+
+    private func validateAggregateLimits(
+        metadata: ValidatedImageAsset,
+        frameCount: Int,
+        totalFileBytes: Int
+    ) throws {
+        guard totalFileBytes <= maximumTotalFileBytes else {
+            throw PNGSequenceLoaderError.totalFileSizeTooLarge(
+                actual: totalFileBytes,
+                maximum: maximumTotalFileBytes
+            )
+        }
+
+        let pixelsPerFrame = metadata.width * metadata.height
+        let totalPixelCount = pixelsPerFrame * frameCount
+        guard totalPixelCount <= maximumTotalPixelCount else {
+            throw PNGSequenceLoaderError.totalPixelCountTooLarge(
+                actual: totalPixelCount,
+                maximum: maximumTotalPixelCount
+            )
         }
     }
 }
