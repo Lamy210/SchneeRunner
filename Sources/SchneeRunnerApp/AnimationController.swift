@@ -66,6 +66,14 @@ final class AnimationController: NSObject {
         )
     }
 
+    func replaceAnimation(_ animation: LoadedAnimation) {
+        stop()
+        install(
+            frames: animation.frames,
+            schedule: animation.schedule
+        )
+    }
+
     func setFramesPerSecond(_ value: Double) {
         guard
             value.isFinite,
