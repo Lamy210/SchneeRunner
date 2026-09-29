@@ -2,7 +2,7 @@ import Foundation
 @testable import VisualDiffCore
 import XCTest
 
-final class ManifestRunnerTests: XCTestCase {
+final class ManifestRunnerProfileTests: XCTestCase {
     func testCurrentProfileMismatchFailsBeforeCaptureLookup() throws {
         let fixture = try Fixture()
         let manifest = try fixture.manifest(
@@ -119,6 +119,9 @@ final class ManifestRunnerTests: XCTestCase {
         }
     }
 
+}
+
+final class ManifestRunnerApprovalTests: XCTestCase {
     func testExactApprovalTurnsRollingMismatchIntoApprovedChange() throws {
         let fixture = try Fixture()
         let approvalPath = "Tests/VisualRegression/Approvals/dynamic.json"
@@ -238,6 +241,9 @@ final class ManifestRunnerTests: XCTestCase {
         XCTAssertEqual(summary.cases.first?.status, .failed)
     }
 
+}
+
+final class ManifestRunnerRollingBaselineTests: XCTestCase {
     func testMissingRollingBaselineIsExplicitBootstrapWhenEnabled() throws {
         let fixture = try Fixture()
         let testCase = fixture.rollingCase(id: "dynamic")
