@@ -69,6 +69,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onLoadGIF = { [weak self] in
             self?.loadGIF()
         }
+        menuController.onLoadCharacterPack = { [weak self] in
+            self?.loadCharacterPack()
+        }
         menuController.onLoadRecentCharacter = { [weak self] id in
             self?.loadRecentCharacter(id: id)
         }
@@ -218,11 +221,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func loadCharacterPack() {
+        guard let url = importPresenter.chooseCharacterPack(
+            title: "Choose a .schneerunner Character Pack"
+        ) else {
+            return
+        }
+
+        do {
+            let library = try characterLibrary.library(
+                fromCharacterPack: url
+            )
+            play(library)
+
+            do {
+                let asset = try characterLibrary.persistCharacterPack(
+                    sourceURL: url
+                )
+                characterLibrary.rememberSelection(asset)
+                refreshRecentCharactersMenu()
+            } catch {
+                importPresenter.presentPersistenceWarning(error)
+            }
+        } catch {
+            importPresenter.presentLoadError(error)
+        }
+    }
+
     private func loadRecentCharacter(id: UUID) {
         do {
             let asset = try characterLibrary.asset(id: id)
-            let animation = try characterLibrary.animation(for: asset)
-            play(animation)
+            let library = try characterLibrary.library(for: asset)
+            play(library)
             characterLibrary.rememberSelection(asset)
         } catch {
             importPresenter.presentLoadError(error)
@@ -245,8 +275,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let animation = try characterLibrary.animation(for: asset)
-            play(animation)
+            let library = try characterLibrary.library(for: asset)
+            play(library)
         } catch {
             characterLibrary.clearLastSelection()
         }
@@ -260,9 +290,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func play(_ animation: LoadedAnimation) {
-        let library = CharacterAnimationLibrary.single(
-            animation: animation
+        play(
+            CharacterAnimationLibrary.single(
+                animation: animation
+            )
         )
+    }
+
+    private func play(_ library: CharacterAnimationLibrary) {
         characterPlaybackController.install(library)
     }
 
