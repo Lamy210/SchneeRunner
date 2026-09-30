@@ -5,6 +5,8 @@ public enum CharacterAssetKind: String, Codable, Equatable, Sendable {
     case spriteSheet4x2
     case pngSequence
     case gif
+    case apng
+    case webP
     case characterPack
 }
 
@@ -36,6 +38,7 @@ public enum CharacterAssetStoreError: Error, Equatable, LocalizedError {
     case unsupportedFileType(String)
     case sequenceRequiresMultipleSources
     case gifRequiresDedicatedStore
+    case animatedImageRequiresDedicatedStore
     case characterPackRequiresDedicatedStore
     case assetNotFound(UUID)
     case invalidManifest(URL)
@@ -54,6 +57,8 @@ public enum CharacterAssetStoreError: Error, Equatable, LocalizedError {
             "PNG sequences must be imported through the sequence asset store."
         case .gifRequiresDedicatedStore:
             "GIF assets must be imported through the GIF asset store."
+        case .animatedImageRequiresDedicatedStore:
+            "APNG and WebP assets must be imported through the animated image asset store."
         case .characterPackRequiresDedicatedStore:
             "Character packs must be imported through the character pack store."
         case let .assetNotFound(id):
@@ -137,6 +142,8 @@ public struct CharacterAssetStore {
             throw CharacterAssetStoreError.sequenceRequiresMultipleSources
         case .gif:
             throw CharacterAssetStoreError.gifRequiresDedicatedStore
+        case .apng, .webP:
+            throw CharacterAssetStoreError.animatedImageRequiresDedicatedStore
         case .characterPack:
             throw CharacterAssetStoreError.characterPackRequiresDedicatedStore
         case .singleImage, .spriteSheet4x2:
@@ -260,6 +267,8 @@ public struct CharacterAssetStore {
             throw CharacterAssetStoreError.sequenceRequiresMultipleSources
         case .gif:
             throw CharacterAssetStoreError.gifRequiresDedicatedStore
+        case .apng, .webP:
+            throw CharacterAssetStoreError.animatedImageRequiresDedicatedStore
         case .characterPack:
             throw CharacterAssetStoreError.characterPackRequiresDedicatedStore
         case .singleImage, .spriteSheet4x2:
