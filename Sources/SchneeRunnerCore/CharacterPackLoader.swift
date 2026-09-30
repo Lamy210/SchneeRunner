@@ -274,6 +274,24 @@ public struct CharacterPackLoader {
         return max(width, 1) * max(height, 1)
     }
 
+    private func animatedImageFormat(
+        for kind: CharacterPackClipKind
+    ) -> AnimatedImageFormat {
+        switch kind {
+        case .apng:
+            .apng
+        case .webP:
+            .webP
+        case .singleImage,
+             .spriteSheet4x2,
+             .pngSequence,
+             .gif:
+            preconditionFailure(
+                "Expected APNG or WebP character pack clip kind."
+            )
+        }
+    }
+
     private func loadClip(
         _ clip: CharacterPackClip,
         packageURL: URL
@@ -313,6 +331,15 @@ public struct CharacterPackLoader {
                 kind: clip.kind
             )
             return try GIFAnimationLoader().load(from: url)
+
+        case .apng, .webP:
+            try resolver.validateRegularFile(
+                url,
+                kind: clip.kind
+            )
+            return try AnimatedImageLoader(
+                format: animatedImageFormat(for: clip.kind)
+            ).load(from: url)
 
         case .pngSequence:
             try resolver.validateDirectory(
