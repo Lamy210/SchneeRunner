@@ -217,7 +217,6 @@ public struct CharacterPackLoader {
             )
         }
     }
-
 }
 
 private extension CharacterPackLoader {
