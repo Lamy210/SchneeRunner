@@ -104,6 +104,20 @@ The original package is never moved, renamed, overwritten, or deleted.
 
 The owned copy is fully reloaded before its staging directory is committed.
 
+## Building packs programmatically
+
+`CharacterPackBuilder` creates a canonical v1 pack from local clip sources. A build request supplies the pack name, default state, and one source per state.
+
+Source semantics match the manifest clip kinds:
+
+- `singleImage` and `spriteSheet4x2` point to PNG files;
+- `gif` points to one GIF file;
+- `pngSequence` points to a directory containing the PNG frames.
+
+The builder validates name/state rules before copying, normalizes clip order to `idle`, `walk`, `run`, `dash`, `sprint`, applies the normal aggregate package-size limit, writes into a temporary `.schneerunner` directory, reloads the completed package, and only then moves it to the requested destination.
+
+Builds reject symlink clip files, invalid clip data, duplicate states, a missing default-state clip, non-`.schneerunner` destinations, and existing destinations. Failed builds remove their staging directory and leave source files unchanged.
+
 ## Export
 
 A currently loaded, stored Character Pack can be written back out with **Export Current Character Pack…**.
