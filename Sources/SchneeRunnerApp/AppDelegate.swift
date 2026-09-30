@@ -3,13 +3,9 @@ import SchneeRunnerCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private static let cpuStateTriggerID = "cpu"
-    private static let manualStateTriggerID = "manual"
-
     private let animationController = AnimationController()
     private let cpuMonitor = CPUMonitor()
     private let characterLibrary = CharacterLibraryController()
-    private let characterStatePolicy = CharacterStatePolicy()
     private let importPresenter = CharacterImportPresenter()
     private let packBuilderPresenter = CharacterPackBuilderPresenter()
     private let menuController = StatusMenuController()
@@ -17,11 +13,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var characterPlaybackController = CharacterPlaybackController(
         animationController: animationController
     )
+    private lazy var characterStateCoordinator = CharacterStateCoordinator(
+        playbackController: characterPlaybackController
+    )
 
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
     private var latestCPUUpdate: CPUMonitor.Update?
-    private var stateTriggerEngine = CharacterStateTriggerEngine()
     private var isCPUAdaptiveSpeedEnabled = true
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -116,7 +114,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             latestCPUUpdate = update
 
             if isCPUAdaptiveSpeedEnabled {
-                updateCPUStateTrigger(for: update.pace)
+                characterStateCoordinator.updateCPUState(
+                    for: update.pace
+                )
                 animationController.setFramesPerSecond(
                     update.pace.framesPerSecond
                 )
@@ -437,7 +437,9 @@ private extension AppDelegate {
         menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
 
         if isCPUAdaptiveSpeedEnabled, let latestCPUUpdate {
-            updateCPUStateTrigger(for: latestCPUUpdate.pace)
+            characterStateCoordinator.updateCPUState(
+                for: latestCPUUpdate.pace
+            )
             animationController.setFramesPerSecond(
                 latestCPUUpdate.pace.framesPerSecond
             )
@@ -447,40 +449,9 @@ private extension AppDelegate {
     }
 
     func setCharacterStateOverride(_ state: CharacterState?) {
-        if let state {
-            stateTriggerEngine.set(
-                CharacterStateTrigger(
-                    id: Self.manualStateTriggerID,
-                    state: state,
-                    priority: .manual
-                )
-            )
-        } else {
-            stateTriggerEngine.remove(
-                id: Self.manualStateTriggerID
-            )
-        }
-
+        characterStateCoordinator.setManualOverride(state)
         menuController.setCharacterStateOverride(state)
-        applyResolvedCharacterState()
         refreshCPUStatus()
-    }
-
-    func updateCPUStateTrigger(for pace: AnimationPace) {
-        stateTriggerEngine.set(
-            CharacterStateTrigger(
-                id: Self.cpuStateTriggerID,
-                state: characterStatePolicy.state(for: pace),
-                priority: .metric
-            )
-        )
-        applyResolvedCharacterState()
-    }
-
-    func applyResolvedCharacterState() {
-        characterPlaybackController.requestState(
-            stateTriggerEngine.resolution.state
-        )
     }
 
     func changeAnimationSpeed(_ framesPerSecond: Double) {
