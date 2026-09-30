@@ -47,6 +47,32 @@ final class CharacterImportPresenter {
         return panel.url
     }
 
+    func chooseCharacterPackExportDestination(
+        suggestedName: String
+    ) -> URL? {
+        let panel = NSSavePanel()
+        panel.title = "Export Character Pack"
+        panel.prompt = "Export"
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.nameFieldStringValue = characterPackFileName(
+            suggestedName
+        )
+
+        guard panel.runModal() == .OK else {
+            return nil
+        }
+
+        return panel.url
+    }
+
+    func presentExportError(_ error: Error) {
+        presentWarning(
+            title: "Could not export character pack",
+            error: error
+        )
+    }
+
     func presentLoadError(_ error: Error) {
         presentWarning(
             title: "Could not load animation",
@@ -59,6 +85,16 @@ final class CharacterImportPresenter {
             title: "Character is running, but was not saved",
             error: error
         )
+    }
+
+    private func characterPackFileName(
+        _ suggestedName: String
+    ) -> String {
+        let sanitizedName = suggestedName
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+
+        return "\(sanitizedName).schneerunner"
     }
 
     private func chooseFile(
