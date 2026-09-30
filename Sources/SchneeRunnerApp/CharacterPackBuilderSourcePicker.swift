@@ -12,12 +12,22 @@ final class CharacterPackBuilderSourcePicker {
         case .singleImage, .spriteSheet4x2:
             chooseFile(
                 title: "Choose PNG for \(state.displayName)",
-                contentType: .png
+                contentTypes: [.png]
             )
         case .gif:
             chooseFile(
                 title: "Choose GIF for \(state.displayName)",
-                contentType: .gif
+                contentTypes: [.gif]
+            )
+        case .apng:
+            chooseFile(
+                title: "Choose APNG for \(state.displayName)",
+                contentTypes: apngContentTypes
+            )
+        case .webP:
+            chooseFile(
+                title: "Choose WebP for \(state.displayName)",
+                contentTypes: [.webP]
             )
         case .pngSequence:
             chooseDirectory(
@@ -26,16 +36,25 @@ final class CharacterPackBuilderSourcePicker {
         }
     }
 
+    private var apngContentTypes: [UTType] {
+        var types: [UTType] = [.png]
+        if let apngType = UTType(filenameExtension: "apng") {
+            types.append(apngType)
+        }
+
+        return types
+    }
+
     private func chooseFile(
         title: String,
-        contentType: UTType
+        contentTypes: [UTType]
     ) -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
         panel.prompt = "Choose"
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [contentType]
+        panel.allowedContentTypes = contentTypes
 
         guard panel.runModal() == .OK else {
             return nil
