@@ -270,7 +270,7 @@ private extension AppDelegate {
         }
 
         guard let destinationURL = importPresenter
-            .chooseCharacterPackExportDestination(
+            .chooseCharacterPackBuildDestination(
                 suggestedName: request.name
             )
         else {
