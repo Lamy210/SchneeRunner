@@ -95,8 +95,8 @@ do {
     )
     let payload = try event.encodedJSON()
 
-    DistributedNotificationCenter.default().post(
-        name: Notification.Name(
+    DistributedNotificationCenter.default().postNotificationName(
+        Notification.Name(
             LocalCharacterStateEvent.notificationName
         ),
         object: payload,
