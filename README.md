@@ -31,6 +31,7 @@ The current vertical slice supports:
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - canonical export of the currently loaded stored Character Pack
 - Core Character Pack builder for assembling canonical packs from local clips
+- in-app Character Pack builder with per-state clip selection
 - local-only operation with no network access
 
 Additional character-pack clip kinds, additional animated image formats, export tooling, and launch-at-login are intentionally deferred to later changes.
@@ -83,6 +84,8 @@ Choose **Load Character Pack…** to import a directory ending in `.schneerunner
 Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, and GIF clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible. A pack is capped at 240 decoded frames and 32 million decoded pixels across all state clips.
 
 When the current stored character is a Character Pack, **Export Current Character Pack…** writes a fresh canonical `.schneerunner` directory. Export reuses only manifest-referenced clips, reloads the staged result before commit, and refuses to overwrite an existing destination.
+
+Choose **Build Character Pack…** to set a pack name and default state, attach optional idle / walk / run / dash / sprint clips, and write a canonical `.schneerunner` package. PNG Sequence clips select a source directory; the other clip kinds select PNG or GIF files. Building a pack does not change the currently running character.
 
 See [docs/CHARACTER_PACK.md](docs/CHARACTER_PACK.md) for the manifest and layout specification.
 
@@ -142,11 +145,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. character-pack builder UI
-2. APNG / WebP animation import
-3. battery, memory, build, and local event triggers
-4. generalized trigger priority and state overrides
-5. optional desktop-pet renderer
+1. APNG / WebP animation import
+2. battery, memory, build, and local event triggers
+3. generalized trigger priority and state overrides
+4. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 
