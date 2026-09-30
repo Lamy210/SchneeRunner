@@ -218,7 +218,10 @@ public struct CharacterPackLoader {
         }
     }
 
-    private func accountAnimation(
+}
+
+private extension CharacterPackLoader {
+    func accountAnimation(
         _ animation: LoadedAnimation,
         totalFrameCount: inout Int,
         totalDecodedPixels: inout Int
@@ -257,7 +260,7 @@ public struct CharacterPackLoader {
         totalDecodedPixels += animationPixels
     }
 
-    private func framePixelCount(_ image: NSImage) -> Int {
+    func framePixelCount(_ image: NSImage) -> Int {
         let representation = image.representations.max { lhs, rhs in
             lhs.pixelsWide * lhs.pixelsHigh
                 < rhs.pixelsWide * rhs.pixelsHigh
@@ -274,7 +277,7 @@ public struct CharacterPackLoader {
         return max(width, 1) * max(height, 1)
     }
 
-    private func loadClip(
+    func loadClip(
         _ clip: CharacterPackClip,
         packageURL: URL
     ) throws -> LoadedAnimation {
@@ -319,7 +322,7 @@ public struct CharacterPackLoader {
         }
     }
 
-    private func loadSingleImageClip(
+    func loadSingleImageClip(
         at url: URL,
         kind: CharacterPackClipKind
     ) throws -> LoadedAnimation {
@@ -334,7 +337,7 @@ public struct CharacterPackLoader {
         )
     }
 
-    private func loadSpriteSheetClip(
+    func loadSpriteSheetClip(
         at url: URL,
         kind: CharacterPackClipKind
     ) throws -> LoadedAnimation {
@@ -350,7 +353,7 @@ public struct CharacterPackLoader {
         )
     }
 
-    private func loadGIFClip(
+    func loadGIFClip(
         at url: URL,
         kind: CharacterPackClipKind
     ) throws -> LoadedAnimation {
@@ -363,7 +366,7 @@ public struct CharacterPackLoader {
         )
     }
 
-    private func loadAnimatedImageClip(
+    func loadAnimatedImageClip(
         at url: URL,
         kind: CharacterPackClipKind,
         format: AnimatedImageFormat
@@ -377,7 +380,7 @@ public struct CharacterPackLoader {
         ).load(from: url)
     }
 
-    private func loadPNGSequenceClip(
+    func loadPNGSequenceClip(
         at url: URL,
         kind: CharacterPackClipKind
     ) throws -> LoadedAnimation {
