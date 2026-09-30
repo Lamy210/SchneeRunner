@@ -58,10 +58,10 @@ final class CharacterPackClipRowView: NSView {
         )
     }
 
-    func setSourceURL(_ url: URL?) {
-        sourceURL = url
+    func setSourceURL(_ newURL: URL?) {
+        sourceURL = newURL
 
-        if let url {
+        if let url = newURL {
             sourceLabel.stringValue = url.lastPathComponent
             sourceLabel.toolTip = url.path
             clearButton.isEnabled = true
