@@ -5,7 +5,6 @@ import SchneeRunnerCore
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let animationController = AnimationController()
     private let cpuMonitor = CPUMonitor()
-    private let memoryPressureMonitor = SystemMemoryPressureMonitor()
     private let characterLibrary = CharacterLibraryController()
     private let importPresenter = CharacterImportPresenter()
     private let packBuilderPresenter = CharacterPackBuilderPresenter()
@@ -29,18 +28,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureAnimationCallback()
         configureMenuCallbacks()
         configureCPUMonitor()
-        configureMemoryPressureMonitor()
         refreshRecentCharactersMenu()
         restoreLastCharacter()
         characterStateCoordinator.start()
         cpuMonitor.start()
-        memoryPressureMonitor.start()
     }
 
     func applicationWillTerminate(_: Notification) {
         characterStateCoordinator.stop()
         cpuMonitor.stop()
-        memoryPressureMonitor.stop()
         animationController.stop()
     }
 
@@ -134,12 +130,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cpuMonitor.onError = { [weak self] _ in
             self?.latestCPUUpdate = nil
             self?.menuController.setCPUStatus("CPU: unavailable")
-        }
-    }
-
-    private func configureMemoryPressureMonitor() {
-        memoryPressureMonitor.onChange = { [weak self] level in
-            self?.characterStateCoordinator.updateMemoryPressure(level)
         }
     }
 

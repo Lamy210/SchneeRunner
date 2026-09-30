@@ -75,9 +75,9 @@ AppDelegate
      |            |
      |            +----> LocalCharacterStateEventMonitor
      |            |
+     |            +----> SystemMemoryPressureMonitor
+     |            |
      |            +----> MemoryPressureStatePolicy
-     |
-     +----> SystemMemoryPressureMonitor
      |
      +----> CPUMonitor
                   |

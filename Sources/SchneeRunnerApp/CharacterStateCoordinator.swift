@@ -11,6 +11,7 @@ final class CharacterStateCoordinator {
     private let cpuStatePolicy = CharacterStatePolicy()
     private let memoryPressurePolicy = MemoryPressureStatePolicy()
     private let localEventMonitor = LocalCharacterStateEventMonitor()
+    private let memoryPressureMonitor = SystemMemoryPressureMonitor()
 
     private var triggerEngine = CharacterStateTriggerEngine()
 
@@ -25,14 +26,19 @@ final class CharacterStateCoordinator {
         localEventMonitor.onClear = { [weak self] in
             self?.clearLocalEvent()
         }
+        memoryPressureMonitor.onChange = { [weak self] level in
+            self?.updateMemoryPressure(level)
+        }
     }
 
     func start() {
         localEventMonitor.start()
+        memoryPressureMonitor.start()
     }
 
     func stop() {
         localEventMonitor.stop()
+        memoryPressureMonitor.stop()
     }
 
     func updateCPUState(for pace: AnimationPace) {
