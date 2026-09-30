@@ -243,14 +243,13 @@ private extension AppDelegate {
     func loadAnimatedImage(
         format: AnimatedImageFormat
     ) {
-        let url: URL?
-        switch format {
+        let url = switch format {
         case .apng:
-            url = importPresenter.chooseAPNG(
+            importPresenter.chooseAPNG(
                 title: "Choose an Animated PNG"
             )
         case .webP:
-            url = importPresenter.chooseWebP(
+            importPresenter.chooseWebP(
                 title: "Choose an Animated WebP"
             )
         }
