@@ -162,14 +162,14 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
             target: self,
             action: #selector(cancel)
         )
-        cancelButton.keyEquivalent = ""
+        cancelButton.keyEquivalent = "\u{1B}"
 
         let buildButton = NSButton(
             title: "Build…",
             target: self,
             action: #selector(build)
         )
-        buildButton.keyEquivalent = ""
+        buildButton.keyEquivalent = "\r"
 
         let stack = NSStackView(
             views: [
