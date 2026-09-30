@@ -194,6 +194,48 @@ final class CharacterAssetStoreTests: XCTestCase {
         }
     }
 
+    func testRejectsAPNGKindInPNGStore() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try pngData().write(to: fixture.sourceURL)
+
+        XCTAssertThrowsError(
+            try fixture.store.importAsset(
+                from: fixture.sourceURL,
+                kind: .apng
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterAssetStoreError,
+                .animatedImageRequiresDedicatedStore
+            )
+        }
+    }
+
+    func testRejectsWebPKindInPNGStore() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try pngData().write(to: fixture.sourceURL)
+
+        XCTAssertThrowsError(
+            try fixture.store.importAsset(
+                from: fixture.sourceURL,
+                kind: .webP
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterAssetStoreError,
+                .animatedImageRequiresDedicatedStore
+            )
+        }
+    }
+
     func testRejectsCharacterPackKindInSingleSourceStore() throws {
         let fixture = try makeFixture()
         defer {

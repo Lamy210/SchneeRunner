@@ -71,6 +71,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onLoadGIF = { [weak self] in
             self?.loadGIF()
         }
+        menuController.onLoadAPNG = { [weak self] in
+            self?.loadAnimatedImage(format: .apng)
+        }
+        menuController.onLoadWebP = { [weak self] in
+            self?.loadAnimatedImage(format: .webP)
+        }
         menuController.onLoadCharacterPack = { [weak self] in
             self?.loadCharacterPack()
         }
@@ -222,6 +228,47 @@ private extension AppDelegate {
             do {
                 let asset = try characterLibrary.persistGIF(
                     sourceURL: url
+                )
+                setCurrentAsset(asset)
+                characterLibrary.rememberSelection(asset)
+                refreshRecentCharactersMenu()
+            } catch {
+                importPresenter.presentPersistenceWarning(error)
+            }
+        } catch {
+            importPresenter.presentLoadError(error)
+        }
+    }
+
+    func loadAnimatedImage(
+        format: AnimatedImageFormat
+    ) {
+        let url = switch format {
+        case .apng:
+            importPresenter.chooseAPNG(
+                title: "Choose an Animated PNG"
+            )
+        case .webP:
+            importPresenter.chooseWebP(
+                title: "Choose an Animated WebP"
+            )
+        }
+
+        guard let url else {
+            return
+        }
+
+        do {
+            let animation = try characterLibrary.animation(
+                fromAnimatedImage: url,
+                format: format
+            )
+            play(animation)
+
+            do {
+                let asset = try characterLibrary.persistAnimatedImage(
+                    sourceURL: url,
+                    format: format
                 )
                 setCurrentAsset(asset)
                 characterLibrary.rememberSelection(asset)
