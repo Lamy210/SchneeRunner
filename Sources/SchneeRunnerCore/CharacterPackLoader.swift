@@ -285,72 +285,119 @@ public struct CharacterPackLoader {
 
         switch clip.kind {
         case .singleImage:
-            try resolver.validateRegularFile(
-                url,
-                kind: clip.kind
-            )
-            let frames = try ProceduralImageFrameGenerator()
-                .frames(from: url)
-            return try LoadedAnimation.uniform(
-                frames: frames
-            )
-
-        case .spriteSheet4x2:
-            try resolver.validateRegularFile(
-                url,
-                kind: clip.kind
-            )
-            let frames = try SpriteSheetLoader(
-                grid: SpriteSheetGrid(columns: 4, rows: 2)
-            ).loadFrames(from: url)
-            return try LoadedAnimation.uniform(
-                frames: frames
-            )
-
-        case .gif:
-            try resolver.validateRegularFile(
-                url,
-                kind: clip.kind
-            )
-            return try GIFAnimationLoader().load(from: url)
-
-        case .apng:
-            try resolver.validateRegularFile(
-                url,
-                kind: clip.kind
-            )
-            return try AnimatedImageLoader(
-                format: .apng
-            ).load(from: url)
-
-        case .webP:
-            try resolver.validateRegularFile(
-                url,
-                kind: clip.kind
-            )
-            return try AnimatedImageLoader(
-                format: .webP
-            ).load(from: url)
-
-        case .pngSequence:
-            try resolver.validateDirectory(
-                url,
-                kind: clip.kind
-            )
-            let urls = try fileManager.contentsOfDirectory(
+            return try loadSingleImageClip(
                 at: url,
-                includingPropertiesForKeys: [
-                    .isRegularFileKey,
-                    .isSymbolicLinkKey
-                ],
-                options: [.skipsHiddenFiles]
+                kind: clip.kind
             )
-            let frames = try PNGSequenceLoader().frames(
-                from: urls
+        case .spriteSheet4x2:
+            return try loadSpriteSheetClip(
+                at: url,
+                kind: clip.kind
             )
-            return try LoadedAnimation.uniform(
-                frames: frames
+        case .gif:
+            return try loadGIFClip(
+                at: url,
+                kind: clip.kind
+            )
+        case .apng:
+            return try loadAnimatedImageClip(
+                at: url,
+                kind: clip.kind,
+                format: .apng
+            )
+        case .webP:
+            return try loadAnimatedImageClip(
+                at: url,
+                kind: clip.kind,
+                format: .webP
+            )
+        case .pngSequence:
+            return try loadPNGSequenceClip(
+                at: url,
+                kind: clip.kind
             )
         }
+    }
+
+    private func loadSingleImageClip(
+        at url: URL,
+        kind: CharacterPackClipKind
+    ) throws -> LoadedAnimation {
+        try resolver.validateRegularFile(
+            url,
+            kind: kind
+        )
+        let frames = try ProceduralImageFrameGenerator()
+            .frames(from: url)
+        return try LoadedAnimation.uniform(
+            frames: frames
+        )
+    }
+
+    private func loadSpriteSheetClip(
+        at url: URL,
+        kind: CharacterPackClipKind
+    ) throws -> LoadedAnimation {
+        try resolver.validateRegularFile(
+            url,
+            kind: kind
+        )
+        let frames = try SpriteSheetLoader(
+            grid: SpriteSheetGrid(columns: 4, rows: 2)
+        ).loadFrames(from: url)
+        return try LoadedAnimation.uniform(
+            frames: frames
+        )
+    }
+
+    private func loadGIFClip(
+        at url: URL,
+        kind: CharacterPackClipKind
+    ) throws -> LoadedAnimation {
+        try resolver.validateRegularFile(
+            url,
+            kind: kind
+        )
+        return try GIFAnimationLoader().load(
+            from: url
+        )
+    }
+
+    private func loadAnimatedImageClip(
+        at url: URL,
+        kind: CharacterPackClipKind,
+        format: AnimatedImageFormat
+    ) throws -> LoadedAnimation {
+        try resolver.validateRegularFile(
+            url,
+            kind: kind
+        )
+        return try AnimatedImageLoader(
+            format: format
+        ).load(from: url)
+    }
+
+    private func loadPNGSequenceClip(
+        at url: URL,
+        kind: CharacterPackClipKind
+    ) throws -> LoadedAnimation {
+        try resolver.validateDirectory(
+            url,
+            kind: kind
+        )
+        let urls = try fileManager.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: [
+                .isRegularFileKey,
+                .isSymbolicLinkKey
+            ],
+            options: [.skipsHiddenFiles]
+        )
+        let frames = try PNGSequenceLoader().frames(
+            from: urls
+        )
+        return try LoadedAnimation.uniform(
+            frames: frames
+        )
     }
 }
