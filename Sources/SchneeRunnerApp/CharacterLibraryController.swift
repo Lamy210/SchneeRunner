@@ -7,6 +7,7 @@ final class CharacterLibraryController {
     private let sequenceStore: PNGSequenceAssetStore
     private let gifStore: GIFAssetStore
     private let packStore: CharacterPackStore
+    private let packBuilder: CharacterPackBuilder
     private let selectionStore: CharacterSelectionStore
 
     init(
@@ -37,6 +38,9 @@ final class CharacterLibraryController {
         )
         packStore = CharacterPackStore(
             rootDirectory: rootDirectory,
+            fileManager: fileManager
+        )
+        packBuilder = CharacterPackBuilder(
             fileManager: fileManager
         )
     }
@@ -99,6 +103,16 @@ final class CharacterLibraryController {
         sourceURL: URL
     ) throws -> StoredCharacterAsset {
         try packStore.importPack(from: sourceURL)
+    }
+
+    func buildCharacterPack(
+        _ request: CharacterPackBuildRequest,
+        at destinationURL: URL
+    ) throws {
+        try packBuilder.build(
+            request,
+            at: destinationURL
+        )
     }
 
     func exportCharacterPack(
