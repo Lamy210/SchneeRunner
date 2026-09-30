@@ -39,6 +39,37 @@ final class CharacterStateTriggerEngineTests: XCTestCase {
         XCTAssertEqual(engine.resolution.trigger?.id, "manual")
     }
 
+    func testSystemEventPrioritySitsBetweenMetricAndEvent() {
+        var engine = CharacterStateTriggerEngine()
+
+        engine.set(
+            CharacterStateTrigger(
+                id: "cpu",
+                state: .walk,
+                priority: .metric
+            )
+        )
+        engine.set(
+            CharacterStateTrigger(
+                id: "memory-pressure",
+                state: .sprint,
+                priority: .systemEvent
+            )
+        )
+
+        XCTAssertEqual(engine.resolution.state, .sprint)
+
+        engine.set(
+            CharacterStateTrigger(
+                id: "local-event",
+                state: .idle,
+                priority: .event
+            )
+        )
+
+        XCTAssertEqual(engine.resolution.state, .idle)
+    }
+
     func testEventPrioritySitsBetweenMetricAndManual() {
         var engine = CharacterStateTriggerEngine()
 

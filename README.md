@@ -30,6 +30,7 @@ The current vertical slice supports:
 - priority-aware character-state trigger resolution
 - manual Automatic / Idle / Walk / Run / Dash / Sprint state override
 - local state-event CLI with optional TTL expiry
+- system memory-pressure trigger with warning / critical escalation
 - state-aware animation lookup with deterministic default-animation fallback
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - canonical export of the currently loaded stored Character Pack
@@ -93,9 +94,15 @@ swift run schneerunnerctl state idle
 swift run schneerunnerctl clear
 ```
 
-A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. The current priority order is **manual > local event > CPU metric**.
+A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. The current priority order is **manual > local event > system memory pressure > CPU metric**.
 
 The control path uses macOS Distributed Notifications and does not open a network port. It is intended for same-user local automation such as build scripts and development hooks; it is not an authenticated security boundary. Malformed payloads are ignored.
+
+## Memory pressure trigger
+
+SchneeRunner monitors macOS system memory-pressure transitions locally. Normal pressure does not install a trigger. A warning requests the **dash** state, while critical pressure requests **sprint**. Returning to normal removes the memory-pressure trigger and immediately exposes the next active source.
+
+The priority order is **manual > local event > system memory pressure > CPU metric**. This keeps an explicit user override strongest, lets local automation override system pressure when needed, and prevents the one-second CPU sampler from immediately replacing a pressure alert.
 
 ## Character Pack v1
 
@@ -173,7 +180,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. battery, memory, and first-class build triggers
+1. battery and first-class build triggers
 2. named/multiple local event channels if real integrations require them
 3. optional desktop-pet renderer
 
