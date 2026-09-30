@@ -1,11 +1,6 @@
 import Foundation
 
-public struct CharacterStateTriggerPriority:
-    RawRepresentable,
-    Comparable,
-    Equatable,
-    Sendable
-{
+public struct CharacterStateTriggerPriority: RawRepresentable, Comparable, Equatable, Sendable {
     public let rawValue: Int
 
     public init(rawValue: Int) {
