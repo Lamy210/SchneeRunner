@@ -44,13 +44,7 @@ public struct LocalCharacterStateEvent: Codable, Equatable, Sendable {
         action: LocalCharacterStateEventAction,
         state: CharacterState?,
         durationSeconds: Double?
-    ) throws {
-        try Self.validate(
-            action: action,
-            state: state,
-            durationSeconds: durationSeconds
-        )
-
+    ) {
         self.action = action
         self.state = state
         self.durationSeconds = durationSeconds
@@ -60,7 +54,13 @@ public struct LocalCharacterStateEvent: Codable, Equatable, Sendable {
         state: CharacterState,
         durationSeconds: Double? = nil
     ) throws -> LocalCharacterStateEvent {
-        try LocalCharacterStateEvent(
+        try validate(
+            action: .set,
+            state: state,
+            durationSeconds: durationSeconds
+        )
+
+        return LocalCharacterStateEvent(
             action: .set,
             state: state,
             durationSeconds: durationSeconds
@@ -68,7 +68,7 @@ public struct LocalCharacterStateEvent: Codable, Equatable, Sendable {
     }
 
     public static func clear() -> LocalCharacterStateEvent {
-        try! LocalCharacterStateEvent(
+        LocalCharacterStateEvent(
             action: .clear,
             state: nil,
             durationSeconds: nil
