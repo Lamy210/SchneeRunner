@@ -172,4 +172,4 @@ Only manifest-referenced clip files are copied. Extra files in the source packag
 
 Character Pack v1 supports `singleImage`, `spriteSheet4x2`, `pngSequence`, and `gif` clips.
 
-Future format versions may add other clip kinds or metadata. A v1 reader rejects unknown format versions rather than guessing their meaning.
+Standalone APNG and WebP animations are supported by SchneeRunner, but they are not Character Pack v1 clip kinds. A future compatible format change may add them explicitly. Unknown format versions or clip kinds are rejected rather than guessed.
