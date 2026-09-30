@@ -26,7 +26,7 @@ final class SystemMemoryPressureMonitor {
                     return
                 }
 
-                self.onChange?(level)
+                onChange?(level)
             }
         }
 
