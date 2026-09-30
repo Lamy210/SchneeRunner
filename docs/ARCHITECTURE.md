@@ -67,6 +67,8 @@ AppDelegate
      |            |
      |            +----> CharacterSelectionStore
      |
+     +----> LaunchAtLoginMenuController ----> SMAppService.mainApp
+     |
      +----> CharacterStateCoordinator
      |            |
      |            +----> CharacterStateTriggerEngine
@@ -133,6 +135,7 @@ Owns macOS integration:
 - animation scheduling;
 - requested-state playback coordination;
 - manual character-state override menu coordination;
+- system-managed login-item registration and approval-state presentation;
 - local Distributed Notification event reception and TTL expiry;
 - Mach host CPU sampling;
 - CPU sampling timer;
@@ -278,7 +281,6 @@ The following remain deliberately deferred:
 - Xcode project layout;
 - sandboxing and entitlements;
 - character-pack export and future schema versions;
-- launch-at-login mechanism;
 - signed/notarized release configuration;
 - generalized metric/event provider protocols;
 - desktop rendering.

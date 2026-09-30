@@ -32,6 +32,7 @@ final class StatusMenuController: NSObject {
     )
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
     private let stateMenuController = CharacterStateMenuController()
+    private let launchAtLoginMenuController = LaunchAtLoginMenuController()
     private let exportCharacterPackItem = NSMenuItem(
         title: "Export Current Character Pack…",
         action: nil,
@@ -43,6 +44,7 @@ final class StatusMenuController: NSObject {
         stateMenuController.onSelection = { [weak self] state in
             self?.onCharacterStateOverride?(state)
         }
+        menu.delegate = self
         buildMenu()
     }
 
@@ -96,6 +98,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(stateMenuController.rootItem)
         addManualSpeedItem()
         menu.addItem(.separator())
+        menu.addItem(launchAtLoginMenuController.item)
         addQuitItem()
     }
 
@@ -335,5 +338,11 @@ final class StatusMenuController: NSObject {
     @objc
     private func quitApplication() {
         onQuit?()
+    }
+}
+
+extension StatusMenuController: NSMenuDelegate {
+    func menuWillOpen(_: NSMenu) {
+        launchAtLoginMenuController.refresh()
     }
 }
