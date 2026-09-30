@@ -31,6 +31,7 @@ The current vertical slice supports:
 - manual Automatic / Idle / Walk / Run / Dash / Sprint state override
 - local state-event CLI with optional TTL expiry
 - system memory-pressure trigger with warning / critical escalation
+- system low-battery warning trigger driven by macOS warning levels
 - state-aware animation lookup with deterministic default-animation fallback
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - canonical export of the currently loaded stored Character Pack
@@ -94,7 +95,7 @@ swift run schneerunnerctl state idle
 swift run schneerunnerctl clear
 ```
 
-A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. The current priority order is **manual > local event > system memory pressure > CPU metric**.
+A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. The current priority order is **manual > local event > system memory pressure > battery warning > CPU metric**.
 
 The control path uses macOS Distributed Notifications and does not open a network port. It is intended for same-user local automation such as build scripts and development hooks; it is not an authenticated security boundary. Malformed payloads are ignored.
 
@@ -102,7 +103,13 @@ The control path uses macOS Distributed Notifications and does not open a networ
 
 SchneeRunner monitors macOS system memory-pressure transitions locally. Normal pressure does not install a trigger. A warning requests the **dash** state, while critical pressure requests **sprint**. Returning to normal removes the memory-pressure trigger and immediately exposes the next active source.
 
-The priority order is **manual > local event > system memory pressure > CPU metric**. This keeps an explicit user override strongest, lets local automation override system pressure when needed, and prevents the one-second CPU sampler from immediately replacing a pressure alert.
+The priority order is **manual > local event > system memory pressure > battery warning > CPU metric**. This keeps an explicit user override strongest, lets local automation override system pressure when needed, and prevents the one-second CPU sampler from immediately replacing a pressure alert.
+
+## Battery warning trigger
+
+SchneeRunner listens for macOS power-source changes and reads the operating system's low-battery warning level. It does not define its own battery-percentage thresholds. No warning removes the battery trigger, an early warning requests **walk**, and a final warning requests **idle**.
+
+Battery warnings use a system-advisory priority below memory pressure and above the CPU metric. A critical memory-pressure state therefore remains authoritative over a later battery update, while CPU sampling cannot immediately erase the battery warning. Desktops and Macs on external power resolve to the no-warning path.
 
 ## Character Pack v1
 
@@ -180,7 +187,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. battery and first-class build triggers
+1. first-class build triggers
 2. named/multiple local event channels if real integrations require them
 3. optional desktop-pet renderer
 
