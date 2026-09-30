@@ -3,11 +3,13 @@ import SchneeRunnerCore
 @MainActor
 final class CharacterStateCoordinator {
     private static let cpuTriggerID = "cpu"
+    private static let memoryPressureTriggerID = "memory-pressure"
     private static let localEventTriggerID = "local-event"
     private static let manualTriggerID = "manual"
 
     private let playbackController: CharacterPlaybackController
-    private let statePolicy = CharacterStatePolicy()
+    private let cpuStatePolicy = CharacterStatePolicy()
+    private let memoryPressurePolicy = MemoryPressureStatePolicy()
     private let localEventMonitor = LocalCharacterStateEventMonitor()
 
     private var triggerEngine = CharacterStateTriggerEngine()
@@ -37,10 +39,28 @@ final class CharacterStateCoordinator {
         triggerEngine.set(
             CharacterStateTrigger(
                 id: Self.cpuTriggerID,
-                state: statePolicy.state(for: pace),
+                state: cpuStatePolicy.state(for: pace),
                 priority: .metric
             )
         )
+        applyResolvedState()
+    }
+
+    func updateMemoryPressure(_ level: MemoryPressureLevel) {
+        if let state = memoryPressurePolicy.state(for: level) {
+            triggerEngine.set(
+                CharacterStateTrigger(
+                    id: Self.memoryPressureTriggerID,
+                    state: state,
+                    priority: .systemEvent
+                )
+            )
+        } else {
+            triggerEngine.remove(
+                id: Self.memoryPressureTriggerID
+            )
+        }
+
         applyResolvedState()
     }
 

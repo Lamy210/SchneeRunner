@@ -10,6 +10,9 @@ public struct CharacterStateTriggerPriority: RawRepresentable, Comparable, Equat
     public static let metric = CharacterStateTriggerPriority(
         rawValue: 100
     )
+    public static let systemEvent = CharacterStateTriggerPriority(
+        rawValue: 400
+    )
     public static let event = CharacterStateTriggerPriority(
         rawValue: 500
     )
