@@ -16,6 +16,7 @@ final class StatusMenuController: NSObject {
     var onExportCharacterPack: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
+    var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
     var onQuit: (() -> Void)?
 
@@ -30,6 +31,7 @@ final class StatusMenuController: NSObject {
         keyEquivalent: ""
     )
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
+    private let stateMenuController = CharacterStateMenuController()
     private let exportCharacterPackItem = NSMenuItem(
         title: "Export Current Character Pack…",
         action: nil,
@@ -38,6 +40,9 @@ final class StatusMenuController: NSObject {
 
     override init() {
         super.init()
+        stateMenuController.onSelection = { [weak self] state in
+            self?.onCharacterStateOverride?(state)
+        }
         buildMenu()
     }
 
@@ -47,6 +52,10 @@ final class StatusMenuController: NSObject {
 
     func setAdaptiveSpeedEnabled(_ isEnabled: Bool) {
         adaptiveSpeedItem.state = isEnabled ? .on : .off
+    }
+
+    func setCharacterStateOverride(_ state: CharacterState?) {
+        stateMenuController.setSelection(state)
     }
 
     func setRecentCharacters(_ assets: [StoredCharacterAsset]) {
@@ -84,6 +93,7 @@ final class StatusMenuController: NSObject {
         addExportItem()
         menu.addItem(.separator())
         addCPUItems()
+        menu.addItem(stateMenuController.rootItem)
         addManualSpeedItem()
         menu.addItem(.separator())
         addQuitItem()
