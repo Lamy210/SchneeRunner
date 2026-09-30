@@ -47,23 +47,24 @@ final class CharacterImportPresenter {
         return panel.url
     }
 
+    func chooseCharacterPackBuildDestination(
+        suggestedName: String
+    ) -> URL? {
+        chooseCharacterPackDestination(
+            title: "Build Character Pack",
+            prompt: "Build",
+            suggestedName: suggestedName
+        )
+    }
+
     func chooseCharacterPackExportDestination(
         suggestedName: String
     ) -> URL? {
-        let panel = NSSavePanel()
-        panel.title = "Export Character Pack"
-        panel.prompt = "Export"
-        panel.canCreateDirectories = true
-        panel.isExtensionHidden = false
-        panel.nameFieldStringValue = characterPackFileName(
-            suggestedName
+        chooseCharacterPackDestination(
+            title: "Export Character Pack",
+            prompt: "Export",
+            suggestedName: suggestedName
         )
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-
-        return panel.url
     }
 
     func presentBuildSuccess(_ url: URL) {
@@ -100,6 +101,27 @@ final class CharacterImportPresenter {
             title: "Character is running, but was not saved",
             error: error
         )
+    }
+
+    private func chooseCharacterPackDestination(
+        title: String,
+        prompt: String,
+        suggestedName: String
+    ) -> URL? {
+        let panel = NSSavePanel()
+        panel.title = title
+        panel.prompt = prompt
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.nameFieldStringValue = characterPackFileName(
+            suggestedName
+        )
+
+        guard panel.runModal() == .OK else {
+            return nil
+        }
+
+        return panel.url
     }
 
     private func characterPackFileName(
