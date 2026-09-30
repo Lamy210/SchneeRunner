@@ -10,6 +10,7 @@ final class StatusMenuController: NSObject {
     var onLoadPNGSequence: (() -> Void)?
     var onLoadGIF: (() -> Void)?
     var onLoadCharacterPack: (() -> Void)?
+    var onBuildCharacterPack: (() -> Void)?
     var onExportCharacterPack: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
@@ -126,6 +127,14 @@ final class StatusMenuController: NSObject {
         )
         packItem.target = self
         menu.addItem(packItem)
+
+        let buildPackItem = NSMenuItem(
+            title: "Build Character Pack…",
+            action: #selector(buildCharacterPack),
+            keyEquivalent: ""
+        )
+        buildPackItem.target = self
+        menu.addItem(buildPackItem)
     }
 
     private func addExportItem() {
@@ -247,6 +256,11 @@ final class StatusMenuController: NSObject {
     @objc
     private func loadCharacterPack() {
         onLoadCharacterPack?()
+    }
+
+    @objc
+    private func buildCharacterPack() {
+        onBuildCharacterPack?()
     }
 
     @objc
