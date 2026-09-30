@@ -78,6 +78,32 @@ final class CharacterPackStoreTests: XCTestCase {
         )
     }
 
+    func testExportRejectsNonCharacterPackAsset() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let asset = StoredCharacterAsset(
+            id: UUID(),
+            displayName: "Not a Pack",
+            kind: .singleImage,
+            createdAt: Date()
+        )
+        let exportURL = fixture.rootURL
+            .appendingPathComponent("Exported.schneerunner", isDirectory: true)
+
+        XCTAssertThrowsError(
+            try fixture.packStore.exportPack(
+                for: asset,
+                to: exportURL
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterPackStoreError,
+                .wrongAssetKind(.singleImage)
+            )
+        }
+    }
+
     func testExportRequiresCharacterPackExtension() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
