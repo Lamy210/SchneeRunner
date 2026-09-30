@@ -66,6 +66,21 @@ final class CharacterImportPresenter {
         return panel.url
     }
 
+    func presentBuildSuccess(_ url: URL) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Character Pack built"
+        alert.informativeText = url.path
+        alert.runModal()
+    }
+
+    func presentBuildError(_ error: Error) {
+        presentWarning(
+            title: "Could not build character pack",
+            error: error
+        )
+    }
+
     func presentExportError(_ error: Error) {
         presentWarning(
             title: "Could not export character pack",
