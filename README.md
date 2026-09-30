@@ -27,6 +27,8 @@ The current vertical slice supports:
 - exponential moving average smoothing
 - hysteretic CPU-to-animation-speed mapping
 - CPU-derived idle / walk / run / dash / sprint character states
+- priority-aware character-state trigger resolution
+- manual Automatic / Idle / Walk / Run / Dash / Sprint state override
 - state-aware animation lookup with deterministic default-animation fallback
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - canonical export of the currently loaded stored Character Pack
@@ -75,7 +77,7 @@ Current target mapping:
 
 Threshold transitions include a small hysteresis margin.
 
-The state and playback rate are separate values. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. Character packs can provide exact animations for idle, walk, run, dash, and sprint without changing the CPU policy or renderer.
+The state and playback rate are separate values. CPU state updates are registered as low-priority metric triggers. The **Character State** submenu can apply a high-priority manual override or return to **Automatic**, which removes that override and immediately resolves the next available trigger. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. Character packs can provide exact animations for idle, walk, run, dash, and sprint without changing the trigger policy or renderer.
 
 ## Character Pack v1
 
@@ -154,7 +156,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 Planned increments:
 
 1. battery, memory, build, and local event triggers
-2. generalized trigger priority and state overrides
+2. trigger lifetime / expiry for transient events
 3. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.

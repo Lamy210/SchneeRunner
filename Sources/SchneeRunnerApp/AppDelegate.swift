@@ -6,13 +6,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let animationController = AnimationController()
     private let cpuMonitor = CPUMonitor()
     private let characterLibrary = CharacterLibraryController()
-    private let characterStatePolicy = CharacterStatePolicy()
     private let importPresenter = CharacterImportPresenter()
     private let packBuilderPresenter = CharacterPackBuilderPresenter()
     private let menuController = StatusMenuController()
 
     private lazy var characterPlaybackController = CharacterPlaybackController(
         animationController: animationController
+    )
+    private lazy var characterStateCoordinator = CharacterStateCoordinator(
+        playbackController: characterPlaybackController
     )
 
     private var statusItem: NSStatusItem?
@@ -92,6 +94,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onToggleCPUAdaptiveSpeed = { [weak self] in
             self?.toggleCPUAdaptiveSpeed()
         }
+        menuController.onCharacterStateOverride = { [weak self] state in
+            self?.setCharacterStateOverride(state)
+        }
         menuController.onManualSpeed = { [weak self] framesPerSecond in
             self?.changeAnimationSpeed(framesPerSecond)
         }
@@ -109,10 +114,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             latestCPUUpdate = update
 
             if isCPUAdaptiveSpeedEnabled {
-                let state = characterStatePolicy.state(
+                characterStateCoordinator.updateCPUState(
                     for: update.pace
                 )
-                characterPlaybackController.requestState(state)
                 animationController.setFramesPerSecond(
                     update.pace.framesPerSecond
                 )
@@ -433,15 +437,20 @@ private extension AppDelegate {
         menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
 
         if isCPUAdaptiveSpeedEnabled, let latestCPUUpdate {
-            let state = characterStatePolicy.state(
+            characterStateCoordinator.updateCPUState(
                 for: latestCPUUpdate.pace
             )
-            characterPlaybackController.requestState(state)
             animationController.setFramesPerSecond(
                 latestCPUUpdate.pace.framesPerSecond
             )
         }
 
+        refreshCPUStatus()
+    }
+
+    func setCharacterStateOverride(_ state: CharacterState?) {
+        characterStateCoordinator.setManualOverride(state)
+        menuController.setCharacterStateOverride(state)
         refreshCPUStatus()
     }
 
