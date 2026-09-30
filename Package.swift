@@ -11,6 +11,10 @@ let package = Package(
         .executable(
             name: "SchneeRunner",
             targets: ["SchneeRunnerApp"]
+        ),
+        .executable(
+            name: "schneerunnerctl",
+            targets: ["SchneeRunnerCtl"]
         )
     ],
     targets: [
@@ -19,6 +23,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "SchneeRunnerApp",
+            dependencies: ["SchneeRunnerCore"]
+        ),
+        .executableTarget(
+            name: "SchneeRunnerCtl",
             dependencies: ["SchneeRunnerCore"]
         ),
         .testTarget(
