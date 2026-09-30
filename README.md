@@ -29,6 +29,7 @@ The current vertical slice supports:
 - CPU-derived idle / walk / run / dash / sprint character states
 - priority-aware character-state trigger resolution
 - manual Automatic / Idle / Walk / Run / Dash / Sprint state override
+- local state-event CLI with optional TTL expiry
 - state-aware animation lookup with deterministic default-animation fallback
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - canonical export of the currently loaded stored Character Pack
@@ -77,7 +78,21 @@ Current target mapping:
 
 Threshold transitions include a small hysteresis margin.
 
-The state and playback rate are separate values. CPU state updates are registered as low-priority metric triggers. The **Character State** submenu can apply a high-priority manual override or return to **Automatic**, which removes that override and immediately resolves the next available trigger. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. Character packs can provide exact animations for idle, walk, run, dash, and sprint without changing the trigger policy or renderer.
+The state and playback rate are separate values. CPU state updates are registered as low-priority metric triggers. Local events use the middle event priority, and the **Character State** submenu uses the highest manual priority. Returning the menu to **Automatic** removes only the manual override and immediately resolves the next available trigger. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. Character packs can provide exact animations for idle, walk, run, dash, and sprint without changing the trigger policy or renderer.
+
+## Local state events
+
+With SchneeRunner running, local scripts can temporarily or persistently request one of the existing character states:
+
+```bash
+swift run schneerunnerctl state sprint --seconds 5
+swift run schneerunnerctl state idle
+swift run schneerunnerctl clear
+```
+
+A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. The current priority order is **manual > local event > CPU metric**.
+
+The control path uses macOS Distributed Notifications and does not open a network port. It is intended for same-user local automation such as build scripts and development hooks; it is not an authenticated security boundary. Malformed payloads are ignored.
 
 ## Character Pack v1
 
@@ -155,8 +170,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. battery, memory, build, and local event triggers
-2. trigger lifetime / expiry for transient events
+1. battery, memory, and first-class build triggers
+2. named/multiple local event channels if real integrations require them
 3. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.

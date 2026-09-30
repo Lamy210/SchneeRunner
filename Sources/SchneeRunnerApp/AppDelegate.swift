@@ -30,10 +30,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureCPUMonitor()
         refreshRecentCharactersMenu()
         restoreLastCharacter()
+        characterStateCoordinator.start()
         cpuMonitor.start()
     }
 
     func applicationWillTerminate(_: Notification) {
+        characterStateCoordinator.stop()
         cpuMonitor.stop()
         animationController.stop()
     }
