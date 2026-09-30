@@ -341,7 +341,6 @@ final class StatusMenuController: NSObject {
     }
 }
 
-
 extension StatusMenuController: NSMenuDelegate {
     func menuWillOpen(_: NSMenu) {
         launchAtLoginMenuController.refresh()
