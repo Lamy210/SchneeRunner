@@ -17,7 +17,7 @@ The current vertical slice supports:
 - single-image procedural run animation
 - 4x2 sprite sheets with 8 frames
 - ordered multi-file PNG sequences
-- animated GIF import with authored per-frame timing
+- animated GIF, APNG, and WebP import with authored per-frame timing
 - persistent local character library under Application Support
 - recent-character reopening from the menu
 - automatic restoration of the last selected character on launch
@@ -51,7 +51,7 @@ swift run SchneeRunner
 
 SchneeRunner appears in the menu bar with a running-person placeholder icon.
 
-Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, **Load PNG Sequence…** to select multiple authored frame PNGs, or **Load GIF…** to preserve an animated GIF's authored frame timing.
+Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, **Load PNG Sequence…** for multiple PNG frames, or **Load GIF…**, **Load APNG…**, and **Load WebP…** to preserve authored per-frame timing.
 
 Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. If that stored selection can no longer be loaded, SchneeRunner clears the saved selection and continues launching with the placeholder. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
 
@@ -88,6 +88,14 @@ When the current stored character is a Character Pack, **Export Current Characte
 Choose **Build Character Pack…** to set a pack name and default state, attach optional idle / walk / run / dash / sprint clips, and write a canonical `.schneerunner` package. PNG Sequence clips select a source directory; the other clip kinds select PNG or GIF files. Building a pack does not change the currently running character.
 
 See [docs/CHARACTER_PACK.md](docs/CHARACTER_PACK.md) for the manifest and layout specification.
+
+## APNG and WebP formats
+
+APNG and animated WebP imports use the same bounded animation policy as GIF: 2–120 frames, a 32 MiB file limit, a 4096-pixel limit on either axis, and 16 million decoded pixels across the animation. Per-frame delays are preserved and delays below 20 ms are clamped to reduce excessive timer wakeups.
+
+APNG accepts animated PNG data selected through either a `.png` or `.apng` filename. WebP accepts animated `.webp` data. File extensions are only picker hints; ImageIO content type and frame count are validated before decode. Owned copies are fully decoded again before staged persistence is committed, and both formats participate in Recent Characters and last-character restoration.
+
+Character Pack v1 still accepts only `singleImage`, `spriteSheet4x2`, `pngSequence`, and `gif` clips. APNG/WebP pack clips are intentionally deferred to a separate format-compatible change.
 
 ## GIF format
 
@@ -145,7 +153,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. APNG / WebP animation import
+1. APNG / WebP Character Pack clip support
 2. battery, memory, build, and local event triggers
 3. generalized trigger priority and state overrides
 4. optional desktop-pet renderer
