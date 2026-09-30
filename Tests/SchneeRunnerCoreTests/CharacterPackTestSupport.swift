@@ -152,7 +152,6 @@ struct PackFixture {
     }
 }
 
-
 private enum SelfContainedAnimatedFixtures {
     static let apng =
         "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACGFjVEwAAAACAAAA" +
