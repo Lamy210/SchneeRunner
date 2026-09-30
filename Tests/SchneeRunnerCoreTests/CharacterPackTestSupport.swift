@@ -34,6 +34,30 @@ func writePackManifest(
     )
 }
 
+func writeTestAPNG(to url: URL) throws {
+    try writeBase64Fixture(
+        SelfContainedAnimatedFixtures.apng,
+        to: url
+    )
+}
+
+func writeTestWebP(to url: URL) throws {
+    try writeBase64Fixture(
+        SelfContainedAnimatedFixtures.webP,
+        to: url
+    )
+}
+
+private func writeBase64Fixture(
+    _ encoded: String,
+    to url: URL
+) throws {
+    let data = try XCTUnwrap(
+        Data(base64Encoded: encoded)
+    )
+    try data.write(to: url)
+}
+
 func writeTestGIF(to url: URL) throws {
     let destination = try XCTUnwrap(
         CGImageDestinationCreateWithURL(
@@ -126,4 +150,18 @@ struct PackFixture {
     func cleanup() {
         try? FileManager.default.removeItem(at: rootURL)
     }
+}
+
+private enum SelfContainedAnimatedFixtures {
+    static let apng =
+        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACGFjVEwAAAACAAAA" +
+        "APONk3AAAAAaZmNUTAAAAAAAAAACAAAAAgAAAAAAAAAAAAEAFAAA/uxSegAAABRJ" +
+        "REFUeJxj/M/A8J+BgYGBiQEKAB8XAgJPlM6+AAAAGmZjVEwAAAABAAAAAgAAAAIA" +
+        "AAAAAAAAAAABAAUAAHh7cekAAAAYZmRBVAAAAAJ4nGNk+M/wn4GBgYGJAQoAHhgC" +
+        "AjJqffAAAAAASUVORK5CYII="
+
+    static let webP =
+        "UklGRoQAAABXRUJQVlA4WAoAAAACAAAAAQAAAQAAQU5JTQYAAAAAAAAAAABBTk1G" +
+        "KAAAAAAAAAAAAAEAAAEAADIAAAJWUDhMDwAAAC8BQAAABxD9j/4HIqL/AQBBTk1G" +
+        "KAAAAAAAAAAAAAEAAAEAAMgAAABWUDhMDwAAAC8BQAAAB9D/iP4HIqL/AQA="
 }

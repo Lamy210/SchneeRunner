@@ -7,7 +7,9 @@ final class CharacterPackClipRowView: NSView {
         .singleImage,
         .spriteSheet4x2,
         .pngSequence,
-        .gif
+        .gif,
+        .apng,
+        .webP
     ]
 
     let state: CharacterState
@@ -153,6 +155,10 @@ final class CharacterPackClipRowView: NSView {
             "PNG Sequence"
         case .gif:
             "GIF"
+        case .apng:
+            "APNG"
+        case .webP:
+            "WebP"
         }
     }
 

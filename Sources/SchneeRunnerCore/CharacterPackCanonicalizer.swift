@@ -97,6 +97,22 @@ struct CharacterPackCanonicalizer {
                 destinationDirectory: destinationDirectory,
                 copiedBytes: &copiedBytes
             )
+        case .apng:
+            try copyAnimatedImage(
+                clip,
+                sourceURL: sourceURL,
+                destinationDirectory: destinationDirectory,
+                fileName: "source.png",
+                copiedBytes: &copiedBytes
+            )
+        case .webP:
+            try copyAnimatedImage(
+                clip,
+                sourceURL: sourceURL,
+                destinationDirectory: destinationDirectory,
+                fileName: "source.webp",
+                copiedBytes: &copiedBytes
+            )
         case .pngSequence:
             try copyPNGSequence(
                 clip,
@@ -146,6 +162,28 @@ struct CharacterPackCanonicalizer {
             state: clip.state,
             kind: .gif,
             path: "clips/\(clip.state.rawValue)/source.gif"
+        )
+    }
+
+    private func copyAnimatedImage(
+        _ clip: CharacterPackClip,
+        sourceURL: URL,
+        destinationDirectory: URL,
+        fileName: String,
+        copiedBytes: inout Int
+    ) throws -> CharacterPackClip {
+        let destinationURL = destinationDirectory
+            .appendingPathComponent(fileName)
+        try accountAndCopyFile(
+            sourceURL,
+            destinationURL: destinationURL,
+            copiedBytes: &copiedBytes
+        )
+
+        return CharacterPackClip(
+            state: clip.state,
+            kind: clip.kind,
+            path: "clips/\(clip.state.rawValue)/\(fileName)"
         )
     }
 

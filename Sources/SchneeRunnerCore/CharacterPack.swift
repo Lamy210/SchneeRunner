@@ -5,6 +5,8 @@ public enum CharacterPackClipKind: String, Codable, Equatable, Sendable {
     case spriteSheet4x2
     case pngSequence
     case gif
+    case apng
+    case webP
 }
 
 public struct CharacterPackClip: Codable, Equatable, Sendable {
