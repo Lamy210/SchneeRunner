@@ -18,15 +18,7 @@ final class SystemMemoryPressureMonitor {
         )
         source.setEventHandler { [weak self] in
             Task { @MainActor [weak self] in
-                guard
-                    let self,
-                    let source = self.source,
-                    let level = Self.level(for: source.data)
-                else {
-                    return
-                }
-
-                onChange?(level)
+                self?.handleMemoryPressureEvent()
             }
         }
 
@@ -37,6 +29,17 @@ final class SystemMemoryPressureMonitor {
     func stop() {
         source?.cancel()
         source = nil
+    }
+
+    private func handleMemoryPressureEvent() {
+        guard
+            let source,
+            let level = Self.level(for: source.data)
+        else {
+            return
+        }
+
+        onChange?(level)
     }
 
     private static func level(
