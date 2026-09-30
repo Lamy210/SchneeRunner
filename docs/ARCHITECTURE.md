@@ -67,6 +67,12 @@ AppDelegate
      |            |
      |            +----> CharacterSelectionStore
      |
+     +----> CharacterStateCoordinator
+     |            |
+     |            +----> CharacterStateTriggerEngine
+     |            |
+     |            +----> LocalCharacterStateEventMonitor
+     |
      +----> CPUMonitor
                   |
                   +----> SystemCPUUsageSampler
@@ -97,6 +103,7 @@ Owns deterministic and reusable domain behavior:
 - frame/schedule pairing through `LoadedAnimation`;
 - character state modeling and CPU-pace-to-state policy;
 - priority-aware character-state trigger resolution with deterministic recency tie-breaking;
+- validated local character-state event payloads and TTL constraints;
 - state-aware animation lookup with deterministic default fallback;
 - Character Pack v1 manifest validation and safe relative-path resolution;
 - state-specific pack loading into `CharacterAnimationLibrary`, including GIF, APNG, and WebP timing;
@@ -126,6 +133,7 @@ Owns macOS integration:
 - animation scheduling;
 - requested-state playback coordination;
 - manual character-state override menu coordination;
+- local Distributed Notification event reception and TTL expiry;
 - Mach host CPU sampling;
 - CPU sampling timer;
 - menu-bar image sizing;
@@ -174,6 +182,7 @@ CharacterState
           |
           v
 CharacterStateTriggerEngine <---- Manual State Override
+          ^                    <---- Local State Event
           |
           v
 CharacterPlaybackController
@@ -216,7 +225,9 @@ A metric provider emits values. It must not directly manipulate a renderer.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 
-Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, while a manual menu selection uses the manual priority. Removing the manual trigger returns control to the CPU trigger without coupling either source to the renderer.
+Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, local process events use the event priority, and a manual menu selection uses the manual priority. Removing or expiring a higher-priority trigger immediately exposes the next active trigger without coupling any source to the renderer.
+
+Local state events are transported through macOS Distributed Notifications. The payload is a validated JSON value containing a set/clear action, a known `CharacterState`, and an optional bounded TTL. This path is local IPC rather than a network service and is intended for same-user automation, not as an authentication boundary.
 
 ## 5. Asset safety
 
