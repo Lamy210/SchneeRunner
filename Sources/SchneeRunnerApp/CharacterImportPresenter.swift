@@ -32,6 +32,25 @@ final class CharacterImportPresenter {
         )
     }
 
+    func chooseAPNG(title: String) -> URL? {
+        var contentTypes: [UTType] = [.png]
+        if let apngType = UTType(filenameExtension: "apng") {
+            contentTypes.append(apngType)
+        }
+
+        return chooseFile(
+            title: title,
+            contentTypes: contentTypes
+        )
+    }
+
+    func chooseWebP(title: String) -> URL? {
+        chooseFile(
+            title: title,
+            contentType: .webP
+        )
+    }
+
     func chooseCharacterPack(title: String) -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
@@ -138,12 +157,22 @@ final class CharacterImportPresenter {
         title: String,
         contentType: UTType
     ) -> URL? {
+        chooseFile(
+            title: title,
+            contentTypes: [contentType]
+        )
+    }
+
+    private func chooseFile(
+        title: String,
+        contentTypes: [UTType]
+    ) -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
         panel.prompt = "Load"
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [contentType]
+        panel.allowedContentTypes = contentTypes
 
         guard panel.runModal() == .OK else {
             return nil
