@@ -49,6 +49,8 @@ AppDelegate
      |
      +----> CharacterPackLoader ----> CharacterAnimationLibrary
      |
+     +----> CharacterPackBuilder
+     |
      +----> CharacterLibraryController
      |            |
      |            +----> CharacterAssetStore
@@ -94,6 +96,7 @@ Owns deterministic and reusable domain behavior:
 - GIF owned-copy persistence;
 - canonical character-pack owned-copy persistence;
 - canonical character-pack export through staged revalidation;
+- canonical Character Pack construction from local clip sources;
 - last-selected character preference persistence;
 - pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
