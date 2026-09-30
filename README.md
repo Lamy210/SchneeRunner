@@ -30,6 +30,7 @@ The current vertical slice supports:
 - state-aware animation lookup with deterministic default-animation fallback
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - canonical export of the currently loaded stored Character Pack
+- Core Character Pack builder for assembling canonical packs from local clips
 - local-only operation with no network access
 
 Additional character-pack clip kinds, additional animated image formats, export tooling, and launch-at-login are intentionally deferred to later changes.
