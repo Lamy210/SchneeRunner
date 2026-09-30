@@ -29,6 +29,7 @@ The current vertical slice supports:
 - CPU-derived idle / walk / run / dash / sprint character states
 - state-aware animation lookup with deterministic default-animation fallback
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
+- canonical export of the currently loaded stored Character Pack
 - local-only operation with no network access
 
 Additional character-pack clip kinds, additional animated image formats, export tooling, and launch-at-login are intentionally deferred to later changes.
@@ -79,6 +80,8 @@ The state and playback rate are separate values. Existing single-animation asset
 Choose **Load Character Pack…** to import a directory ending in `.schneerunner`. A pack can provide separate clips for idle, walk, run, dash, and sprint. Missing states fall back to the pack's declared default state.
 
 Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, and GIF clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible. A pack is capped at 240 decoded frames and 32 million decoded pixels across all state clips.
+
+When the current stored character is a Character Pack, **Export Current Character Pack…** writes a fresh canonical `.schneerunner` directory. Export reuses only manifest-referenced clips, reloads the staged result before commit, and refuses to overwrite an existing destination.
 
 See [docs/CHARACTER_PACK.md](docs/CHARACTER_PACK.md) for the manifest and layout specification.
 
@@ -138,7 +141,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. character-pack export tooling and builder UI
+1. character-pack builder UI
 2. APNG / WebP animation import
 3. battery, memory, build, and local event triggers
 4. generalized trigger priority and state overrides

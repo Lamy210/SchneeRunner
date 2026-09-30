@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
 
     private var statusItem: NSStatusItem?
+    private var currentAsset: StoredCharacterAsset?
     private var latestCPUUpdate: CPUMonitor.Update?
     private var isCPUAdaptiveSpeedEnabled = true
 
@@ -71,6 +72,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menuController.onLoadCharacterPack = { [weak self] in
             self?.loadCharacterPack()
+        }
+        menuController.onExportCharacterPack = { [weak self] in
+            self?.exportCurrentCharacterPack()
         }
         menuController.onLoadRecentCharacter = { [weak self] id in
             self?.loadRecentCharacter(id: id)
@@ -159,6 +163,7 @@ private extension AppDelegate {
                     sourceURL: url,
                     kind: kind
                 )
+                setCurrentAsset(asset)
                 characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
@@ -186,6 +191,7 @@ private extension AppDelegate {
                 let asset = try characterLibrary.persistPNGSequence(
                     sourceURLs: urls
                 )
+                setCurrentAsset(asset)
                 characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
@@ -213,6 +219,7 @@ private extension AppDelegate {
                 let asset = try characterLibrary.persistGIF(
                     sourceURL: url
                 )
+                setCurrentAsset(asset)
                 characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
@@ -240,6 +247,7 @@ private extension AppDelegate {
                 let asset = try characterLibrary.persistCharacterPack(
                     sourceURL: url
                 )
+                setCurrentAsset(asset)
                 characterLibrary.rememberSelection(asset)
                 refreshRecentCharactersMenu()
             } catch {
@@ -250,11 +258,38 @@ private extension AppDelegate {
         }
     }
 
+    func exportCurrentCharacterPack() {
+        guard
+            let asset = currentAsset,
+            asset.kind == .characterPack
+        else {
+            return
+        }
+
+        guard let destinationURL = importPresenter
+            .chooseCharacterPackExportDestination(
+                suggestedName: asset.displayName
+            )
+        else {
+            return
+        }
+
+        do {
+            try characterLibrary.exportCharacterPack(
+                asset,
+                to: destinationURL
+            )
+        } catch {
+            importPresenter.presentExportError(error)
+        }
+    }
+
     func loadRecentCharacter(id: UUID) {
         do {
             let asset = try characterLibrary.asset(id: id)
             let library = try characterLibrary.library(for: asset)
             play(library)
+            setCurrentAsset(asset)
             characterLibrary.rememberSelection(asset)
         } catch {
             importPresenter.presentLoadError(error)
@@ -279,6 +314,7 @@ private extension AppDelegate {
 
             let library = try characterLibrary.library(for: asset)
             play(library)
+            setCurrentAsset(asset)
         } catch {
             characterLibrary.clearLastSelection()
         }
@@ -302,7 +338,15 @@ private extension AppDelegate {
     }
 
     func play(_ library: CharacterAnimationLibrary) {
+        setCurrentAsset(nil)
         characterPlaybackController.install(library)
+    }
+
+    func setCurrentAsset(_ asset: StoredCharacterAsset?) {
+        currentAsset = asset
+        menuController.setCharacterPackExportEnabled(
+            asset?.kind == .characterPack
+        )
     }
 
     func toggleCPUAdaptiveSpeed() {

@@ -10,6 +10,7 @@ final class StatusMenuController: NSObject {
     var onLoadPNGSequence: (() -> Void)?
     var onLoadGIF: (() -> Void)?
     var onLoadCharacterPack: (() -> Void)?
+    var onExportCharacterPack: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -26,6 +27,11 @@ final class StatusMenuController: NSObject {
         keyEquivalent: ""
     )
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
+    private let exportCharacterPackItem = NSMenuItem(
+        title: "Export Current Character Pack…",
+        action: nil,
+        keyEquivalent: ""
+    )
 
     override init() {
         super.init()
@@ -65,9 +71,14 @@ final class StatusMenuController: NSObject {
         addDisabledRecentItem(title: "Character library unavailable")
     }
 
+    func setCharacterPackExportEnabled(_ isEnabled: Bool) {
+        exportCharacterPackItem.isEnabled = isEnabled
+    }
+
     private func buildMenu() {
         addImportItems()
         addRecentCharactersItem()
+        addExportItem()
         menu.addItem(.separator())
         addCPUItems()
         addManualSpeedItem()
@@ -115,6 +126,13 @@ final class StatusMenuController: NSObject {
         )
         packItem.target = self
         menu.addItem(packItem)
+    }
+
+    private func addExportItem() {
+        exportCharacterPackItem.target = self
+        exportCharacterPackItem.action = #selector(exportCharacterPack)
+        exportCharacterPackItem.isEnabled = false
+        menu.addItem(exportCharacterPackItem)
     }
 
     private func addRecentCharactersItem() {
@@ -229,6 +247,11 @@ final class StatusMenuController: NSObject {
     @objc
     private func loadCharacterPack() {
         onLoadCharacterPack?()
+    }
+
+    @objc
+    private func exportCharacterPack() {
+        onExportCharacterPack?()
     }
 
     @objc

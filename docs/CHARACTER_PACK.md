@@ -104,6 +104,20 @@ The original package is never moved, renamed, overwritten, or deleted.
 
 The owned copy is fully reloaded before its staging directory is committed.
 
+## Export
+
+A currently loaded, stored Character Pack can be written back out with **Export Current Character Pack…**.
+
+Export does not recursively copy the owned package directory. SchneeRunner reads the stored manifest, copies only referenced clips into a fresh canonical staging package, writes a new canonical manifest, reloads the staged package, and only then moves it to the selected destination.
+
+Export rules:
+
+- the destination must end in `.schneerunner`;
+- an existing file or directory is never overwritten;
+- unreferenced files added to the owned package are not exported;
+- canonical clip names and ordering are regenerated;
+- the exported package must pass the same loader and aggregate resource limits as an imported pack.
+
 ## Security rules
 
 Character Pack v1 rejects:
