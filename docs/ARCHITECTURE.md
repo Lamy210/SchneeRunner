@@ -77,6 +77,9 @@ AppDelegate
                                |
                                v
                          CharacterStatePolicy
+                               |
+                               v
+                    CharacterStateTriggerEngine
 ```
 
 ### SchneeRunnerCore
@@ -93,6 +96,7 @@ Owns deterministic and reusable domain behavior:
 - APNG and WebP frame decoding with authored per-frame timing;
 - frame/schedule pairing through `LoadedAnimation`;
 - character state modeling and CPU-pace-to-state policy;
+- priority-aware character-state trigger resolution with deterministic recency tie-breaking;
 - state-aware animation lookup with deterministic default fallback;
 - Character Pack v1 manifest validation and safe relative-path resolution;
 - state-specific pack loading into `CharacterAnimationLibrary`, including GIF, APNG, and WebP timing;
@@ -121,6 +125,7 @@ Owns macOS integration:
 - `NSOpenPanel`;
 - animation scheduling;
 - requested-state playback coordination;
+- manual character-state override menu coordination;
 - Mach host CPU sampling;
 - CPU sampling timer;
 - menu-bar image sizing;
@@ -168,6 +173,9 @@ CharacterStatePolicy
 CharacterState
           |
           v
+CharacterStateTriggerEngine <---- Manual State Override
+          |
+          v
 CharacterPlaybackController
           |
           +----> CharacterAnimationLibrary
@@ -207,6 +215,8 @@ CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 A metric provider emits values. It must not directly manipulate a renderer.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
+
+Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, while a manual menu selection uses the manual priority. Removing the manual trigger returns control to the CPU trigger without coupling either source to the renderer.
 
 ## 5. Asset safety
 
