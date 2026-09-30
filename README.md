@@ -35,9 +35,10 @@ The current vertical slice supports:
 - canonical export of the currently loaded stored Character Pack
 - Core Character Pack builder for assembling canonical packs from local clips
 - in-app Character Pack builder with per-state clip selection
+- system-managed Launch at Login
 - local-only operation with no network access
 
-Additional character-pack clip kinds, additional animated image formats, export tooling, and launch-at-login are intentionally deferred to later changes.
+Additional character-pack clip kinds, additional animated image formats, and export tooling are intentionally deferred to later changes.
 
 ## Run locally
 
@@ -53,6 +54,8 @@ swift run SchneeRunner
 ```
 
 SchneeRunner appears in the menu bar with a running-person placeholder icon.
+
+The **Launch at Login** menu item uses macOS system-managed login-item registration for the packaged application. If macOS requires user approval, SchneeRunner shows **Approval Required** and opens System Settings > Login Items when selected. The menu refreshes from the system registration status each time it opens rather than storing a separate preference.
 
 Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, **Load PNG Sequence…** for multiple PNG frames, or **Load GIF…**, **Load APNG…**, and **Load WebP…** to preserve authored per-frame timing.
 
