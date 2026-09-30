@@ -1,9 +1,10 @@
 import AppKit
 import SchneeRunnerCore
-import UniformTypeIdentifiers
 
 @MainActor
-final class CharacterPackBuilderPresenter: NSObject {
+final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
+    private let sourcePicker = CharacterPackBuilderSourcePicker()
+
     private var panel: NSPanel?
     private var nameField: NSTextField?
     private var defaultStatePopUp: NSPopUpButton?
@@ -39,12 +40,13 @@ final class CharacterPackBuilderPresenter: NSObject {
                 width: 720,
                 height: 400
             ),
-            styleMask: [.titled],
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         panel.title = "Build Character Pack"
         panel.isReleasedWhenClosed = false
+        panel.delegate = self
         return panel
     }
 
@@ -131,7 +133,7 @@ final class CharacterPackBuilderPresenter: NSObject {
         )
         popUp.addItems(
             withTitles: CharacterState.allCases.map(
-                .displayName
+                \.displayName
             )
         )
         if let runIndex = CharacterState.allCases.firstIndex(
@@ -197,66 +199,17 @@ final class CharacterPackBuilderPresenter: NSObject {
         for state: CharacterState,
         kind: CharacterPackClipKind
     ) {
-        guard let row = rows[state] else {
+        guard
+            let row = rows[state],
+            let selectedURL = sourcePicker.chooseSource(
+                for: state,
+                kind: kind
+            )
+        else {
             return
         }
 
-        let selectedURL: URL?
-        switch kind {
-        case .singleImage, .spriteSheet4x2:
-            selectedURL = chooseFile(
-                title: "Choose PNG for \(state.displayName)",
-                contentType: .png
-            )
-        case .gif:
-            selectedURL = chooseFile(
-                title: "Choose GIF for \(state.displayName)",
-                contentType: .gif
-            )
-        case .pngSequence:
-            selectedURL = chooseDirectory(
-                title: "Choose PNG Sequence for \(state.displayName)"
-            )
-        }
-
-        if let selectedURL {
-            row.setSourceURL(selectedURL)
-        }
-    }
-
-    private func chooseFile(
-        title: String,
-        contentType: UTType
-    ) -> URL? {
-        let panel = NSOpenPanel()
-        panel.title = title
-        panel.prompt = "Choose"
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [contentType]
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-
-        return panel.url
-    }
-
-    private func chooseDirectory(
-        title: String
-    ) -> URL? {
-        let panel = NSOpenPanel()
-        panel.title = title
-        panel.prompt = "Choose"
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-
-        return panel.url
+        row.setSourceURL(selectedURL)
     }
 
     private func makeRequest() -> CharacterPackBuildRequest? {
@@ -325,6 +278,21 @@ final class CharacterPackBuilderPresenter: NSObject {
 
     @objc
     private func cancel() {
+        result = nil
+        NSApplication.shared.stopModal(
+            withCode: .cancel
+        )
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard
+            let closingPanel = notification.object as? NSPanel,
+            closingPanel === panel,
+            NSApplication.shared.modalWindow === closingPanel
+        else {
+            return
+        }
+
         result = nil
         NSApplication.shared.stopModal(
             withCode: .cancel
