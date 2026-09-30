@@ -47,6 +47,8 @@ AppDelegate
      |
      +----> GIFAnimationLoader ----> LoadedAnimation
      |
+     +----> AnimatedImageLoader ---> LoadedAnimation
+     |
      +----> CharacterPackLoader ----> CharacterAnimationLibrary
      |
      +----> CharacterPackBuilder
@@ -58,6 +60,8 @@ AppDelegate
      |            +----> PNGSequenceAssetStore
      |            |
      |            +----> GIFAssetStore
+     |            |
+     |            +----> AnimatedImageAssetStore
      |            |
      |            +----> CharacterPackStore
      |            |
@@ -86,6 +90,7 @@ Owns deterministic and reusable domain behavior:
 - procedural run-cycle transforms;
 - ordered multi-file PNG sequence loading;
 - GIF frame decoding with authored per-frame timing;
+- APNG and WebP frame decoding with authored per-frame timing;
 - frame/schedule pairing through `LoadedAnimation`;
 - character state modeling and CPU-pace-to-state policy;
 - state-aware animation lookup with deterministic default fallback;
@@ -94,6 +99,7 @@ Owns deterministic and reusable domain behavior:
 - character metadata and owned-copy persistence;
 - multi-file sequence persistence;
 - GIF owned-copy persistence;
+- APNG/WebP owned-copy persistence;
 - canonical character-pack owned-copy persistence;
 - canonical character-pack export through staged revalidation;
 - canonical Character Pack construction from local clip sources;
@@ -208,7 +214,7 @@ The current PoC reads the user-selected PNG directly and does not mutate it.
 
 Imported assets are copied into a SchneeRunner-owned Application Support directory using a staging directory followed by a final directory move. Source images are never moved, renamed, overwritten, or deleted as part of import.
 
-Each stored character uses a UUID directory and a JSON manifest. Single-image and sprite-sheet assets use `source.png`, GIF assets use `source.gif`, PNG sequences use a `frames/` directory with zero-padded frame names, and character packs use an owned `package.schneerunner/` directory containing only referenced clips in canonical paths. Character Pack export canonicalizes from that owned package into a fresh staging directory, reloads it, and refuses to replace an existing destination. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running. Image imports are inspected with ImageIO before decode; type, frame count, file size, dimensions, and pixel count must satisfy the configured validation policy. PNG sequences also enforce aggregate file-byte and decoded-pixel budgets across all frames and revalidate the owned copies before the staged directory becomes visible. GIFs enforce file, frame-count, dimension, and aggregate decoded-pixel limits; the copied GIF is fully decoded before its staged directory is committed.
+Each stored character uses a UUID directory and a JSON manifest. Single-image and sprite-sheet assets use `source.png`, GIF assets use `source.gif`, PNG sequences use a `frames/` directory with zero-padded frame names, and character packs use an owned `package.schneerunner/` directory containing only referenced clips in canonical paths. Character Pack export canonicalizes from that owned package into a fresh staging directory, reloads it, and refuses to replace an existing destination. A failed persistence attempt cleans up its staging directory and does not prevent the already-decoded animation from running. Image imports are inspected with ImageIO before decode; type, frame count, file size, dimensions, and pixel count must satisfy the configured validation policy. PNG sequences also enforce aggregate file-byte and decoded-pixel budgets across all frames and revalidate the owned copies before the staged directory becomes visible. GIF, APNG, and WebP animations enforce file, frame-count, per-frame dimension, and aggregate decoded-pixel limits. Owned animated-image copies are fully decoded before their staged directories are committed.
 
 Third-party character art is not part of the application distribution by default.
 
@@ -251,7 +257,7 @@ The following remain deliberately deferred:
 - Xcode project layout;
 - sandboxing and entitlements;
 - character-pack export and future schema versions;
-- APNG/WebP decoding policy;
+- APNG/WebP Character Pack clip compatibility;
 - launch-at-login mechanism;
 - signed/notarized release configuration;
 - generalized metric/event provider protocols;
