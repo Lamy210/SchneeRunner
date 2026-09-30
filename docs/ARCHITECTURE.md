@@ -95,7 +95,7 @@ Owns deterministic and reusable domain behavior:
 - character state modeling and CPU-pace-to-state policy;
 - state-aware animation lookup with deterministic default fallback;
 - Character Pack v1 manifest validation and safe relative-path resolution;
-- state-specific pack loading into `CharacterAnimationLibrary`;
+- state-specific pack loading into `CharacterAnimationLibrary`, including GIF, APNG, and WebP timing;
 - character metadata and owned-copy persistence;
 - multi-file sequence persistence;
 - GIF owned-copy persistence;
@@ -257,7 +257,6 @@ The following remain deliberately deferred:
 - Xcode project layout;
 - sandboxing and entitlements;
 - character-pack export and future schema versions;
-- APNG/WebP Character Pack clip compatibility;
 - launch-at-login mechanism;
 - signed/notarized release configuration;
 - generalized metric/event provider protocols;
