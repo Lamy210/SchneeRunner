@@ -84,13 +84,17 @@ final class LocalCharacterStateEventMonitor: NSObject {
         }
 
         expiryTimer = Timer.scheduledTimer(
-            withTimeInterval: duration,
+            timeInterval: duration,
+            target: self,
+            selector: #selector(expireEvent),
+            userInfo: nil,
             repeats: false
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.expiryTimer = nil
-                self?.onClear?()
-            }
-        }
+        )
+    }
+
+    @objc
+    private func expireEvent() {
+        expiryTimer = nil
+        onClear?()
     }
 }
