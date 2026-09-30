@@ -9,6 +9,8 @@ final class StatusMenuController: NSObject {
     var onLoadSpriteSheet: (() -> Void)?
     var onLoadPNGSequence: (() -> Void)?
     var onLoadGIF: (() -> Void)?
+    var onLoadAPNG: (() -> Void)?
+    var onLoadWebP: (() -> Void)?
     var onLoadCharacterPack: (() -> Void)?
     var onBuildCharacterPack: (() -> Void)?
     var onExportCharacterPack: (() -> Void)?
@@ -120,6 +122,22 @@ final class StatusMenuController: NSObject {
         gifItem.target = self
         menu.addItem(gifItem)
 
+        let apngItem = NSMenuItem(
+            title: "Load APNG…",
+            action: #selector(loadAPNG),
+            keyEquivalent: ""
+        )
+        apngItem.target = self
+        menu.addItem(apngItem)
+
+        let webPItem = NSMenuItem(
+            title: "Load WebP…",
+            action: #selector(loadWebP),
+            keyEquivalent: ""
+        )
+        webPItem.target = self
+        menu.addItem(webPItem)
+
         let packItem = NSMenuItem(
             title: "Load Character Pack…",
             action: #selector(loadCharacterPack),
@@ -216,6 +234,10 @@ final class StatusMenuController: NSObject {
             "PNG Sequence"
         case .gif:
             "GIF"
+        case .apng:
+            "APNG"
+        case .webP:
+            "WebP"
         case .characterPack:
             "Character Pack"
         }
@@ -251,6 +273,16 @@ final class StatusMenuController: NSObject {
     @objc
     private func loadGIF() {
         onLoadGIF?()
+    }
+
+    @objc
+    private func loadAPNG() {
+        onLoadAPNG?()
+    }
+
+    @objc
+    private func loadWebP() {
+        onLoadWebP?()
     }
 
     @objc
