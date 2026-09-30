@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let characterLibrary = CharacterLibraryController()
     private let characterStatePolicy = CharacterStatePolicy()
     private let importPresenter = CharacterImportPresenter()
+    private let packBuilderPresenter = CharacterPackBuilderPresenter()
     private let menuController = StatusMenuController()
 
     private lazy var characterPlaybackController = CharacterPlaybackController(
@@ -72,6 +73,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menuController.onLoadCharacterPack = { [weak self] in
             self?.loadCharacterPack()
+        }
+        menuController.onBuildCharacterPack = { [weak self] in
+            self?.buildCharacterPack()
         }
         menuController.onExportCharacterPack = { [weak self] in
             self?.exportCurrentCharacterPack()
@@ -255,6 +259,34 @@ private extension AppDelegate {
             }
         } catch {
             importPresenter.presentLoadError(error)
+        }
+    }
+
+    func buildCharacterPack() {
+        guard let request = packBuilderPresenter
+            .chooseBuildRequest()
+        else {
+            return
+        }
+
+        guard let destinationURL = importPresenter
+            .chooseCharacterPackExportDestination(
+                suggestedName: request.name
+            )
+        else {
+            return
+        }
+
+        do {
+            try characterLibrary.buildCharacterPack(
+                request,
+                at: destinationURL
+            )
+            importPresenter.presentBuildSuccess(
+                destinationURL
+            )
+        } catch {
+            importPresenter.presentBuildError(error)
         }
     }
 
