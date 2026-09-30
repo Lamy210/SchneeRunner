@@ -69,6 +69,14 @@ A state may appear at most once. The default state must have a clip.
 
 The normal GIF safety policy applies, including file-size, frame-count, dimension, decoded-pixel, and frame-duration limits.
 
+### `apng`
+
+`path` points to one animated PNG. The normal APNG safety policy and authored frame timing apply.
+
+### `webP`
+
+`path` points to one animated WebP file. The normal WebP safety policy and authored frame timing apply.
+
 ### `pngSequence`
 
 `path` points to a directory containing the sequence PNGs.
@@ -112,6 +120,8 @@ Source semantics match the manifest clip kinds:
 
 - `singleImage` and `spriteSheet4x2` point to PNG files;
 - `gif` points to one GIF file;
+- `apng` points to one animated PNG file;
+- `webP` points to one animated WebP file;
 - `pngSequence` points to a directory containing the PNG frames.
 
 The builder validates name/state rules before copying, normalizes clip order to `idle`, `walk`, `run`, `dash`, `sprint`, applies the normal aggregate package-size limit, writes into a temporary `.schneerunner` directory, reloads the completed package, and only then moves it to the requested destination.
@@ -127,7 +137,7 @@ The builder lets the user:
 - enter the Character Pack name;
 - choose the default state;
 - optionally attach one clip to each of idle, walk, run, dash, and sprint;
-- choose `singleImage`, `spriteSheet4x2`, `pngSequence`, or `gif` independently per state;
+- choose `singleImage`, `spriteSheet4x2`, `pngSequence`, `gif`, `apng`, or `webP` independently per state;
 - clear or replace an already selected clip source;
 - choose the final `.schneerunner` destination only after the draft is complete.
 
@@ -170,6 +180,6 @@ Only manifest-referenced clip files are copied. Extra files in the source packag
 
 ## Compatibility
 
-Character Pack v1 supports `singleImage`, `spriteSheet4x2`, `pngSequence`, and `gif` clips.
+Character Pack v1 supports `singleImage`, `spriteSheet4x2`, `pngSequence`, `gif`, `apng`, and `webP` clips.
 
-Standalone APNG and WebP animations are supported by SchneeRunner, but they are not Character Pack v1 clip kinds. A future compatible format change may add them explicitly. Unknown format versions or clip kinds are rejected rather than guessed.
+Unknown format versions or clip kinds are rejected rather than guessed.
