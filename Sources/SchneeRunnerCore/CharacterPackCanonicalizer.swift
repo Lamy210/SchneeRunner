@@ -29,21 +29,11 @@ struct CharacterPackCanonicalizer {
                 path: clip.path,
                 packageURL: sourcePackageURL
             )
-            let clipDirectory = destinationPackageURL
-                .appendingPathComponent("clips", isDirectory: true)
-                .appendingPathComponent(
-                    clip.state.rawValue,
-                    isDirectory: true
-                )
-            try fileManager.createDirectory(
-                at: clipDirectory,
-                withIntermediateDirectories: true
-            )
-
-            let canonicalClip = try copyClip(
-                clip,
+            let canonicalClip = try copyResolvedClip(
+                state: clip.state,
+                kind: clip.kind,
                 sourceURL: sourceURL,
-                destinationDirectory: clipDirectory,
+                destinationPackageURL: destinationPackageURL,
                 copiedBytes: &copiedBytes
             )
             canonicalClips.append(canonicalClip)
@@ -53,6 +43,36 @@ struct CharacterPackCanonicalizer {
             name: manifest.name,
             defaultState: manifest.defaultState,
             clips: canonicalClips
+        )
+    }
+
+    func copyResolvedClip(
+        state: CharacterState,
+        kind: CharacterPackClipKind,
+        sourceURL: URL,
+        destinationPackageURL: URL,
+        copiedBytes: inout Int
+    ) throws -> CharacterPackClip {
+        let clipDirectory = destinationPackageURL
+            .appendingPathComponent("clips", isDirectory: true)
+            .appendingPathComponent(
+                state.rawValue,
+                isDirectory: true
+            )
+        try fileManager.createDirectory(
+            at: clipDirectory,
+            withIntermediateDirectories: true
+        )
+
+        return try copyClip(
+            CharacterPackClip(
+                state: state,
+                kind: kind,
+                path: ""
+            ),
+            sourceURL: sourceURL,
+            destinationDirectory: clipDirectory,
+            copiedBytes: &copiedBytes
         )
     }
 
