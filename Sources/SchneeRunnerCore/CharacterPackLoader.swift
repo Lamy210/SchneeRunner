@@ -168,7 +168,7 @@ public struct CharacterPackLoader {
         )
     }
 
-    private func validateManifest(
+    func validateManifest(
         _ manifest: CharacterPackManifest
     ) throws {
         guard manifest.formatVersion == CharacterPackManifest.currentFormatVersion else {
