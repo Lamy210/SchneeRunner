@@ -57,51 +57,73 @@ final class CharacterPackAnimatedImageClipTests: XCTestCase {
     }
 
     func testBuilderCanonicalizesAPNGAndWebPClips() throws {
+        let fixture = try makeBuilderFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        try CharacterPackBuilder().build(
+            animatedBuildRequest(fixture),
+            at: fixture.destinationURL
+        )
+
+        try assertCanonicalAnimatedBuild(fixture)
+    }
+}
+
+private extension CharacterPackAnimatedImageClipTests {
+    func makeBuilderFixture() throws -> AnimatedBuilderFixture {
         let rootURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(
                 UUID().uuidString,
                 isDirectory: true
             )
-        defer {
-            try? FileManager.default.removeItem(at: rootURL)
-        }
         try FileManager.default.createDirectory(
             at: rootURL,
             withIntermediateDirectories: true
         )
 
-        let idleURL = rootURL.appendingPathComponent("idle.apng")
-        let runURL = rootURL.appendingPathComponent("run.webp")
-        let destinationURL = rootURL.appendingPathComponent(
-            "Animated.schneerunner",
-            isDirectory: true
+        let fixture = AnimatedBuilderFixture(
+            rootURL: rootURL,
+            idleURL: rootURL.appendingPathComponent("idle.apng"),
+            runURL: rootURL.appendingPathComponent("run.webp"),
+            destinationURL: rootURL.appendingPathComponent(
+                "Animated.schneerunner",
+                isDirectory: true
+            )
         )
-        try writeTestAPNG(to: idleURL)
-        try writeTestWebP(to: runURL)
+        try writeTestAPNG(to: fixture.idleURL)
+        try writeTestWebP(to: fixture.runURL)
+        return fixture
+    }
 
-        try CharacterPackBuilder().build(
-            CharacterPackBuildRequest(
-                name: "Animated Pack",
-                defaultState: .run,
-                clips: [
-                    CharacterPackBuildClip(
-                        state: .run,
-                        kind: .webP,
-                        sourceURL: runURL
-                    ),
-                    CharacterPackBuildClip(
-                        state: .idle,
-                        kind: .apng,
-                        sourceURL: idleURL
-                    )
-                ]
-            ),
-            at: destinationURL
+    func animatedBuildRequest(
+        _ fixture: AnimatedBuilderFixture
+    ) -> CharacterPackBuildRequest {
+        CharacterPackBuildRequest(
+            name: "Animated Pack",
+            defaultState: .run,
+            clips: [
+                CharacterPackBuildClip(
+                    state: .run,
+                    kind: .webP,
+                    sourceURL: fixture.runURL
+                ),
+                CharacterPackBuildClip(
+                    state: .idle,
+                    kind: .apng,
+                    sourceURL: fixture.idleURL
+                )
+            ]
         )
+    }
 
+    func assertCanonicalAnimatedBuild(
+        _ fixture: AnimatedBuilderFixture
+    ) throws {
         let loader = CharacterPackLoader()
         let manifest = try loader.validatedManifest(
-            from: destinationURL
+            from: fixture.destinationURL
         )
 
         XCTAssertEqual(
@@ -121,7 +143,7 @@ final class CharacterPackAnimatedImageClipTests: XCTestCase {
         )
 
         let library = try loader.load(
-            from: destinationURL
+            from: fixture.destinationURL
         )
         XCTAssertEqual(
             library.availableStates,
@@ -129,13 +151,26 @@ final class CharacterPackAnimatedImageClipTests: XCTestCase {
         )
         XCTAssertTrue(
             FileManager.default.fileExists(
-                atPath: idleURL.path
+                atPath: fixture.idleURL.path
             )
         )
         XCTAssertTrue(
             FileManager.default.fileExists(
-                atPath: runURL.path
+                atPath: fixture.runURL.path
             )
+        )
+    }
+}
+
+private struct AnimatedBuilderFixture {
+    let rootURL: URL
+    let idleURL: URL
+    let runURL: URL
+    let destinationURL: URL
+
+    func cleanup() {
+        try? FileManager.default.removeItem(
+            at: rootURL
         )
     }
 }
