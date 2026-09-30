@@ -81,7 +81,7 @@ The state and playback rate are separate values. Existing single-animation asset
 
 Choose **Load Character Pack…** to import a directory ending in `.schneerunner`. A pack can provide separate clips for idle, walk, run, dash, and sprint. Missing states fall back to the pack's declared default state.
 
-Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, and GIF clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible. A pack is capped at 240 decoded frames and 32 million decoded pixels across all state clips.
+Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, GIF, APNG, and WebP clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible. A pack is capped at 240 decoded frames and 32 million decoded pixels across all state clips.
 
 When the current stored character is a Character Pack, **Export Current Character Pack…** writes a fresh canonical `.schneerunner` directory. Export reuses only manifest-referenced clips, reloads the staged result before commit, and refuses to overwrite an existing destination.
 
@@ -95,7 +95,7 @@ APNG and animated WebP imports use the same bounded animation policy as GIF: 2�
 
 APNG accepts animated PNG data selected through either a `.png` or `.apng` filename. WebP accepts animated `.webp` data. File extensions are only picker hints; ImageIO content type and frame count are validated before decode. Owned copies are fully decoded again before staged persistence is committed, and both formats participate in Recent Characters and last-character restoration.
 
-Character Pack v1 still accepts only `singleImage`, `spriteSheet4x2`, `pngSequence`, and `gif` clips. APNG/WebP pack clips are intentionally deferred to a separate format-compatible change.
+Character Pack v1 also accepts `apng` and `webP` clips. They use the same bounded animated-image validation and authored frame timing as standalone imports.
 
 ## GIF format
 
@@ -153,10 +153,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. APNG / WebP Character Pack clip support
-2. battery, memory, build, and local event triggers
-3. generalized trigger priority and state overrides
-4. optional desktop-pet renderer
+1. battery, memory, build, and local event triggers
+2. generalized trigger priority and state overrides
+3. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 
