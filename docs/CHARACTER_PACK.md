@@ -118,6 +118,23 @@ The builder validates name/state rules before copying, normalizes clip order to 
 
 Builds reject symlink clip files, invalid clip data, duplicate states, a missing default-state clip, non-`.schneerunner` destinations, and existing destinations. Failed builds remove their staging directory and leave source files unchanged.
 
+## Builder UI
+
+**Build Character Pack…** opens the in-app builder.
+
+The builder lets the user:
+
+- enter the Character Pack name;
+- choose the default state;
+- optionally attach one clip to each of idle, walk, run, dash, and sprint;
+- choose `singleImage`, `spriteSheet4x2`, `pngSequence`, or `gif` independently per state;
+- clear or replace an already selected clip source;
+- choose the final `.schneerunner` destination only after the draft is complete.
+
+Changing a row's clip kind clears its previously selected source so stale files cannot be reinterpreted as a different clip type. The selected default state must have a clip. The UI delegates final validation and canonical package creation to `CharacterPackBuilder`.
+
+Building a package is side-effect free with respect to playback: it does not replace the currently running character or change CPU-adaptive state.
+
 ## Export
 
 A currently loaded, stored Character Pack can be written back out with **Export Current Character Pack…**.

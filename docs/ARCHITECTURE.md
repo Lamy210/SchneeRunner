@@ -119,7 +119,8 @@ Owns macOS integration:
 - CPU sampling timer;
 - menu-bar image sizing;
 - user-facing error/state presentation;
-- save-panel coordination for Character Pack export.
+- save-panel coordination for Character Pack export;
+- modal Character Pack builder coordination and per-state source selection.
 
 UI mutation stays on the main actor.
 
