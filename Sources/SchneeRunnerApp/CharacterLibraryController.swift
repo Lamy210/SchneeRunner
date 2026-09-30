@@ -101,6 +101,16 @@ final class CharacterLibraryController {
         try packStore.importPack(from: sourceURL)
     }
 
+    func exportCharacterPack(
+        _ asset: StoredCharacterAsset,
+        to destinationURL: URL
+    ) throws {
+        try packStore.exportPack(
+            for: asset,
+            to: destinationURL
+        )
+    }
+
     func recentAssets(limit: Int = 8) throws -> [StoredCharacterAsset] {
         let assets = try store.listAssets()
         return Array(assets.prefix(max(limit, 0)))
