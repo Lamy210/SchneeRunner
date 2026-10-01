@@ -6,7 +6,7 @@ final class CharacterStateCoordinator {
     private static let batteryWarningTriggerID = "battery-warning"
     private static let memoryPressureTriggerID = "memory-pressure"
     private static let buildTriggerID = "build"
-    private static let localEventTriggerID = "local-event"
+    private static let localEventTriggerPrefix = "local-event:"
     private static let manualTriggerID = "manual"
 
     private let playbackController: CharacterPlaybackController
@@ -34,11 +34,14 @@ final class CharacterStateCoordinator {
         buildEventMonitor.onClear = { [weak self] in
             self?.clearBuildEvent()
         }
-        localEventMonitor.onSet = { [weak self] state in
-            self?.setLocalEvent(state)
+        localEventMonitor.onSet = { [weak self] channel, state in
+            self?.setLocalEvent(
+                state,
+                channel: channel
+            )
         }
-        localEventMonitor.onClear = { [weak self] in
-            self?.clearLocalEvent()
+        localEventMonitor.onClear = { [weak self] channel in
+            self?.clearLocalEvent(channel: channel)
         }
         memoryPressureMonitor.onChange = { [weak self] level in
             self?.updateMemoryPressure(level)
@@ -124,10 +127,13 @@ final class CharacterStateCoordinator {
         applyResolvedState()
     }
 
-    func setLocalEvent(_ state: CharacterState) {
+    func setLocalEvent(
+        _ state: CharacterState,
+        channel: String = LocalCharacterStateEvent.defaultChannel
+    ) {
         triggerEngine.set(
             CharacterStateTrigger(
-                id: Self.localEventTriggerID,
+                id: Self.localEventTriggerID(for: channel),
                 state: state,
                 priority: .event
             )
@@ -135,9 +141,11 @@ final class CharacterStateCoordinator {
         applyResolvedState()
     }
 
-    func clearLocalEvent() {
+    func clearLocalEvent(
+        channel: String = LocalCharacterStateEvent.defaultChannel
+    ) {
         triggerEngine.remove(
-            id: Self.localEventTriggerID
+            id: Self.localEventTriggerID(for: channel)
         )
         applyResolvedState()
     }
@@ -158,6 +166,12 @@ final class CharacterStateCoordinator {
         }
 
         applyResolvedState()
+    }
+
+    private static func localEventTriggerID(
+        for channel: String
+    ) -> String {
+        "\(localEventTriggerPrefix)\(channel)"
     }
 
     private func applyResolvedState() {

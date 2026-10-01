@@ -118,7 +118,7 @@ Owns deterministic and reusable domain behavior:
 - memory-pressure-to-state policy;
 - build-lifecycle-to-trigger-effect policy;
 - priority-aware character-state trigger resolution with deterministic recency tie-breaking;
-- validated local character-state event payloads and TTL constraints;
+- validated local character-state event payloads, channel identifiers, and TTL constraints;
 - versioned local build lifecycle event payloads;
 - state-aware animation lookup with deterministic default fallback;
 - Character Pack v1 manifest validation and safe relative-path resolution;
@@ -150,7 +150,7 @@ Owns macOS integration:
 - requested-state playback coordination;
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
-- local Distributed Notification state-event reception and TTL expiry;
+- local Distributed Notification state-event reception with per-channel TTL expiry;
 - local build lifecycle event reception and terminal-state expiry;
 - IOKit power-source notification and low-battery warning monitoring;
 - Dispatch system memory-pressure monitoring;
@@ -251,7 +251,7 @@ Battery warning changes are observed through IOKit's power-source notification r
 
 System memory pressure is observed through a Dispatch memory-pressure source. Normal pressure removes the system trigger, warning maps to `dash`, and critical maps to `sprint`. The system-event priority sits above ordinary metrics but below explicit local events so CPU sampling cannot erase a pressure alert while local automation and manual overrides still remain authoritative.
 
-Local state events are transported through macOS Distributed Notifications. The payload is a validated JSON value containing a set/clear action, a known `CharacterState`, and an optional bounded TTL. Build lifecycle events use a separate versioned Distributed Notification payload containing only the lifecycle phase. `BuildStatePolicy` maps start to a persistent `dash` reaction, success to a 2-second `sprint`, failure to a 5-second `idle`, and cancellation to immediate removal. Both paths are local IPC rather than network services and are intended for same-user automation, not as authentication boundaries.
+Local state events are transported through macOS Distributed Notifications. The payload is a validated JSON value containing a set/clear action, a known `CharacterState`, an optional bounded TTL, and a validated channel identifier. Payloads that omit the channel remain compatible with v1 and resolve to the `default` channel. Each channel maps to an independent trigger ID and expiry timer, so clearing or expiring one automation does not remove another channel. Build lifecycle events use a separate versioned Distributed Notification payload containing only the lifecycle phase. `BuildStatePolicy` maps start to a persistent `dash` reaction, success to a 2-second `sprint`, failure to a 5-second `idle`, and cancellation to immediate removal. Both paths are local IPC rather than network services and are intended for same-user automation, not as authentication boundaries.
 
 ## 5. Asset safety
 
