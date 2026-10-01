@@ -88,8 +88,8 @@ private func parseStateCommand(
     }
 
     if arguments.count == 2 {
-        return .characterState(
-            try LocalCharacterStateEvent.set(
+        return try .characterState(
+            LocalCharacterStateEvent.set(
                 state: state
             )
         )
@@ -104,8 +104,8 @@ private func parseStateCommand(
         )
     }
 
-    return .characterState(
-        try LocalCharacterStateEvent.set(
+    return try .characterState(
+        LocalCharacterStateEvent.set(
             state: state,
             durationSeconds: duration
         )
