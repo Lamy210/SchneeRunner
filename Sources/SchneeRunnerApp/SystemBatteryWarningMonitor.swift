@@ -58,14 +58,12 @@ final class SystemBatteryWarningMonitor {
 
     private func refresh() {
         let warning = IOPSGetBatteryWarningLevel()
-        let level: BatteryWarningLevel
-
-        if warning == kIOPSLowBatteryWarningFinal {
-            level = .final
+        let level: BatteryWarningLevel = if warning == kIOPSLowBatteryWarningFinal {
+            .final
         } else if warning == kIOPSLowBatteryWarningEarly {
-            level = .early
+            .early
         } else {
-            level = .none
+            .none
         }
 
         guard level != currentLevel else {
