@@ -73,6 +73,10 @@ AppDelegate
      |            |
      |            +----> CharacterStateTriggerEngine
      |            |
+     |            +----> SystemBatteryWarningMonitor
+     |            |
+     |            +----> BatteryWarningStatePolicy
+     |            |
      |            +----> LocalCharacterStateEventMonitor
      |            |
      |            +----> SystemMemoryPressureMonitor
@@ -108,6 +112,7 @@ Owns deterministic and reusable domain behavior:
 - APNG and WebP frame decoding with authored per-frame timing;
 - frame/schedule pairing through `LoadedAnimation`;
 - character state modeling and CPU-pace-to-state policy;
+- battery-warning-to-state policy;
 - memory-pressure-to-state policy;
 - priority-aware character-state trigger resolution with deterministic recency tie-breaking;
 - validated local character-state event payloads and TTL constraints;
@@ -142,6 +147,7 @@ Owns macOS integration:
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
 - local Distributed Notification event reception and TTL expiry;
+- IOKit power-source notification and low-battery warning monitoring;
 - Dispatch system memory-pressure monitoring;
 - Mach host CPU sampling;
 - CPU sampling timer;
@@ -234,7 +240,9 @@ A metric provider emits values. It must not directly manipulate a renderer.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 
-Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, system memory pressure uses the system-event priority, local process events use the event priority, and a manual menu selection uses the manual priority. Removing or expiring a higher-priority trigger immediately exposes the next active trigger without coupling any source to the renderer.
+Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, battery warnings use the system-advisory priority, system memory pressure uses the system-event priority, local process events use the event priority, and a manual menu selection uses the manual priority. Removing or expiring a higher-priority trigger immediately exposes the next active trigger without coupling any source to the renderer.
+
+Battery warning changes are observed through IOKit's power-source notification run-loop source and mapped from macOS's own low-battery warning level. No warning removes the advisory trigger, early warning maps to `walk`, and final warning maps to `idle`. The system-advisory priority sits above ordinary metrics but below memory pressure so a low-battery update does not hide an urgent memory-pressure state.
 
 System memory pressure is observed through a Dispatch memory-pressure source. Normal pressure removes the system trigger, warning maps to `dash`, and critical maps to `sprint`. The system-event priority sits above ordinary metrics but below explicit local events so CPU sampling cannot erase a pressure alert while local automation and manual overrides still remain authoritative.
 

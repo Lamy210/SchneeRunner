@@ -3,13 +3,16 @@ import SchneeRunnerCore
 @MainActor
 final class CharacterStateCoordinator {
     private static let cpuTriggerID = "cpu"
+    private static let batteryWarningTriggerID = "battery-warning"
     private static let memoryPressureTriggerID = "memory-pressure"
     private static let localEventTriggerID = "local-event"
     private static let manualTriggerID = "manual"
 
     private let playbackController: CharacterPlaybackController
     private let cpuStatePolicy = CharacterStatePolicy()
+    private let batteryWarningPolicy = BatteryWarningStatePolicy()
     private let memoryPressurePolicy = MemoryPressureStatePolicy()
+    private let batteryWarningMonitor = SystemBatteryWarningMonitor()
     private let localEventMonitor = LocalCharacterStateEventMonitor()
     private let memoryPressureMonitor = SystemMemoryPressureMonitor()
 
@@ -20,6 +23,9 @@ final class CharacterStateCoordinator {
     ) {
         self.playbackController = playbackController
 
+        batteryWarningMonitor.onChange = { [weak self] level in
+            self?.updateBatteryWarning(level)
+        }
         localEventMonitor.onSet = { [weak self] state in
             self?.setLocalEvent(state)
         }
@@ -32,11 +38,13 @@ final class CharacterStateCoordinator {
     }
 
     func start() {
+        batteryWarningMonitor.start()
         localEventMonitor.start()
         memoryPressureMonitor.start()
     }
 
     func stop() {
+        batteryWarningMonitor.stop()
         localEventMonitor.stop()
         memoryPressureMonitor.stop()
     }
@@ -49,6 +57,24 @@ final class CharacterStateCoordinator {
                 priority: .metric
             )
         )
+        applyResolvedState()
+    }
+
+    func updateBatteryWarning(_ level: BatteryWarningLevel) {
+        if let state = batteryWarningPolicy.state(for: level) {
+            triggerEngine.set(
+                CharacterStateTrigger(
+                    id: Self.batteryWarningTriggerID,
+                    state: state,
+                    priority: .systemAdvisory
+                )
+            )
+        } else {
+            triggerEngine.remove(
+                id: Self.batteryWarningTriggerID
+            )
+        }
+
         applyResolvedState()
     }
 
