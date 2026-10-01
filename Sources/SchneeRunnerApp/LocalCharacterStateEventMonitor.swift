@@ -3,11 +3,11 @@ import SchneeRunnerCore
 
 @MainActor
 final class LocalCharacterStateEventMonitor: NSObject {
-    var onSet: ((CharacterState) -> Void)?
-    var onClear: (() -> Void)?
+    var onSet: ((String, CharacterState) -> Void)?
+    var onClear: ((String) -> Void)?
 
     private let center = DistributedNotificationCenter.default()
-    private var expiryTimer: Timer?
+    private var expiryTimers: [String: Timer] = [:]
     private var isStarted = false
 
     func start() {
@@ -39,8 +39,10 @@ final class LocalCharacterStateEventMonitor: NSObject {
             ),
             object: nil
         )
-        expiryTimer?.invalidate()
-        expiryTimer = nil
+        for timer in expiryTimers.values {
+            timer.invalidate()
+        }
+        expiryTimers.removeAll()
         isStarted = false
     }
 
@@ -59,8 +61,7 @@ final class LocalCharacterStateEventMonitor: NSObject {
     }
 
     private func handle(_ event: LocalCharacterStateEvent) {
-        expiryTimer?.invalidate()
-        expiryTimer = nil
+        cancelExpiry(for: event.channel)
 
         switch event.action {
         case .set:
@@ -68,33 +69,49 @@ final class LocalCharacterStateEventMonitor: NSObject {
                 return
             }
 
-            onSet?(state)
+            onSet?(event.channel, state)
             scheduleExpiry(
+                for: event.channel,
                 after: event.durationSeconds
             )
 
         case .clear:
-            onClear?()
+            onClear?(event.channel)
         }
     }
 
-    private func scheduleExpiry(after duration: Double?) {
+    private func scheduleExpiry(
+        for channel: String,
+        after duration: Double?
+    ) {
         guard let duration else {
             return
         }
 
-        expiryTimer = Timer.scheduledTimer(
+        expiryTimers[channel] = Timer.scheduledTimer(
             timeInterval: duration,
             target: self,
-            selector: #selector(expireEvent),
-            userInfo: nil,
+            selector: #selector(expireEvent(_:)),
+            userInfo: channel,
             repeats: false
         )
     }
 
+    private func cancelExpiry(for channel: String) {
+        expiryTimers.removeValue(forKey: channel)?.invalidate()
+    }
+
     @objc
-    private func expireEvent() {
-        expiryTimer = nil
-        onClear?()
+    private func expireEvent(_ timer: Timer) {
+        guard
+            let channel = timer.userInfo as? String,
+            let activeTimer = expiryTimers[channel],
+            activeTimer === timer
+        else {
+            return
+        }
+
+        expiryTimers.removeValue(forKey: channel)
+        onClear?(channel)
     }
 }

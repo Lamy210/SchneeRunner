@@ -96,7 +96,17 @@ swift run schneerunnerctl state idle
 swift run schneerunnerctl clear
 ```
 
-A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. Generic local state events and build lifecycle events share the explicit local-event priority; the most recently updated trigger wins when both are active. The current priority order is **manual > local event/build event > system memory pressure > battery warning > CPU metric**.
+Independent automations can use named channels so one script does not overwrite or clear another script's trigger:
+
+```bash
+swift run schneerunnerctl state dash --channel build-a
+swift run schneerunnerctl state sprint --seconds 10 --channel test-suite
+swift run schneerunnerctl clear --channel build-a
+```
+
+The channel defaults to `default` for backward compatibility. Channel names are 1–64 bytes and accept letters, numbers, `.`, `_`, and `-`. Older v1 payloads without a channel still decode into the default channel.
+
+Each channel owns an independent trigger and TTL timer. Expiring or clearing one channel therefore exposes the next active trigger instead of deleting unrelated local automation. Multiple local channels and build lifecycle events share the explicit event priority; the existing recency rule selects the most recently updated active trigger. The current priority order is **manual > local event/build event > system memory pressure > battery warning > CPU metric**.
 
 The control path uses macOS Distributed Notifications and does not open a network port. It is intended for same-user local automation such as build scripts and development hooks; it is not an authenticated security boundary. Malformed payloads are ignored.
 
@@ -104,7 +114,7 @@ The control path uses macOS Distributed Notifications and does not open a networ
 
 SchneeRunner monitors macOS system memory-pressure transitions locally. Normal pressure does not install a trigger. A warning requests the **dash** state, while critical pressure requests **sprint**. Returning to normal removes the memory-pressure trigger and immediately exposes the next active source.
 
-The priority order is **manual > local event > system memory pressure > battery warning > CPU metric**. This keeps an explicit user override strongest, lets local automation override system pressure when needed, and prevents the one-second CPU sampler from immediately replacing a pressure alert.
+The priority order is **manual > local event/build event > system memory pressure > battery warning > CPU metric**. This keeps an explicit user override strongest, lets local automation override system pressure when needed, and prevents the one-second CPU sampler from immediately replacing a pressure alert.
 
 ## Battery warning trigger
 
@@ -216,8 +226,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. named/multiple local event channels if real integrations require them
-2. optional desktop-pet renderer
+1. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 

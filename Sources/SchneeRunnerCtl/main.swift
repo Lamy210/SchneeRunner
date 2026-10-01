@@ -22,6 +22,11 @@ private enum ControlCLIError: Error, LocalizedError {
     }
 }
 
+private struct StateCommandOptions {
+    let durationSeconds: Double?
+    let channel: String
+}
+
 private enum ControlPayload {
     case characterState(LocalCharacterStateEvent)
     case build(LocalBuildEvent)
@@ -54,13 +59,7 @@ private func parseCommand(
 
     switch command {
     case "clear":
-        guard arguments.count == 1 else {
-            throw ControlCLIError.invalidCommand
-        }
-
-        return .characterState(
-            LocalCharacterStateEvent.clear()
-        )
+        return try parseClearCommand(arguments)
 
     case "state":
         return try parseStateCommand(arguments)
@@ -73,12 +72,33 @@ private func parseCommand(
     }
 }
 
+private func parseClearCommand(
+    _ arguments: [String]
+) throws -> ControlPayload {
+    if arguments.count == 1 {
+        return .characterState(
+            LocalCharacterStateEvent.clear()
+        )
+    }
+
+    guard
+        arguments.count == 3,
+        arguments[1] == "--channel"
+    else {
+        throw ControlCLIError.invalidCommand
+    }
+
+    return try .characterState(
+        LocalCharacterStateEvent.clear(
+            channel: arguments[2]
+        )
+    )
+}
+
 private func parseStateCommand(
     _ arguments: [String]
 ) throws -> ControlPayload {
-    guard
-        arguments.count == 2 || arguments.count == 4
-    else {
+    guard arguments.count >= 2 else {
         throw ControlCLIError.invalidCommand
     }
 
@@ -87,28 +107,60 @@ private func parseStateCommand(
         throw ControlCLIError.invalidState(rawState)
     }
 
-    if arguments.count == 2 {
-        return try .characterState(
-            LocalCharacterStateEvent.set(
-                state: state
-            )
-        )
-    }
-
-    guard arguments[2] == "--seconds" else {
-        throw ControlCLIError.invalidCommand
-    }
-    guard let duration = Double(arguments[3]) else {
-        throw ControlCLIError.invalidDuration(
-            arguments[3]
-        )
-    }
+    let options = try parseStateCommandOptions(
+        Array(arguments.dropFirst(2))
+    )
 
     return try .characterState(
         LocalCharacterStateEvent.set(
             state: state,
-            durationSeconds: duration
+            durationSeconds: options.durationSeconds,
+            channel: options.channel
         )
+    )
+}
+
+private func parseStateCommandOptions(
+    _ arguments: [String]
+) throws -> StateCommandOptions {
+    guard arguments.count.isMultiple(of: 2) else {
+        throw ControlCLIError.invalidCommand
+    }
+
+    var durationSeconds: Double?
+    var channel: String?
+    var index = 0
+
+    while index < arguments.count {
+        let option = arguments[index]
+        let value = arguments[index + 1]
+
+        switch option {
+        case "--seconds":
+            guard durationSeconds == nil else {
+                throw ControlCLIError.invalidCommand
+            }
+            guard let parsedDuration = Double(value) else {
+                throw ControlCLIError.invalidDuration(value)
+            }
+            durationSeconds = parsedDuration
+
+        case "--channel":
+            guard channel == nil else {
+                throw ControlCLIError.invalidCommand
+            }
+            channel = value
+
+        default:
+            throw ControlCLIError.invalidCommand
+        }
+
+        index += 2
+    }
+
+    return StateCommandOptions(
+        durationSeconds: durationSeconds,
+        channel: channel ?? LocalCharacterStateEvent.defaultChannel
     )
 }
 
@@ -147,10 +199,9 @@ private func printUsage() {
     fputs(
         """
         Usage:
-          schneerunnerctl state <\(states)> [--seconds <0.1...3600>]
-          schneerunnerctl clear
+          schneerunnerctl state <\(states)> [--seconds <0.1...3600>] [--channel <name>]
+          schneerunnerctl clear [--channel <name>]
           schneerunnerctl build <start|success|failure|cancel>
-
         """,
         stderr
     )
