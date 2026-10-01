@@ -35,8 +35,8 @@ final class DesktopCharacterPlacementStoreTests: XCTestCase {
             width: 32,
             height: 32
         )
-        fixture.defaults.set(
-            try JSONEncoder().encode(invalidPlacement),
+        try fixture.defaults.set(
+            JSONEncoder().encode(invalidPlacement),
             forKey: fixture.key
         )
 
