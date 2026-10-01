@@ -32,6 +32,7 @@ The current vertical slice supports:
 - local state-event CLI with optional TTL expiry
 - system memory-pressure trigger with warning / critical escalation
 - system low-battery warning trigger driven by macOS warning levels
+- first-class local build lifecycle trigger for start / success / failure / cancel
 - state-aware animation lookup with deterministic default-animation fallback
 - portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
 - canonical export of the currently loaded stored Character Pack
@@ -95,7 +96,7 @@ swift run schneerunnerctl state idle
 swift run schneerunnerctl clear
 ```
 
-A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. The current priority order is **manual > local event > system memory pressure > battery warning > CPU metric**.
+A duration is optional and must be between 0.1 and 3600 seconds. When the TTL expires, the local-event trigger is removed automatically and state resolution falls back to the next active trigger. Generic local state events and build lifecycle events share the explicit local-event priority; the most recently updated trigger wins when both are active. The current priority order is **manual > local event/build event > system memory pressure > battery warning > CPU metric**.
 
 The control path uses macOS Distributed Notifications and does not open a network port. It is intended for same-user local automation such as build scripts and development hooks; it is not an authenticated security boundary. Malformed payloads are ignored.
 
@@ -110,6 +111,34 @@ The priority order is **manual > local event > system memory pressure > battery 
 SchneeRunner listens for macOS power-source changes and reads the operating system's low-battery warning level. It does not define its own battery-percentage thresholds. No warning removes the battery trigger, an early warning requests **walk**, and a final warning requests **idle**.
 
 Battery warnings use a system-advisory priority below memory pressure and above the CPU metric. A critical memory-pressure state therefore remains authoritative over a later battery update, while CPU sampling cannot immediately erase the battery warning. Desktops and Macs on external power resolve to the no-warning path.
+
+## Build lifecycle trigger
+
+Build scripts can report lifecycle events without choosing animation states themselves:
+
+```bash
+swift run schneerunnerctl build start
+swift run schneerunnerctl build success
+swift run schneerunnerctl build failure
+swift run schneerunnerctl build cancel
+```
+
+A started build requests **dash** until another build lifecycle event arrives. Success requests **sprint** for 2 seconds, failure requests **idle** for 5 seconds, and cancel removes the build trigger immediately. Terminal reactions expire automatically and expose the next active trigger.
+
+The build event uses the same local Distributed Notification transport as manual local automation, but has its own versioned payload and notification name. It opens no network port and needs no GitHub token. Generic local-state events and build events share the explicit local-event priority, so whichever source updated most recently wins until it clears or expires.
+
+A shell integration can report a complete build without coupling the script to character states:
+
+```bash
+swift run schneerunnerctl build start
+if swift build; then
+  swift run schneerunnerctl build success
+else
+  status=$?
+  swift run schneerunnerctl build failure
+  exit "$status"
+fi
+```
 
 ## Character Pack v1
 
@@ -187,9 +216,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. first-class build triggers
-2. named/multiple local event channels if real integrations require them
-3. optional desktop-pet renderer
+1. named/multiple local event channels if real integrations require them
+2. optional desktop-pet renderer
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 

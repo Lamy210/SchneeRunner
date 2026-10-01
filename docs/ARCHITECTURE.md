@@ -77,6 +77,8 @@ AppDelegate
      |            |
      |            +----> BatteryWarningStatePolicy
      |            |
+     |            +----> LocalBuildEventMonitor
+     |            |
      |            +----> LocalCharacterStateEventMonitor
      |            |
      |            +----> SystemMemoryPressureMonitor
@@ -114,8 +116,10 @@ Owns deterministic and reusable domain behavior:
 - character state modeling and CPU-pace-to-state policy;
 - battery-warning-to-state policy;
 - memory-pressure-to-state policy;
+- build-lifecycle-to-trigger-effect policy;
 - priority-aware character-state trigger resolution with deterministic recency tie-breaking;
 - validated local character-state event payloads and TTL constraints;
+- versioned local build lifecycle event payloads;
 - state-aware animation lookup with deterministic default fallback;
 - Character Pack v1 manifest validation and safe relative-path resolution;
 - state-specific pack loading into `CharacterAnimationLibrary`, including GIF, APNG, and WebP timing;
@@ -146,7 +150,8 @@ Owns macOS integration:
 - requested-state playback coordination;
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
-- local Distributed Notification event reception and TTL expiry;
+- local Distributed Notification state-event reception and TTL expiry;
+- local build lifecycle event reception and terminal-state expiry;
 - IOKit power-source notification and low-battery warning monitoring;
 - Dispatch system memory-pressure monitoring;
 - Mach host CPU sampling;
@@ -240,13 +245,13 @@ A metric provider emits values. It must not directly manipulate a renderer.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 
-Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, battery warnings use the system-advisory priority, system memory pressure uses the system-event priority, local process events use the event priority, and a manual menu selection uses the manual priority. Removing or expiring a higher-priority trigger immediately exposes the next active trigger without coupling any source to the renderer.
+Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, battery warnings use the system-advisory priority, system memory pressure uses the system-event priority, generic local process events and build lifecycle events share the event priority, and a manual menu selection uses the manual priority. Removing or expiring a higher-priority trigger immediately exposes the next active trigger without coupling any source to the renderer.
 
 Battery warning changes are observed through IOKit's power-source notification run-loop source and mapped from macOS's own low-battery warning level. No warning removes the advisory trigger, early warning maps to `walk`, and final warning maps to `idle`. The system-advisory priority sits above ordinary metrics but below memory pressure so a low-battery update does not hide an urgent memory-pressure state.
 
 System memory pressure is observed through a Dispatch memory-pressure source. Normal pressure removes the system trigger, warning maps to `dash`, and critical maps to `sprint`. The system-event priority sits above ordinary metrics but below explicit local events so CPU sampling cannot erase a pressure alert while local automation and manual overrides still remain authoritative.
 
-Local state events are transported through macOS Distributed Notifications. The payload is a validated JSON value containing a set/clear action, a known `CharacterState`, and an optional bounded TTL. This path is local IPC rather than a network service and is intended for same-user automation, not as an authentication boundary.
+Local state events are transported through macOS Distributed Notifications. The payload is a validated JSON value containing a set/clear action, a known `CharacterState`, and an optional bounded TTL. Build lifecycle events use a separate versioned Distributed Notification payload containing only the lifecycle phase. `BuildStatePolicy` maps start to a persistent `dash` reaction, success to a 2-second `sprint`, failure to a 5-second `idle`, and cancellation to immediate removal. Both paths are local IPC rather than network services and are intended for same-user automation, not as authentication boundaries.
 
 ## 5. Asset safety
 
