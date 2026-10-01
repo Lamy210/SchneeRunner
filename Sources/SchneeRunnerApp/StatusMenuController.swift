@@ -18,6 +18,7 @@ final class StatusMenuController: NSObject {
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
+    var onDesktopCharacterVisibilityChanged: ((Bool) -> Void)?
     var onQuit: (() -> Void)?
 
     private let cpuUsageItem = NSMenuItem(
@@ -32,17 +33,20 @@ final class StatusMenuController: NSObject {
     )
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
     private let stateMenuController = CharacterStateMenuController()
+    private let desktopCharacterMenuController = DesktopCharacterMenuController()
     private let launchAtLoginMenuController = LaunchAtLoginMenuController()
     private let exportCharacterPackItem = NSMenuItem(
         title: "Export Current Character Pack…",
         action: nil,
         keyEquivalent: ""
     )
-
     override init() {
         super.init()
         stateMenuController.onSelection = { [weak self] state in
             self?.onCharacterStateOverride?(state)
+        }
+        desktopCharacterMenuController.onVisibilityChanged = { [weak self] isVisible in
+            self?.onDesktopCharacterVisibilityChanged?(isVisible)
         }
         menu.delegate = self
         buildMenu()
@@ -98,6 +102,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(stateMenuController.rootItem)
         addManualSpeedItem()
         menu.addItem(.separator())
+        menu.addItem(desktopCharacterMenuController.item)
         menu.addItem(launchAtLoginMenuController.item)
         addQuitItem()
     }

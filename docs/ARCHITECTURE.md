@@ -23,6 +23,12 @@ AppDelegate
      |
      +----> NSStatusItem
      |
+     +----> CharacterFrameRendererCoordinator
+     |            |
+     |            +----> NSStatusBarButton
+     |            |
+     |            +----> DesktopCharacterRenderer
+     |
      +----> CharacterPlaybackController
      |            |
      |            +----> CharacterAnimationLibrary
@@ -147,6 +153,8 @@ Owns macOS integration:
 - `NSStatusItem`;
 - `NSOpenPanel`;
 - animation scheduling;
+- frame fan-out to menu bar and optional desktop renderers;
+- transparent draggable desktop-window rendering;
 - requested-state playback coordination;
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
@@ -242,6 +250,8 @@ CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 ```
 
 A metric provider emits values. It must not directly manipulate a renderer.
+
+The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 
