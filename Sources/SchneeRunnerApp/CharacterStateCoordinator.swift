@@ -5,6 +5,7 @@ final class CharacterStateCoordinator {
     private static let cpuTriggerID = "cpu"
     private static let batteryWarningTriggerID = "battery-warning"
     private static let memoryPressureTriggerID = "memory-pressure"
+    private static let buildTriggerID = "build"
     private static let localEventTriggerID = "local-event"
     private static let manualTriggerID = "manual"
 
@@ -13,6 +14,7 @@ final class CharacterStateCoordinator {
     private let batteryWarningPolicy = BatteryWarningStatePolicy()
     private let memoryPressurePolicy = MemoryPressureStatePolicy()
     private let batteryWarningMonitor = SystemBatteryWarningMonitor()
+    private let buildEventMonitor = LocalBuildEventMonitor()
     private let localEventMonitor = LocalCharacterStateEventMonitor()
     private let memoryPressureMonitor = SystemMemoryPressureMonitor()
 
@@ -25,6 +27,12 @@ final class CharacterStateCoordinator {
 
         batteryWarningMonitor.onChange = { [weak self] level in
             self?.updateBatteryWarning(level)
+        }
+        buildEventMonitor.onSet = { [weak self] state in
+            self?.setBuildEvent(state)
+        }
+        buildEventMonitor.onClear = { [weak self] in
+            self?.clearBuildEvent()
         }
         localEventMonitor.onSet = { [weak self] state in
             self?.setLocalEvent(state)
@@ -39,12 +47,14 @@ final class CharacterStateCoordinator {
 
     func start() {
         batteryWarningMonitor.start()
+        buildEventMonitor.start()
         localEventMonitor.start()
         memoryPressureMonitor.start()
     }
 
     func stop() {
         batteryWarningMonitor.stop()
+        buildEventMonitor.stop()
         localEventMonitor.stop()
         memoryPressureMonitor.stop()
     }
@@ -93,6 +103,24 @@ final class CharacterStateCoordinator {
             )
         }
 
+        applyResolvedState()
+    }
+
+    func setBuildEvent(_ state: CharacterState) {
+        triggerEngine.set(
+            CharacterStateTrigger(
+                id: Self.buildTriggerID,
+                state: state,
+                priority: .event
+            )
+        )
+        applyResolvedState()
+    }
+
+    func clearBuildEvent() {
+        triggerEngine.remove(
+            id: Self.buildTriggerID
+        )
         applyResolvedState()
     }
 
