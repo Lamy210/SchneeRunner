@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let animationController = AnimationController()
     private let cpuMonitor = CPUMonitor()
     private let characterLibrary = CharacterLibraryController()
+    private let frameRendererCoordinator = CharacterFrameRendererCoordinator()
     private let importPresenter = CharacterImportPresenter()
     private let packBuilderPresenter = CharacterPackBuilderPresenter()
     private let menuController = StatusMenuController()
@@ -38,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         characterStateCoordinator.stop()
         cpuMonitor.stop()
         animationController.stop()
+        frameRendererCoordinator.stop()
     }
 
     private func configureStatusItem() {
@@ -48,11 +50,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         item.menu = menuController.menu
         statusItem = item
+        frameRendererCoordinator.bind(statusItem: item)
     }
 
     private func configureAnimationCallback() {
         animationController.onFrame = { [weak self] image in
-            self?.statusItem?.button?.image = Self.menuBarImage(from: image)
+            self?.frameRendererCoordinator.render(image)
         }
     }
 
@@ -101,6 +104,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menuController.onManualSpeed = { [weak self] framesPerSecond in
             self?.changeAnimationSpeed(framesPerSecond)
+        }
+        menuController.onDesktopCharacterVisibilityChanged = { [weak self] isVisible in
+            self?.frameRendererCoordinator.setDesktopVisible(isVisible)
         }
         menuController.onQuit = {
             NSApplication.shared.terminate(nil)
@@ -468,24 +474,5 @@ private extension AppDelegate {
             format: "%.2g×",
             value
         )
-    }
-
-    static func menuBarImage(from source: NSImage) -> NSImage {
-        let image = source.copy() as? NSImage ?? source
-        let sourceWidth = max(source.size.width, 1)
-        let sourceHeight = max(source.size.height, 1)
-        let maximumWidth: CGFloat = 36
-        let maximumHeight: CGFloat = 22
-        let scale = min(
-            maximumWidth / sourceWidth,
-            maximumHeight / sourceHeight
-        )
-
-        image.size = NSSize(
-            width: sourceWidth * scale,
-            height: sourceHeight * scale
-        )
-        image.isTemplate = false
-        return image
     }
 }

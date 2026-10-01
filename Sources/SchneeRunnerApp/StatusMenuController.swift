@@ -18,6 +18,7 @@ final class StatusMenuController: NSObject {
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
+    var onDesktopCharacterVisibilityChanged: ((Bool) -> Void)?
     var onQuit: (() -> Void)?
 
     private let cpuUsageItem = NSMenuItem(
@@ -35,6 +36,11 @@ final class StatusMenuController: NSObject {
     private let launchAtLoginMenuController = LaunchAtLoginMenuController()
     private let exportCharacterPackItem = NSMenuItem(
         title: "Export Current Character Pack…",
+        action: nil,
+        keyEquivalent: ""
+    )
+    private let desktopCharacterItem = NSMenuItem(
+        title: "Show Desktop Character",
         action: nil,
         keyEquivalent: ""
     )
@@ -98,6 +104,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(stateMenuController.rootItem)
         addManualSpeedItem()
         menu.addItem(.separator())
+        addDesktopCharacterItem()
         menu.addItem(launchAtLoginMenuController.item)
         addQuitItem()
     }
@@ -193,6 +200,13 @@ final class StatusMenuController: NSObject {
         adaptiveSpeedItem.action = #selector(toggleCPUAdaptiveSpeed)
         adaptiveSpeedItem.state = .on
         menu.addItem(adaptiveSpeedItem)
+    }
+
+    private func addDesktopCharacterItem() {
+        desktopCharacterItem.target = self
+        desktopCharacterItem.action = #selector(toggleDesktopCharacter)
+        desktopCharacterItem.state = .off
+        menu.addItem(desktopCharacterItem)
     }
 
     private func addManualSpeedItem() {
@@ -333,6 +347,13 @@ final class StatusMenuController: NSObject {
     @objc
     private func changeAnimationSpeed(_ sender: NSMenuItem) {
         onManualSpeed?(Double(sender.tag))
+    }
+
+    @objc
+    private func toggleDesktopCharacter() {
+        let isVisible = desktopCharacterItem.state != .on
+        desktopCharacterItem.state = isVisible ? .on : .off
+        onDesktopCharacterVisibilityChanged?(isVisible)
     }
 
     @objc

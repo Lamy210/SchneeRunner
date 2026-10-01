@@ -86,6 +86,12 @@ Threshold transitions include a small hysteresis margin.
 
 The state and playback rate are separate values. CPU state updates are registered as low-priority metric triggers. Local events use the middle event priority, and the **Character State** submenu uses the highest manual priority. Returning the menu to **Automatic** removes only the manual override and immediately resolves the next available trigger. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. Character packs can provide exact animations for idle, walk, run, dash, and sprint without changing the trigger policy or renderer.
 
+## Desktop character renderer
+
+The menu item **Show Desktop Character** mirrors the currently resolved animation into an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging its transparent background.
+
+The desktop renderer receives the same decoded animation frames as the menu bar renderer. It does not load character assets independently and does not alter trigger resolution, playback timing, or Character Pack behavior. Closing SchneeRunner tears down the desktop window with the rest of the application lifecycle.
+
 ## Local state events
 
 With SchneeRunner running, local scripts can temporarily or persistently request one of the existing character states:
@@ -226,7 +232,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. optional desktop-pet renderer
+1. persist desktop renderer position and size
+2. optional autonomous desktop movement without coupling motion to animation state
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 
