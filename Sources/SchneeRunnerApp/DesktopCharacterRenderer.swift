@@ -14,12 +14,12 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         height: 128
     )
     private static let minimumWindowSize = NSSize(
-        width: DesktopCharacterPlacement.minimumDimension,
-        height: DesktopCharacterPlacement.minimumDimension
+        width: CGFloat(DesktopCharacterPlacement.minimumDimension),
+        height: CGFloat(DesktopCharacterPlacement.minimumDimension)
     )
     private static let maximumWindowSize = NSSize(
-        width: DesktopCharacterPlacement.maximumDimension,
-        height: DesktopCharacterPlacement.maximumDimension
+        width: CGFloat(DesktopCharacterPlacement.maximumDimension),
+        height: CGFloat(DesktopCharacterPlacement.maximumDimension)
     )
 
     private let imageView = DesktopCharacterImageView()
@@ -162,10 +162,10 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         let frame = window.frame
         placementStore.save(
             DesktopCharacterPlacement(
-                x: frame.origin.x,
-                y: frame.origin.y,
-                width: frame.width,
-                height: frame.height
+                x: Double(frame.origin.x),
+                y: Double(frame.origin.y),
+                width: Double(frame.width),
+                height: Double(frame.height)
             )
         )
     }
