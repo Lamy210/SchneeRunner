@@ -88,7 +88,7 @@ The state and playback rate are separate values. CPU state updates are registere
 
 ## Desktop character renderer
 
-The menu item **Show Desktop Character** mirrors the currently resolved animation into an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging its transparent background.
+The menu item **Show Desktop Character** mirrors the currently resolved animation into an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging its transparent background. Position changes currently last for the running session only; persistence is a follow-up increment.
 
 The desktop renderer receives the same decoded animation frames as the menu bar renderer. It does not load character assets independently and does not alter trigger resolution, playback timing, or Character Pack behavior. Closing SchneeRunner tears down the desktop window with the rest of the application lifecycle.
 
