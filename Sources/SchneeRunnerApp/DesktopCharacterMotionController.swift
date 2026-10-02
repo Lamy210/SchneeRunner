@@ -55,6 +55,7 @@ final class DesktopCharacterMotionController: NSObject {
         }
 
         renderer.setAutonomousMovementActive(true)
+        renderer.setMotionDirection(direction)
         lastTimestamp = ProcessInfo.processInfo.systemUptime
 
         let timer = Timer.scheduledTimer(
@@ -94,6 +95,9 @@ final class DesktopCharacterMotionController: NSObject {
             elapsedSeconds: elapsed
         )
 
+        if nextState.direction != direction {
+            renderer.setMotionDirection(nextState.direction)
+        }
         direction = nextState.direction
         renderer.moveHorizontally(
             to: nextState.x

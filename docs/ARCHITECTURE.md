@@ -161,6 +161,7 @@ Owns macOS integration:
 - transparent draggable/resizable desktop-window rendering;
 - desktop-window frame restoration constrained to connected displays;
 - timer-driven optional autonomous desktop movement;
+- direction-aware desktop-only horizontal sprite presentation;
 - requested-state playback coordination;
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
@@ -259,7 +260,7 @@ A metric provider emits values. It must not directly manipulate a renderer.
 
 The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record; restoration chooses an intersecting connected display and clamps the window back into that display's visible frame.
 
-Optional desktop movement is a separate pipeline. `DesktopCharacterMotionController` owns the AppKit timer and reads current window/display geometry, while `DesktopMotionPolicy` deterministically advances only horizontal position and direction. Motion never writes character-state triggers or changes animation playback rate. Programmatic movement is excluded from per-frame placement persistence, with the final frame saved when movement stops.
+Optional desktop movement is a separate pipeline. `DesktopCharacterMotionController` owns the AppKit timer and reads current window/display geometry, while `DesktopMotionPolicy` deterministically advances only horizontal position and direction. The motion controller forwards direction changes to the desktop renderer, which mirrors only its presentation layer; the menu bar renderer and source assets are not modified. Motion never writes character-state triggers or changes animation playback rate. Programmatic movement is excluded from per-frame placement persistence, with the final frame saved when movement stops.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 

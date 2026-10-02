@@ -92,7 +92,7 @@ The **Desktop Character** submenu can show the currently resolved animation in a
 
 Desktop position and size are persisted locally and restored on the next launch. If a saved frame no longer intersects any connected display, SchneeRunner ignores that frame and falls back to its normal on-screen starting position; partially visible frames are clamped back into the selected display's visible area.
 
-The submenu also offers **Move Automatically** while the desktop character is visible. Autonomous movement advances horizontally and reflects at the current display's visible edges. Its deterministic motion policy is independent from CharacterState, CPU load, animation playback rate, and Character Pack state selection.
+The submenu also offers **Move Automatically** while the desktop character is visible. Autonomous movement advances horizontally and reflects at the current display's visible edges. The desktop presentation mirrors horizontally when the motion direction changes, while the menu bar image and stored character assets remain unchanged. Its deterministic motion policy is independent from CharacterState, CPU load, animation playback rate, and Character Pack state selection.
 
 Timer delays are capped before they reach the motion policy so a delayed wakeup cannot teleport the character across the desktop. Programmatic movement does not write placement preferences on every frame; the final position is persisted when automatic movement stops or SchneeRunner terminates.
 
@@ -238,8 +238,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. direction-aware desktop sprite orientation
-2. configurable autonomous movement speed
+1. configurable autonomous movement speed
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 

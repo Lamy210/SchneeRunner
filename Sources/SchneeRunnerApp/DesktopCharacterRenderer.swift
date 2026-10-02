@@ -85,6 +85,17 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         )
     }
 
+    func setMotionDirection(_ direction: DesktopMotionDirection) {
+        imageView.wantsLayer = true
+        let transform: CGAffineTransform = switch direction {
+        case .left:
+            CGAffineTransform(scaleX: -1, y: 1)
+        case .right:
+            .identity
+        }
+        imageView.layer?.setAffineTransform(transform)
+    }
+
     func setAutonomousMovementActive(_ isActive: Bool) {
         isAutonomousMovementActive = isActive
 
