@@ -46,6 +46,29 @@ final class DesktopCharacterPlacementStoreTests: XCTestCase {
         )
     }
 
+    func testNonSquareStoredPlacementIsDiscarded() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        let invalidPlacement = DesktopCharacterPlacement(
+            x: 0,
+            y: 0,
+            width: 128,
+            height: 160
+        )
+        try fixture.defaults.set(
+            JSONEncoder().encode(invalidPlacement),
+            forKey: fixture.key
+        )
+
+        XCTAssertNil(fixture.store.placement())
+        XCTAssertNil(
+            fixture.defaults.object(forKey: fixture.key)
+        )
+    }
+
     func testSaveInvalidPlacementClearsExistingValue() throws {
         let fixture = try makeFixture()
         defer {
