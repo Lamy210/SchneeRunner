@@ -128,10 +128,14 @@ struct DesktopWindowPlacementController {
             minimumWindowSize.height
         )
         let maximumDimension = min(
-            maximumWindowSize.width,
-            maximumWindowSize.height,
-            visibleFrame.width,
-            visibleFrame.height
+            min(
+                maximumWindowSize.width,
+                maximumWindowSize.height
+            ),
+            min(
+                visibleFrame.width,
+                visibleFrame.height
+            )
         )
         let requestedDimension = max(
             frame.width,
