@@ -19,6 +19,7 @@ final class StatusMenuController: NSObject {
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
     var onDesktopCharacterConfigurationChanged: ((DesktopCharacterMenuConfiguration) -> Void)?
+    var onResetDesktopCharacterPlacement: (() -> Void)?
     var onQuit: (() -> Void)?
 
     private let cpuUsageItem = NSMenuItem(
@@ -47,6 +48,9 @@ final class StatusMenuController: NSObject {
         }
         desktopCharacterMenuController.onConfigurationChanged = { [weak self] configuration in
             self?.onDesktopCharacterConfigurationChanged?(configuration)
+        }
+        desktopCharacterMenuController.onResetPlacement = { [weak self] in
+            self?.onResetDesktopCharacterPlacement?()
         }
         menu.delegate = self
         buildMenu()
@@ -276,54 +280,56 @@ final class StatusMenuController: NSObject {
         item.isEnabled = false
         recentCharactersMenu.addItem(item)
     }
+}
 
+private extension StatusMenuController {
     @objc
-    private func loadSingleImage() {
+    func loadSingleImage() {
         onLoadSingleImage?()
     }
 
     @objc
-    private func loadSpriteSheet() {
+    func loadSpriteSheet() {
         onLoadSpriteSheet?()
     }
 
     @objc
-    private func loadPNGSequence() {
+    func loadPNGSequence() {
         onLoadPNGSequence?()
     }
 
     @objc
-    private func loadGIF() {
+    func loadGIF() {
         onLoadGIF?()
     }
 
     @objc
-    private func loadAPNG() {
+    func loadAPNG() {
         onLoadAPNG?()
     }
 
     @objc
-    private func loadWebP() {
+    func loadWebP() {
         onLoadWebP?()
     }
 
     @objc
-    private func loadCharacterPack() {
+    func loadCharacterPack() {
         onLoadCharacterPack?()
     }
 
     @objc
-    private func buildCharacterPack() {
+    func buildCharacterPack() {
         onBuildCharacterPack?()
     }
 
     @objc
-    private func exportCharacterPack() {
+    func exportCharacterPack() {
         onExportCharacterPack?()
     }
 
     @objc
-    private func loadRecentCharacter(_ sender: NSMenuItem) {
+    func loadRecentCharacter(_ sender: NSMenuItem) {
         guard
             let rawID = sender.representedObject as? String,
             let id = UUID(uuidString: rawID)
@@ -335,17 +341,17 @@ final class StatusMenuController: NSObject {
     }
 
     @objc
-    private func toggleCPUAdaptiveSpeed() {
+    func toggleCPUAdaptiveSpeed() {
         onToggleCPUAdaptiveSpeed?()
     }
 
     @objc
-    private func changeAnimationSpeed(_ sender: NSMenuItem) {
+    func changeAnimationSpeed(_ sender: NSMenuItem) {
         onManualSpeed?(Double(sender.tag))
     }
 
     @objc
-    private func quitApplication() {
+    func quitApplication() {
         onQuit?()
     }
 }

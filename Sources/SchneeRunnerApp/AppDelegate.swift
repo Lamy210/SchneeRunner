@@ -110,6 +110,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 configuration
             )
         }
+        menuController.onResetDesktopCharacterPlacement = { [weak self] in
+            self?.frameRendererCoordinator.resetDesktopPlacement()
+        }
         frameRendererCoordinator.setDesktopConfiguration(
             menuController.desktopCharacterConfiguration
         )
