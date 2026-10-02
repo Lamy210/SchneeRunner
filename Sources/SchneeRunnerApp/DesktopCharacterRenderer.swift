@@ -41,6 +41,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private var isAutonomousMovementActive = false
     private var isApplyingManagedFrame = false
     private var isClickThroughEnabled = false
+    private var isLiveResizing = false
 
     private(set) var isVisible = false
     private(set) var isUserInteracting = false
@@ -100,6 +101,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             panel.orderFrontRegardless()
         } else {
             isUserInteracting = false
+            isLiveResizing = false
             panel?.orderOut(nil)
         }
     }
@@ -160,6 +162,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         )
         isAutonomousMovementActive = false
         isUserInteracting = false
+        isLiveResizing = false
         persistCurrentFrame()
         panel?.delegate = nil
         panel?.orderOut(nil)
@@ -179,12 +182,34 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         persistFrame(from: notification)
     }
 
+    func windowWillStartLiveResize(_ notification: Notification) {
+        guard isPanelNotification(notification) else {
+            return
+        }
+
+        isLiveResizing = true
+    }
+
     func windowDidResize(_ notification: Notification) {
-        guard !isApplyingManagedFrame else {
+        guard
+            !isApplyingManagedFrame,
+            !isLiveResizing
+        else {
             return
         }
 
         persistFrame(from: notification)
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        guard
+            let window = panelWindow(from: notification)
+        else {
+            return
+        }
+
+        isLiveResizing = false
+        persistFrame(window.frame)
     }
 
     @objc
@@ -254,11 +279,25 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         return panel
     }
 
-    private func persistFrame(from notification: Notification) {
+    private func isPanelNotification(_ notification: Notification) -> Bool {
+        panelWindow(from: notification) != nil
+    }
+
+    private func panelWindow(
+        from notification: Notification
+    ) -> NSWindow? {
         guard
             let window = notification.object as? NSWindow,
             window === panel
         else {
+            return nil
+        }
+
+        return window
+    }
+
+    private func persistFrame(from notification: Notification) {
+        guard let window = panelWindow(from: notification) else {
             return
         }
 
