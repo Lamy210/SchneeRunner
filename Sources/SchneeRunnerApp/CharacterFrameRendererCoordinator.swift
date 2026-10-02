@@ -17,6 +17,10 @@ final class CharacterFrameRendererCoordinator {
 
     func bind(statusItem: NSStatusItem) {
         statusButton = statusItem.button
+
+        if let placeholderImage = statusItem.button?.image {
+            desktopRenderer.render(placeholderImage)
+        }
     }
 
     func render(_ image: NSImage) {

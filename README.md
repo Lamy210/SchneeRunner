@@ -88,7 +88,7 @@ The state and playback rate are separate values. CPU state updates are registere
 
 ## Desktop character renderer
 
-The **Desktop Character** submenu can show the currently resolved animation in an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging the character. Its edges are resizable from 64 to 512 points while preserving a square presentation area.
+The **Desktop Character** submenu can show the currently resolved animation in an optional transparent desktop window. The window is off by default on first launch, floats above normal windows, joins all Spaces, and can be repositioned by dragging the character. Its edges are resizable from 64 to 512 points while preserving a square presentation area. When desktop visibility is restored before a stored character is available, the desktop renderer shows the same running-person placeholder as the menu bar until a real animation frame arrives.
 
 Desktop position and size are persisted locally and restored on the next launch. If a saved frame no longer intersects any connected display, SchneeRunner ignores that frame and falls back to its normal on-screen starting position; partially visible frames are clamped back into the selected display's visible area. While the app is running, display-topology and visible-frame changes also recover an existing desktop window onto a connected display and persist the recovered frame. The **Show on Desktop** choice is also persisted and restored on launch. Automatic movement intentionally starts disabled after each launch and must be enabled explicitly from the menu.
 
