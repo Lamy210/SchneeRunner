@@ -140,6 +140,7 @@ Owns deterministic and reusable domain behavior:
 - canonical Character Pack construction from local clip sources;
 - last-selected character preference persistence;
 - desktop-character placement preference validation and persistence;
+- desktop-character visibility preference persistence;
 - deterministic horizontal desktop-motion policy with edge reflection;
 - desktop-motion speed presets and preference persistence;
 - pre-decode image metadata and resource-limit validation;
@@ -261,7 +262,7 @@ CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 
 A metric provider emits values. It must not directly manipulate a renderer.
 
-The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record; restoration chooses an intersecting connected display and clamps the window back into that display's visible frame. The AppKit renderer also observes display-parameter changes at runtime and recovers an existing panel onto the best remaining screen, falling back to the main display when the previous screen disappears.
+The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record; restoration chooses an intersecting connected display and clamps the window back into that display's visible frame. The user's desktop-visibility choice is persisted independently in Core and applied after App menu callbacks are wired during launch; autonomous movement remains an explicit per-launch opt-in. The AppKit renderer also observes display-parameter changes at runtime and recovers an existing panel onto the best remaining screen, falling back to the main display when the previous screen disappears.
 
 Optional desktop movement is a separate pipeline. `DesktopCharacterMotionController` owns the AppKit timer and reads current window/display geometry, while `DesktopMotionPolicy` deterministically advances only horizontal position and direction. The motion controller forwards direction changes to the desktop renderer, which mirrors only its presentation layer; the menu bar renderer and source assets are not modified. Movement-speed presets are modeled and persisted in Core, while the App menu owns their presentation. Selecting a preset replaces only the motion policy's points-per-second value and remains independent from animation playback rate. Motion never writes character-state triggers or changes animation playback rate. Programmatic movement is excluded from per-frame placement persistence, with the final frame saved when movement stops.
 

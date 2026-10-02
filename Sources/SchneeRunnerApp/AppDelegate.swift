@@ -110,6 +110,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 configuration
             )
         }
+        frameRendererCoordinator.setDesktopConfiguration(
+            menuController.desktopCharacterConfiguration
+        )
         menuController.onQuit = {
             NSApplication.shared.terminate(nil)
         }
