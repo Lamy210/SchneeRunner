@@ -88,7 +88,9 @@ The state and playback rate are separate values. CPU state updates are registere
 
 ## Desktop character renderer
 
-The menu item **Show Desktop Character** mirrors the currently resolved animation into an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging its transparent background. Position changes currently last for the running session only; persistence is a follow-up increment.
+The menu item **Show Desktop Character** mirrors the currently resolved animation into an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging the character. Its edges are resizable from 64 to 512 points while preserving a square presentation area.
+
+Desktop position and size are persisted locally and restored on the next launch. If a saved frame no longer intersects any connected display, SchneeRunner ignores that frame and falls back to its normal on-screen starting position; partially visible frames are clamped back into the selected display's visible area.
 
 The desktop renderer receives the same decoded animation frames as the menu bar renderer. It does not load character assets independently and does not alter trigger resolution, playback timing, or Character Pack behavior. Closing SchneeRunner tears down the desktop window with the rest of the application lifecycle.
 
@@ -232,8 +234,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. persist desktop renderer position and size
-2. optional autonomous desktop movement without coupling motion to animation state
+1. optional autonomous desktop movement without coupling motion to animation state
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 

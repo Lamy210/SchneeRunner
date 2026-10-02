@@ -28,6 +28,8 @@ AppDelegate
      |            +----> NSStatusBarButton
      |            |
      |            +----> DesktopCharacterRenderer
+     |                         |
+     |                         +----> DesktopCharacterPlacementStore
      |
      +----> CharacterPlaybackController
      |            |
@@ -137,6 +139,7 @@ Owns deterministic and reusable domain behavior:
 - canonical character-pack export through staged revalidation;
 - canonical Character Pack construction from local clip sources;
 - last-selected character preference persistence;
+- desktop-character placement preference validation and persistence;
 - pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
 - CPU utilization smoothing;
@@ -154,7 +157,8 @@ Owns macOS integration:
 - `NSOpenPanel`;
 - animation scheduling;
 - frame fan-out to menu bar and optional desktop renderers;
-- transparent draggable desktop-window rendering;
+- transparent draggable/resizable desktop-window rendering;
+- desktop-window frame restoration constrained to connected displays;
 - requested-state playback coordination;
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
@@ -251,7 +255,7 @@ CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 
 A metric provider emits values. It must not directly manipulate a renderer.
 
-The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing.
+The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record; restoration chooses an intersecting connected display and clamps the window back into that display's visible frame.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 
@@ -313,7 +317,6 @@ The following remain deliberately deferred:
 - sandboxing and entitlements;
 - character-pack export and future schema versions;
 - signed/notarized release configuration;
-- generalized metric/event provider protocols;
-- desktop rendering.
+- generalized metric/event provider protocols.
 
 Each should be introduced with its own focused change and verification path.
