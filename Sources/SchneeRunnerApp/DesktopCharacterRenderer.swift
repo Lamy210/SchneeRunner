@@ -42,6 +42,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private var isApplyingManagedFrame = false
     private var isClickThroughEnabled = false
     private var isLiveResizing = false
+    private var isMovePersistenceDeferred = false
 
     private(set) var isVisible = false
     private(set) var isUserInteracting = false
@@ -76,7 +77,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     func setClickThrough(_ isEnabled: Bool) {
         isClickThroughEnabled = isEnabled
         if isEnabled {
-            isUserInteracting = false
+            setUserInteracting(false)
         }
         panel?.ignoresMouseEvents = isEnabled
     }
@@ -100,8 +101,9 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             let panel = panel ?? makePanel()
             panel.orderFrontRegardless()
         } else {
-            isUserInteracting = false
+            setUserInteracting(false)
             isLiveResizing = false
+            isMovePersistenceDeferred = false
             panel?.orderOut(nil)
         }
     }
@@ -163,6 +165,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         isAutonomousMovementActive = false
         isUserInteracting = false
         isLiveResizing = false
+        isMovePersistenceDeferred = false
         persistCurrentFrame()
         panel?.delegate = nil
         panel?.orderOut(nil)
@@ -176,6 +179,11 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             !isAutonomousMovementActive,
             !isApplyingManagedFrame
         else {
+            return
+        }
+
+        if isUserInteracting {
+            isMovePersistenceDeferred = true
             return
         }
 
@@ -209,6 +217,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         }
 
         isLiveResizing = false
+        isMovePersistenceDeferred = false
         persistFrame(window.frame)
     }
 
@@ -246,7 +255,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         )
 
         panel.onPointerInteractionChanged = { [weak self] isInteracting in
-            self?.isUserInteracting = isInteracting
+            self?.setUserInteracting(isInteracting)
         }
         panel.level = .floating
         panel.backgroundColor = .clear
@@ -277,6 +286,23 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
 
         self.panel = panel
         return panel
+    }
+
+    private func setUserInteracting(_ isInteracting: Bool) {
+        let wasInteracting = isUserInteracting
+        isUserInteracting = isInteracting
+
+        let shouldPersistDeferredMove =
+            wasInteracting
+                && !isInteracting
+                && isMovePersistenceDeferred
+                && !isLiveResizing
+                && !isAutonomousMovementActive
+
+        if shouldPersistDeferredMove {
+            isMovePersistenceDeferred = false
+            persistCurrentFrame()
+        }
     }
 
     private func isPanelNotification(_ notification: Notification) -> Bool {
