@@ -22,7 +22,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
     private var latestImage: NSImage?
     private var isAutonomousMovementActive = false
-    private var isRecoveringDisplayFrame = false
+    private var isApplyingManagedFrame = false
     private var isClickThroughEnabled = false
 
     private(set) var isVisible = false
@@ -57,6 +57,18 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     func setClickThrough(_ isEnabled: Bool) {
         isClickThroughEnabled = isEnabled
         panel?.ignoresMouseEvents = isEnabled
+    }
+
+    func resetPlacement() {
+        let frame = placementController.defaultFrame()
+
+        isApplyingManagedFrame = true
+        panel?.setFrame(
+            frame,
+            display: true
+        )
+        isApplyingManagedFrame = false
+        placementController.persist(frame)
     }
 
     func setVisible(_ isVisible: Bool) {
@@ -136,7 +148,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     func windowDidMove(_ notification: Notification) {
         guard
             !isAutonomousMovementActive,
-            !isRecoveringDisplayFrame
+            !isApplyingManagedFrame
         else {
             return
         }
@@ -145,7 +157,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     }
 
     func windowDidResize(_ notification: Notification) {
-        guard !isRecoveringDisplayFrame else {
+        guard !isApplyingManagedFrame else {
             return
         }
 
@@ -162,12 +174,12 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             return
         }
 
-        isRecoveringDisplayFrame = true
+        isApplyingManagedFrame = true
         panel.setFrame(
             recoveredFrame,
             display: true
         )
-        isRecoveringDisplayFrame = false
+        isApplyingManagedFrame = false
         placementController.persist(recoveredFrame)
     }
 

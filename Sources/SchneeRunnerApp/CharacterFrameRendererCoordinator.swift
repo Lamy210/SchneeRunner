@@ -47,6 +47,10 @@ final class CharacterFrameRendererCoordinator {
         }
     }
 
+    func resetDesktopPlacement() {
+        desktopRenderer.resetPlacement()
+    }
+
     func stop() {
         desktopMotionController.stop()
         desktopRenderer.stop()

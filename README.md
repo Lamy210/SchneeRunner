@@ -96,6 +96,8 @@ The submenu also offers **Move Automatically** while the desktop character is vi
 
 **Click Through** makes the desktop character ignore mouse input so clicks reach applications behind it. The setting is persisted and restored on launch. While Click Through is enabled, the desktop character cannot be dragged or resized directly; use the menu-bar item to disable Click Through before repositioning it.
 
+**Reset Position & Size** restores the desktop character to the default 128-point square near the lower-right of the current main display and persists that placement. The reset remains available while the desktop character is hidden or Click Through is enabled. If autonomous movement is active, it continues from the reset position instead of being disabled.
+
 Timer delays are capped before they reach the motion policy so a delayed wakeup cannot teleport the character across the desktop. The **Movement Speed** submenu provides **Slow (36 pt/s)**, **Normal (72 pt/s)**, and **Fast (120 pt/s)** presets; Normal preserves the original autonomous-movement speed. The selected preset is persisted locally and restored on the next launch. Speed changes affect only desktop motion and apply while movement is already running. Programmatic movement does not write placement preferences on every frame; the final position is persisted when automatic movement stops or SchneeRunner terminates.
 
 The desktop renderer receives the same decoded animation frames as the menu bar renderer. It does not load character assets independently and does not alter trigger resolution, playback timing, or Character Pack behavior. Closing SchneeRunner tears down the desktop window with the rest of the application lifecycle.
@@ -238,7 +240,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Product direction
 
-The current desktop-renderer vertical slice now includes persistent placement and visibility, autonomous horizontal movement, direction-aware presentation, independent movement-speed presets, runtime display recovery, and optional click-through interaction.
+The current desktop-renderer vertical slice now includes persistent placement and visibility, placement reset, autonomous horizontal movement, direction-aware presentation, independent movement-speed presets, runtime display recovery, and optional click-through interaction.
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 

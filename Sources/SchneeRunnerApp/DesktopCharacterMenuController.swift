@@ -30,6 +30,7 @@ final class DesktopCharacterMenuController: NSObject {
     )
 
     var onConfigurationChanged: ((DesktopCharacterMenuConfiguration) -> Void)?
+    var onResetPlacement: (() -> Void)?
 
     var configuration: DesktopCharacterMenuConfiguration {
         DesktopCharacterMenuConfiguration(
@@ -60,6 +61,11 @@ final class DesktopCharacterMenuController: NSObject {
         action: nil,
         keyEquivalent: ""
     )
+    private let resetPlacementItem = NSMenuItem(
+        title: "Reset Position & Size",
+        action: nil,
+        keyEquivalent: ""
+    )
 
     private let visibilityStore: DesktopCharacterVisibilityStore
     private let movementSpeedStore: DesktopMotionSpeedPreferenceStore
@@ -86,12 +92,15 @@ final class DesktopCharacterMenuController: NSObject {
             isVisible: isVisible,
             isEnabled: isClickThroughEnabled
         )
+        configureResetPlacementItem()
 
         let submenu = NSMenu(title: "Desktop Character")
         submenu.addItem(visibilityItem)
         submenu.addItem(autonomousMovementItem)
         submenu.addItem(movementSpeedItem)
         submenu.addItem(clickThroughItem)
+        submenu.addItem(.separator())
+        submenu.addItem(resetPlacementItem)
         item.submenu = submenu
     }
 
@@ -137,6 +146,11 @@ final class DesktopCharacterMenuController: NSObject {
         clickThroughItem.isEnabled = isVisible
     }
 
+    private func configureResetPlacementItem() {
+        resetPlacementItem.target = self
+        resetPlacementItem.action = #selector(resetPlacement)
+    }
+
     @objc
     private func toggleVisibility() {
         let isVisible = visibilityItem.state != .on
@@ -174,6 +188,11 @@ final class DesktopCharacterMenuController: NSObject {
         clickThroughItem.state = isEnabled ? .on : .off
         clickThroughStore.save(isEnabled)
         publishConfiguration()
+    }
+
+    @objc
+    private func resetPlacement() {
+        onResetPlacement?()
     }
 
     @objc
