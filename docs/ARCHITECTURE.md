@@ -161,6 +161,7 @@ Owns macOS integration:
 - frame fan-out to menu bar and optional desktop renderers;
 - transparent draggable/resizable desktop-window rendering;
 - desktop-window frame restoration constrained to connected displays;
+- runtime desktop-window recovery after display-topology or visible-frame changes;
 - timer-driven optional autonomous desktop movement;
 - direction-aware desktop-only horizontal sprite presentation;
 - independent desktop-movement speed configuration;
@@ -260,7 +261,7 @@ CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 
 A metric provider emits values. It must not directly manipulate a renderer.
 
-The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record; restoration chooses an intersecting connected display and clamps the window back into that display's visible frame.
+The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record; restoration chooses an intersecting connected display and clamps the window back into that display's visible frame. The AppKit renderer also observes display-parameter changes at runtime and recovers an existing panel onto the best remaining screen, falling back to the main display when the previous screen disappears.
 
 Optional desktop movement is a separate pipeline. `DesktopCharacterMotionController` owns the AppKit timer and reads current window/display geometry, while `DesktopMotionPolicy` deterministically advances only horizontal position and direction. The motion controller forwards direction changes to the desktop renderer, which mirrors only its presentation layer; the menu bar renderer and source assets are not modified. Movement-speed presets are modeled and persisted in Core, while the App menu owns their presentation. Selecting a preset replaces only the motion policy's points-per-second value and remains independent from animation playback rate. Motion never writes character-state triggers or changes animation playback rate. Programmatic movement is excluded from per-frame placement persistence, with the final frame saved when movement stops.
 
