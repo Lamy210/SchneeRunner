@@ -27,9 +27,11 @@ public struct DesktopMotionPolicy: Sendable {
     public init(
         speedPointsPerSecond: Double = Self.defaultSpeedPointsPerSecond
     ) {
-        if
-            speedPointsPerSecond.isFinite,
-            speedPointsPerSecond > 0 {
+        let isValidSpeed =
+            speedPointsPerSecond.isFinite
+                && speedPointsPerSecond > 0
+
+        if isValidSpeed {
             self.speedPointsPerSecond = speedPointsPerSecond
         } else {
             self.speedPointsPerSecond = Self.defaultSpeedPointsPerSecond
