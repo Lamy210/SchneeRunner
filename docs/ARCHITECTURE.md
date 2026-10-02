@@ -318,7 +318,7 @@ Measure:
 - CPU usage at each supported FPS;
 - impact of one-second metric sampling.
 
-Assets are decoded on import rather than decoded again for every displayed frame. Single-image mode renders a bounded 64-point-high working animation instead of retaining eight full-resolution copies of the source.
+Assets are decoded on import rather than decoded again for every displayed frame. Single-image mode renders a bounded 64-point-high working animation instead of retaining eight full-resolution copies of the source. Desktop live-resize notifications are coalesced at the AppKit boundary: intermediate resize frames are not written to placement preferences, and the final frame is persisted once when live resize ends.
 
 The animation timer is not restarted when a CPU sample resolves to the already-active FPS. Playback uses one-shot frame timers derived from an immutable base schedule and a separate playback-rate multiplier. Uniform frame animations use a 12 FPS reference schedule, so the existing 6 / 8 / 12 / 18 / 24 FPS controls preserve their current effective timing while authored per-frame durations can be introduced without changing the renderer.
 
