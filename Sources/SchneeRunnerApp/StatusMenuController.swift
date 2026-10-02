@@ -18,7 +18,7 @@ final class StatusMenuController: NSObject {
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
-    var onDesktopCharacterVisibilityChanged: ((Bool) -> Void)?
+    var onDesktopCharacterConfigurationChanged: ((DesktopCharacterMenuConfiguration) -> Void)?
     var onQuit: (() -> Void)?
 
     private let cpuUsageItem = NSMenuItem(
@@ -45,8 +45,8 @@ final class StatusMenuController: NSObject {
         stateMenuController.onSelection = { [weak self] state in
             self?.onCharacterStateOverride?(state)
         }
-        desktopCharacterMenuController.onVisibilityChanged = { [weak self] isVisible in
-            self?.onDesktopCharacterVisibilityChanged?(isVisible)
+        desktopCharacterMenuController.onConfigurationChanged = { [weak self] configuration in
+            self?.onDesktopCharacterConfigurationChanged?(configuration)
         }
         menu.delegate = self
         buildMenu()

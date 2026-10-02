@@ -140,6 +140,7 @@ Owns deterministic and reusable domain behavior:
 - canonical Character Pack construction from local clip sources;
 - last-selected character preference persistence;
 - desktop-character placement preference validation and persistence;
+- deterministic horizontal desktop-motion policy with edge reflection;
 - pre-decode image metadata and resource-limit validation;
 - CPU tick-delta utilization calculation;
 - CPU utilization smoothing;
@@ -159,6 +160,7 @@ Owns macOS integration:
 - frame fan-out to menu bar and optional desktop renderers;
 - transparent draggable/resizable desktop-window rendering;
 - desktop-window frame restoration constrained to connected displays;
+- timer-driven optional autonomous desktop movement;
 - requested-state playback coordination;
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
@@ -256,6 +258,8 @@ CharacterAsset != AnimationClip != Trigger != Metric != Renderer
 A metric provider emits values. It must not directly manipulate a renderer.
 
 The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record; restoration chooses an intersecting connected display and clamps the window back into that display's visible frame.
+
+Optional desktop movement is a separate pipeline. `DesktopCharacterMotionController` owns the AppKit timer and reads current window/display geometry, while `DesktopMotionPolicy` deterministically advances only horizontal position and direction. Motion never writes character-state triggers or changes animation playback rate. Programmatic movement is excluded from per-frame placement persistence, with the final frame saved when movement stops.
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 

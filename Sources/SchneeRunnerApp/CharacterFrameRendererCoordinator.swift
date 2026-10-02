@@ -2,9 +2,18 @@ import AppKit
 
 @MainActor
 final class CharacterFrameRendererCoordinator {
-    private let desktopRenderer = DesktopCharacterRenderer()
+    private let desktopRenderer: DesktopCharacterRenderer
+    private let desktopMotionController: DesktopCharacterMotionController
 
     private weak var statusButton: NSStatusBarButton?
+
+    init() {
+        let desktopRenderer = DesktopCharacterRenderer()
+        self.desktopRenderer = desktopRenderer
+        desktopMotionController = DesktopCharacterMotionController(
+            renderer: desktopRenderer
+        )
+    }
 
     func bind(statusItem: NSStatusItem) {
         statusButton = statusItem.button
@@ -17,11 +26,22 @@ final class CharacterFrameRendererCoordinator {
         desktopRenderer.render(image)
     }
 
-    func setDesktopVisible(_ isVisible: Bool) {
-        desktopRenderer.setVisible(isVisible)
+    func setDesktopConfiguration(
+        _ configuration: DesktopCharacterMenuConfiguration
+    ) {
+        if configuration.isVisible {
+            desktopRenderer.setVisible(true)
+            desktopMotionController.setEnabled(
+                configuration.isAutonomousMovementEnabled
+            )
+        } else {
+            desktopMotionController.setEnabled(false)
+            desktopRenderer.setVisible(false)
+        }
     }
 
     func stop() {
+        desktopMotionController.stop()
         desktopRenderer.stop()
     }
 
