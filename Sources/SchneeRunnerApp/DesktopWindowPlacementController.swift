@@ -40,7 +40,7 @@ struct DesktopWindowPlacementController {
             return nil
         }
 
-        return constrain(
+        return constrainedFrame(
             storedFrame,
             to: screen.visibleFrame
         )
@@ -63,7 +63,7 @@ struct DesktopWindowPlacementController {
             return nil
         }
 
-        return constrain(
+        return constrainedFrame(
             frame,
             to: screen.visibleFrame
         )
@@ -112,40 +112,49 @@ struct DesktopWindowPlacementController {
         return intersection.width * intersection.height
     }
 
-    private func constrain(
+    func constrainedFrame(
         _ frame: NSRect,
         to visibleFrame: NSRect
     ) -> NSRect {
-        let maximumWidth = min(
-            maximumWindowSize.width,
-            visibleFrame.width
+        guard
+            visibleFrame.width > 0,
+            visibleFrame.height > 0
+        else {
+            return frame
+        }
+
+        let minimumDimension = min(
+            minimumWindowSize.width,
+            minimumWindowSize.height
         )
-        let maximumHeight = min(
+        let maximumDimension = min(
+            maximumWindowSize.width,
             maximumWindowSize.height,
+            visibleFrame.width,
             visibleFrame.height
         )
-        let width = min(
-            max(frame.width, minimumWindowSize.width),
-            maximumWidth
+        let requestedDimension = max(
+            frame.width,
+            frame.height
         )
-        let height = min(
-            max(frame.height, minimumWindowSize.height),
-            maximumHeight
+        let dimension = min(
+            max(requestedDimension, minimumDimension),
+            maximumDimension
         )
         let x = min(
             max(frame.minX, visibleFrame.minX),
-            visibleFrame.maxX - width
+            visibleFrame.maxX - dimension
         )
         let y = min(
             max(frame.minY, visibleFrame.minY),
-            visibleFrame.maxY - height
+            visibleFrame.maxY - dimension
         )
 
         return NSRect(
             x: x,
             y: y,
-            width: width,
-            height: height
+            width: dimension,
+            height: dimension
         )
     }
 
