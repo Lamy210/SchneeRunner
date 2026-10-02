@@ -54,12 +54,12 @@ final class DesktopCharacterMenuController: NSObject {
         keyEquivalent: ""
     )
 
-    private let visibilityStore: DesktopCharacterVisibilityPreferenceStore
+    private let visibilityStore: DesktopCharacterVisibilityStore
     private let movementSpeedStore: DesktopMotionSpeedPreferenceStore
     private var movementSpeed: DesktopMotionSpeedPreset
 
     init(
-        visibilityStore: DesktopCharacterVisibilityPreferenceStore = .init(),
+        visibilityStore: DesktopCharacterVisibilityStore = .init(),
         movementSpeedStore: DesktopMotionSpeedPreferenceStore = .init()
     ) {
         self.visibilityStore = visibilityStore
