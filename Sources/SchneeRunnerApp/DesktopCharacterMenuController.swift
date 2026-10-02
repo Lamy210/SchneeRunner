@@ -30,6 +30,14 @@ final class DesktopCharacterMenuController: NSObject {
 
     var onConfigurationChanged: ((DesktopCharacterMenuConfiguration) -> Void)?
 
+    var configuration: DesktopCharacterMenuConfiguration {
+        DesktopCharacterMenuConfiguration(
+            isVisible: visibilityItem.state == .on,
+            isAutonomousMovementEnabled: autonomousMovementItem.state == .on,
+            movementSpeed: movementSpeed
+        )
+    }
+
     private let visibilityItem = NSMenuItem(
         title: "Show on Desktop",
         action: nil,
@@ -46,19 +54,23 @@ final class DesktopCharacterMenuController: NSObject {
         keyEquivalent: ""
     )
 
+    private let visibilityStore: DesktopCharacterVisibilityPreferenceStore
     private let movementSpeedStore: DesktopMotionSpeedPreferenceStore
     private var movementSpeed: DesktopMotionSpeedPreset
 
     init(
+        visibilityStore: DesktopCharacterVisibilityPreferenceStore = .init(),
         movementSpeedStore: DesktopMotionSpeedPreferenceStore = .init()
     ) {
+        self.visibilityStore = visibilityStore
         self.movementSpeedStore = movementSpeedStore
         movementSpeed = movementSpeedStore.preset()
+        let isVisible = visibilityStore.isVisible()
         super.init()
 
-        configureVisibilityItem()
-        configureAutonomousMovementItem()
-        configureMovementSpeedItem()
+        configureVisibilityItem(isVisible: isVisible)
+        configureAutonomousMovementItem(isVisible: isVisible)
+        configureMovementSpeedItem(isVisible: isVisible)
 
         let submenu = NSMenu(title: "Desktop Character")
         submenu.addItem(visibilityItem)
@@ -67,20 +79,20 @@ final class DesktopCharacterMenuController: NSObject {
         item.submenu = submenu
     }
 
-    private func configureVisibilityItem() {
+    private func configureVisibilityItem(isVisible: Bool) {
         visibilityItem.target = self
         visibilityItem.action = #selector(toggleVisibility)
-        visibilityItem.state = .off
+        visibilityItem.state = isVisible ? .on : .off
     }
 
-    private func configureAutonomousMovementItem() {
+    private func configureAutonomousMovementItem(isVisible: Bool) {
         autonomousMovementItem.target = self
         autonomousMovementItem.action = #selector(toggleAutonomousMovement)
         autonomousMovementItem.state = .off
-        autonomousMovementItem.isEnabled = false
+        autonomousMovementItem.isEnabled = isVisible
     }
 
-    private func configureMovementSpeedItem() {
+    private func configureMovementSpeedItem(isVisible: Bool) {
         let speedMenu = NSMenu(title: "Movement Speed")
 
         for speed in DesktopMotionSpeedPreset.allCases {
@@ -96,7 +108,7 @@ final class DesktopCharacterMenuController: NSObject {
         }
 
         movementSpeedItem.submenu = speedMenu
-        movementSpeedItem.isEnabled = false
+        movementSpeedItem.isEnabled = isVisible
     }
 
     @objc
@@ -105,6 +117,7 @@ final class DesktopCharacterMenuController: NSObject {
         visibilityItem.state = isVisible ? .on : .off
         autonomousMovementItem.isEnabled = isVisible
         movementSpeedItem.isEnabled = isVisible
+        visibilityStore.save(isVisible)
 
         if !isVisible {
             autonomousMovementItem.state = .off
@@ -147,12 +160,6 @@ final class DesktopCharacterMenuController: NSObject {
     }
 
     private func publishConfiguration() {
-        onConfigurationChanged?(
-            DesktopCharacterMenuConfiguration(
-                isVisible: visibilityItem.state == .on,
-                isAutonomousMovementEnabled: autonomousMovementItem.state == .on,
-                movementSpeed: movementSpeed
-            )
-        )
+        onConfigurationChanged?(configuration)
     }
 }
