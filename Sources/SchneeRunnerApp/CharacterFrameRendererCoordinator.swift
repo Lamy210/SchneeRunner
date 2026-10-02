@@ -32,6 +32,9 @@ final class CharacterFrameRendererCoordinator {
         desktopMotionController.setSpeedPointsPerSecond(
             configuration.movementSpeed.pointsPerSecond
         )
+        desktopRenderer.setClickThrough(
+            configuration.isClickThroughEnabled
+        )
 
         if configuration.isVisible {
             desktopRenderer.setVisible(true)
