@@ -23,6 +23,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private var latestImage: NSImage?
     private var isAutonomousMovementActive = false
     private var isRecoveringDisplayFrame = false
+    private var isClickThroughEnabled = false
 
     private(set) var isVisible = false
 
@@ -51,6 +52,11 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     func render(_ image: NSImage) {
         latestImage = image
         imageView.image = image
+    }
+
+    func setClickThrough(_ isEnabled: Bool) {
+        isClickThroughEnabled = isEnabled
+        panel?.ignoresMouseEvents = isEnabled
     }
 
     func setVisible(_ isVisible: Bool) {
@@ -190,6 +196,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             .fullScreenAuxiliary
         ]
         panel.isReleasedWhenClosed = false
+        panel.ignoresMouseEvents = isClickThroughEnabled
         panel.minSize = placementController.minimumWindowSize
         panel.maxSize = placementController.maximumWindowSize
         panel.contentAspectRatio = NSSize(

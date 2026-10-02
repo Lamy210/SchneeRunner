@@ -17,6 +17,7 @@ private extension DesktopMotionSpeedPreset {
 struct DesktopCharacterMenuConfiguration: Equatable {
     let isVisible: Bool
     let isAutonomousMovementEnabled: Bool
+    let isClickThroughEnabled: Bool
     let movementSpeed: DesktopMotionSpeedPreset
 }
 
@@ -34,6 +35,7 @@ final class DesktopCharacterMenuController: NSObject {
         DesktopCharacterMenuConfiguration(
             isVisible: visibilityItem.state == .on,
             isAutonomousMovementEnabled: autonomousMovementItem.state == .on,
+            isClickThroughEnabled: clickThroughItem.state == .on,
             movementSpeed: movementSpeed
         )
     }
@@ -53,29 +55,43 @@ final class DesktopCharacterMenuController: NSObject {
         action: nil,
         keyEquivalent: ""
     )
+    private let clickThroughItem = NSMenuItem(
+        title: "Click Through",
+        action: nil,
+        keyEquivalent: ""
+    )
 
     private let visibilityStore: DesktopCharacterVisibilityStore
     private let movementSpeedStore: DesktopMotionSpeedPreferenceStore
+    private let clickThroughStore: DesktopClickThroughStore
     private var movementSpeed: DesktopMotionSpeedPreset
 
     init(
         visibilityStore: DesktopCharacterVisibilityStore = .init(),
-        movementSpeedStore: DesktopMotionSpeedPreferenceStore = .init()
+        movementSpeedStore: DesktopMotionSpeedPreferenceStore = .init(),
+        clickThroughStore: DesktopClickThroughStore = .init()
     ) {
         self.visibilityStore = visibilityStore
         self.movementSpeedStore = movementSpeedStore
+        self.clickThroughStore = clickThroughStore
         movementSpeed = movementSpeedStore.preset()
         let isVisible = visibilityStore.isVisible()
+        let isClickThroughEnabled = clickThroughStore.isEnabled()
         super.init()
 
         configureVisibilityItem(isVisible: isVisible)
         configureAutonomousMovementItem(isVisible: isVisible)
         configureMovementSpeedItem(isVisible: isVisible)
+        configureClickThroughItem(
+            isVisible: isVisible,
+            isEnabled: isClickThroughEnabled
+        )
 
         let submenu = NSMenu(title: "Desktop Character")
         submenu.addItem(visibilityItem)
         submenu.addItem(autonomousMovementItem)
         submenu.addItem(movementSpeedItem)
+        submenu.addItem(clickThroughItem)
         item.submenu = submenu
     }
 
@@ -111,12 +127,23 @@ final class DesktopCharacterMenuController: NSObject {
         movementSpeedItem.isEnabled = isVisible
     }
 
+    private func configureClickThroughItem(
+        isVisible: Bool,
+        isEnabled: Bool
+    ) {
+        clickThroughItem.target = self
+        clickThroughItem.action = #selector(toggleClickThrough)
+        clickThroughItem.state = isEnabled ? .on : .off
+        clickThroughItem.isEnabled = isVisible
+    }
+
     @objc
     private func toggleVisibility() {
         let isVisible = visibilityItem.state != .on
         visibilityItem.state = isVisible ? .on : .off
         autonomousMovementItem.isEnabled = isVisible
         movementSpeedItem.isEnabled = isVisible
+        clickThroughItem.isEnabled = isVisible
         visibilityStore.save(isVisible)
 
         if !isVisible {
@@ -134,6 +161,18 @@ final class DesktopCharacterMenuController: NSObject {
 
         let isEnabled = autonomousMovementItem.state != .on
         autonomousMovementItem.state = isEnabled ? .on : .off
+        publishConfiguration()
+    }
+
+    @objc
+    private func toggleClickThrough() {
+        guard visibilityItem.state == .on else {
+            return
+        }
+
+        let isEnabled = clickThroughItem.state != .on
+        clickThroughItem.state = isEnabled ? .on : .off
+        clickThroughStore.save(isEnabled)
         publishConfiguration()
     }
 
