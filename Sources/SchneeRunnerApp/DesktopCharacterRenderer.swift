@@ -1,6 +1,23 @@
 import AppKit
 import SchneeRunnerCore
 
+private final class DesktopCharacterPanel: NSPanel {
+    var onPointerInteractionChanged: ((Bool) -> Void)?
+
+    override func sendEvent(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown:
+            onPointerInteractionChanged?(true)
+        case .leftMouseUp:
+            onPointerInteractionChanged?(false)
+        default:
+            break
+        }
+
+        super.sendEvent(event)
+    }
+}
+
 private final class DesktopCharacterImageView: NSImageView {
     override var mouseDownCanMoveWindow: Bool {
         true
@@ -26,6 +43,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private var isClickThroughEnabled = false
 
     private(set) var isVisible = false
+    private(set) var isUserInteracting = false
 
     init(
         placementStore: DesktopCharacterPlacementStore = .init()
@@ -56,6 +74,9 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
 
     func setClickThrough(_ isEnabled: Bool) {
         isClickThroughEnabled = isEnabled
+        if isEnabled {
+            isUserInteracting = false
+        }
         panel?.ignoresMouseEvents = isEnabled
     }
 
@@ -78,6 +99,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             let panel = panel ?? makePanel()
             panel.orderFrontRegardless()
         } else {
+            isUserInteracting = false
             panel?.orderOut(nil)
         }
     }
@@ -137,6 +159,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             object: nil
         )
         isAutonomousMovementActive = false
+        isUserInteracting = false
         persistCurrentFrame()
         panel?.delegate = nil
         panel?.orderOut(nil)
@@ -186,7 +209,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private func makePanel() -> NSPanel {
         let frame = placementController.restoredFrame()
             ?? placementController.defaultFrame()
-        let panel = NSPanel(
+        let panel = DesktopCharacterPanel(
             contentRect: frame,
             styleMask: [
                 .borderless,
@@ -197,6 +220,9 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             defer: false
         )
 
+        panel.onPointerInteractionChanged = { [weak self] isInteracting in
+            self?.isUserInteracting = isInteracting
+        }
         panel.level = .floating
         panel.backgroundColor = .clear
         panel.isOpaque = false

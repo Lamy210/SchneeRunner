@@ -79,14 +79,20 @@ final class DesktopCharacterMotionController: NSObject {
 
     @objc
     private func advance() {
-        guard
-            isEnabled,
-            let geometry = renderer.motionGeometry
-        else {
+        guard isEnabled else {
             return
         }
 
         let timestamp = ProcessInfo.processInfo.systemUptime
+
+        guard
+            !renderer.isUserInteracting,
+            let geometry = renderer.motionGeometry
+        else {
+            lastTimestamp = timestamp
+            return
+        }
+
         let elapsed = lastTimestamp.map {
             timestamp - $0
         } ?? 0
