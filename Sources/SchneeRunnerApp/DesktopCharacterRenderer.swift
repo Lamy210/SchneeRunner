@@ -17,7 +17,7 @@ struct DesktopCharacterMotionGeometry: Equatable {
 @MainActor
 final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private let imageView = DesktopCharacterImageView()
-    private let placementController: DesktopCharacterWindowPlacementController
+    private let placementController: DesktopWindowPlacementController
 
     private var panel: NSPanel?
     private var latestImage: NSImage?
@@ -28,7 +28,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     init(
         placementStore: DesktopCharacterPlacementStore = .init()
     ) {
-        placementController = DesktopCharacterWindowPlacementController(
+        placementController = DesktopWindowPlacementController(
             placementStore: placementStore
         )
         super.init()
