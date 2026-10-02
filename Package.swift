@@ -32,6 +32,13 @@ let package = Package(
         .testTarget(
             name: "SchneeRunnerCoreTests",
             dependencies: ["SchneeRunnerCore"]
+        ),
+        .testTarget(
+            name: "SchneeRunnerAppTests",
+            dependencies: [
+                "SchneeRunnerApp",
+                "SchneeRunnerCore"
+            ]
         )
     ]
 )
