@@ -41,6 +41,8 @@ final class DesktopCharacterMotionController: NSObject {
         timer?.invalidate()
         timer = nil
         lastTimestamp = nil
+        direction = .right
+        renderer.setMotionDirection(.right)
         renderer.setAutonomousMovementActive(false)
         isEnabled = false
     }
