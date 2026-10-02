@@ -7,33 +7,30 @@ private final class DesktopCharacterImageView: NSImageView {
     }
 }
 
+struct DesktopCharacterMotionGeometry: Equatable {
+    let originX: Double
+    let windowWidth: Double
+    let visibleMinX: Double
+    let visibleMaxX: Double
+}
+
 @MainActor
 final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
-    private static let defaultWindowSize = NSSize(
-        width: 128,
-        height: 128
-    )
-    private static let minimumWindowSize = NSSize(
-        width: CGFloat(DesktopCharacterPlacement.minimumDimension),
-        height: CGFloat(DesktopCharacterPlacement.minimumDimension)
-    )
-    private static let maximumWindowSize = NSSize(
-        width: CGFloat(DesktopCharacterPlacement.maximumDimension),
-        height: CGFloat(DesktopCharacterPlacement.maximumDimension)
-    )
-
     private let imageView = DesktopCharacterImageView()
-    private let placementStore: DesktopCharacterPlacementStore
+    private let placementController: DesktopCharacterWindowPlacementController
 
     private var panel: NSPanel?
     private var latestImage: NSImage?
+    private var isAutonomousMovementActive = false
 
     private(set) var isVisible = false
 
     init(
         placementStore: DesktopCharacterPlacementStore = .init()
     ) {
-        self.placementStore = placementStore
+        placementController = DesktopCharacterWindowPlacementController(
+            placementStore: placementStore
+        )
         super.init()
 
         imageView.imageScaling = .scaleProportionallyUpOrDown
@@ -59,7 +56,46 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         }
     }
 
+    var motionGeometry: DesktopCharacterMotionGeometry? {
+        guard
+            let panel,
+            let screen = panel.screen ?? NSScreen.main
+        else {
+            return nil
+        }
+
+        return DesktopCharacterMotionGeometry(
+            originX: Double(panel.frame.minX),
+            windowWidth: Double(panel.frame.width),
+            visibleMinX: Double(screen.visibleFrame.minX),
+            visibleMaxX: Double(screen.visibleFrame.maxX)
+        )
+    }
+
+    func moveHorizontally(to x: Double) {
+        guard let panel else {
+            return
+        }
+
+        panel.setFrameOrigin(
+            NSPoint(
+                x: CGFloat(x),
+                y: panel.frame.minY
+            )
+        )
+    }
+
+    func setAutonomousMovementActive(_ isActive: Bool) {
+        isAutonomousMovementActive = isActive
+
+        if !isActive {
+            persistCurrentFrame()
+        }
+    }
+
     func stop() {
+        isAutonomousMovementActive = false
+        persistCurrentFrame()
         panel?.delegate = nil
         panel?.orderOut(nil)
         panel?.close()
@@ -68,6 +104,10 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     }
 
     func windowDidMove(_ notification: Notification) {
+        guard !isAutonomousMovementActive else {
+            return
+        }
+
         persistFrame(from: notification)
     }
 
@@ -76,7 +116,8 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     }
 
     private func makePanel() -> NSPanel {
-        let frame = restoredFrame() ?? defaultFrame()
+        let frame = placementController.restoredFrame()
+            ?? placementController.defaultFrame()
         let panel = NSPanel(
             contentRect: frame,
             styleMask: [
@@ -99,8 +140,8 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             .fullScreenAuxiliary
         ]
         panel.isReleasedWhenClosed = false
-        panel.minSize = Self.minimumWindowSize
-        panel.maxSize = Self.maximumWindowSize
+        panel.minSize = placementController.minimumWindowSize
+        panel.maxSize = placementController.maximumWindowSize
         panel.contentAspectRatio = NSSize(
             width: 1,
             height: 1
@@ -118,39 +159,6 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         return panel
     }
 
-    private func restoredFrame() -> NSRect? {
-        guard let placement = placementStore.placement() else {
-            return nil
-        }
-
-        let storedFrame = NSRect(
-            x: placement.x,
-            y: placement.y,
-            width: placement.width,
-            height: placement.height
-        )
-        guard let screen = Self.bestScreen(for: storedFrame) else {
-            return nil
-        }
-
-        return Self.constrain(
-            storedFrame,
-            to: screen.visibleFrame
-        )
-    }
-
-    private func defaultFrame() -> NSRect {
-        let size = Self.defaultWindowSize
-        let origin = Self.initialOrigin(
-            windowSize: size
-        )
-
-        return NSRect(
-            origin: origin,
-            size: size
-        )
-    }
-
     private func persistFrame(from notification: Notification) {
         guard
             let window = notification.object as? NSWindow,
@@ -159,100 +167,18 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             return
         }
 
-        let frame = window.frame
-        placementStore.save(
-            DesktopCharacterPlacement(
-                x: Double(frame.origin.x),
-                y: Double(frame.origin.y),
-                width: Double(frame.width),
-                height: Double(frame.height)
-            )
-        )
+        persistFrame(window.frame)
     }
 
-    private static func bestScreen(
-        for frame: NSRect
-    ) -> NSScreen? {
-        let candidates = NSScreen.screens
-            .map { screen in
-                (
-                    screen: screen,
-                    area: intersectionArea(
-                        frame,
-                        screen.visibleFrame
-                    )
-                )
-            }
-            .filter { $0.area > 0 }
-
-        return candidates.max { lhs, rhs in
-            lhs.area < rhs.area
-        }?.screen
-    }
-
-    private static func intersectionArea(
-        _ lhs: NSRect,
-        _ rhs: NSRect
-    ) -> CGFloat {
-        let intersection = lhs.intersection(rhs)
-        guard !intersection.isNull else {
-            return 0
+    private func persistCurrentFrame() {
+        guard let panel else {
+            return
         }
 
-        return intersection.width * intersection.height
+        persistFrame(panel.frame)
     }
 
-    private static func constrain(
-        _ frame: NSRect,
-        to visibleFrame: NSRect
-    ) -> NSRect {
-        let maximumWidth = min(
-            maximumWindowSize.width,
-            visibleFrame.width
-        )
-        let maximumHeight = min(
-            maximumWindowSize.height,
-            visibleFrame.height
-        )
-        let width = min(
-            max(frame.width, minimumWindowSize.width),
-            maximumWidth
-        )
-        let height = min(
-            max(frame.height, minimumWindowSize.height),
-            maximumHeight
-        )
-        let x = min(
-            max(frame.minX, visibleFrame.minX),
-            visibleFrame.maxX - width
-        )
-        let y = min(
-            max(frame.minY, visibleFrame.minY),
-            visibleFrame.maxY - height
-        )
-
-        return NSRect(
-            x: x,
-            y: y,
-            width: width,
-            height: height
-        )
-    }
-
-    private static func initialOrigin(
-        windowSize: NSSize
-    ) -> NSPoint {
-        guard let screen = NSScreen.main else {
-            return NSPoint(
-                x: 24,
-                y: 24
-            )
-        }
-
-        let visibleFrame = screen.visibleFrame
-        return NSPoint(
-            x: visibleFrame.maxX - windowSize.width - 24,
-            y: visibleFrame.minY + 24
-        )
+    private func persistFrame(_ frame: NSRect) {
+        placementController.persist(frame)
     }
 }

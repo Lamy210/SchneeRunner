@@ -105,8 +105,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onManualSpeed = { [weak self] framesPerSecond in
             self?.changeAnimationSpeed(framesPerSecond)
         }
-        menuController.onDesktopCharacterVisibilityChanged = { [weak self] isVisible in
-            self?.frameRendererCoordinator.setDesktopVisible(isVisible)
+        menuController.onDesktopCharacterConfigurationChanged = { [weak self] configuration in
+            self?.frameRendererCoordinator.setDesktopConfiguration(
+                configuration
+            )
         }
         menuController.onQuit = {
             NSApplication.shared.terminate(nil)

@@ -88,9 +88,13 @@ The state and playback rate are separate values. CPU state updates are registere
 
 ## Desktop character renderer
 
-The menu item **Show Desktop Character** mirrors the currently resolved animation into an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging the character. Its edges are resizable from 64 to 512 points while preserving a square presentation area.
+The **Desktop Character** submenu can show the currently resolved animation in an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging the character. Its edges are resizable from 64 to 512 points while preserving a square presentation area.
 
 Desktop position and size are persisted locally and restored on the next launch. If a saved frame no longer intersects any connected display, SchneeRunner ignores that frame and falls back to its normal on-screen starting position; partially visible frames are clamped back into the selected display's visible area.
+
+The submenu also offers **Move Automatically** while the desktop character is visible. Autonomous movement advances horizontally and reflects at the current display's visible edges. Its deterministic motion policy is independent from CharacterState, CPU load, animation playback rate, and Character Pack state selection.
+
+Timer delays are capped before they reach the motion policy so a delayed wakeup cannot teleport the character across the desktop. Programmatic movement does not write placement preferences on every frame; the final position is persisted when automatic movement stops or SchneeRunner terminates.
 
 The desktop renderer receives the same decoded animation frames as the menu bar renderer. It does not load character assets independently and does not alter trigger resolution, playback timing, or Character Pack behavior. Closing SchneeRunner tears down the desktop window with the rest of the application lifecycle.
 
@@ -234,7 +238,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Planned increments:
 
-1. optional autonomous desktop movement without coupling motion to animation state
+1. direction-aware desktop sprite orientation
+2. configurable autonomous movement speed
 
 The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
 
