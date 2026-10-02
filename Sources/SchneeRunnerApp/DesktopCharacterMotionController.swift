@@ -6,7 +6,7 @@ final class DesktopCharacterMotionController: NSObject {
     private static let timerInterval = 1.0 / 30.0
 
     private let renderer: DesktopCharacterRenderer
-    private let policy: DesktopMotionPolicy
+    private var policy: DesktopMotionPolicy
 
     private var timer: Timer?
     private var direction: DesktopMotionDirection = .right
@@ -21,6 +21,12 @@ final class DesktopCharacterMotionController: NSObject {
         self.renderer = renderer
         self.policy = policy
         super.init()
+    }
+
+    func setSpeedPointsPerSecond(_ speed: Double) {
+        policy = DesktopMotionPolicy(
+            speedPointsPerSecond: speed
+        )
     }
 
     func setEnabled(_ isEnabled: Bool) {

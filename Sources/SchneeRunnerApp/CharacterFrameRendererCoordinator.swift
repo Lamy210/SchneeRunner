@@ -29,6 +29,10 @@ final class CharacterFrameRendererCoordinator {
     func setDesktopConfiguration(
         _ configuration: DesktopCharacterMenuConfiguration
     ) {
+        desktopMotionController.setSpeedPointsPerSecond(
+            configuration.movementSpeed.pointsPerSecond
+        )
+
         if configuration.isVisible {
             desktopRenderer.setVisible(true)
             desktopMotionController.setEnabled(
