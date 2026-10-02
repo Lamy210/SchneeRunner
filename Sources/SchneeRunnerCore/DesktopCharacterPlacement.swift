@@ -3,6 +3,7 @@ import Foundation
 public struct DesktopCharacterPlacement: Codable, Equatable, Sendable {
     public static let minimumDimension = 64.0
     public static let maximumDimension = 512.0
+    private static let squareDimensionTolerance = 0.5
 
     public let x: Double
     public let y: Double
@@ -30,6 +31,7 @@ public struct DesktopCharacterPlacement: Codable, Equatable, Sendable {
             && width <= Self.maximumDimension
             && height >= Self.minimumDimension
             && height <= Self.maximumDimension
+            && abs(width - height) <= Self.squareDimensionTolerance
     }
 }
 
