@@ -52,6 +52,10 @@ final class StatusMenuController: NSObject {
         buildMenu()
     }
 
+    var desktopCharacterConfiguration: DesktopCharacterMenuConfiguration {
+        desktopCharacterMenuController.configuration
+    }
+
     func setCPUStatus(_ title: String) {
         cpuUsageItem.title = title
     }
