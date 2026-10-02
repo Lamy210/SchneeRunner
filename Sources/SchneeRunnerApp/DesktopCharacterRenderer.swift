@@ -22,6 +22,7 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
     private var latestImage: NSImage?
     private var isAutonomousMovementActive = false
+    private var isRecoveringDisplayFrame = false
 
     private(set) var isVisible = false
 
@@ -38,6 +39,13 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
             .width,
             .height
         ]
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenParametersDidChange(_:)),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
     }
 
     func render(_ image: NSImage) {
@@ -105,6 +113,11 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     }
 
     func stop() {
+        NotificationCenter.default.removeObserver(
+            self,
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
         isAutonomousMovementActive = false
         persistCurrentFrame()
         panel?.delegate = nil
@@ -115,7 +128,10 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     }
 
     func windowDidMove(_ notification: Notification) {
-        guard !isAutonomousMovementActive else {
+        guard
+            !isAutonomousMovementActive,
+            !isRecoveringDisplayFrame
+        else {
             return
         }
 
@@ -123,7 +139,30 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     }
 
     func windowDidResize(_ notification: Notification) {
+        guard !isRecoveringDisplayFrame else {
+            return
+        }
+
         persistFrame(from: notification)
+    }
+
+    @objc
+    private func screenParametersDidChange(_: Notification) {
+        guard
+            let panel,
+            let recoveredFrame = placementController.recoveredFrame(panel.frame),
+            recoveredFrame != panel.frame
+        else {
+            return
+        }
+
+        isRecoveringDisplayFrame = true
+        panel.setFrame(
+            recoveredFrame,
+            display: true
+        )
+        isRecoveringDisplayFrame = false
+        placementController.persist(recoveredFrame)
     }
 
     private func makePanel() -> NSPanel {

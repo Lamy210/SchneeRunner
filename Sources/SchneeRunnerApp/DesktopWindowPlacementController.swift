@@ -58,6 +58,17 @@ struct DesktopWindowPlacementController {
         )
     }
 
+    func recoveredFrame(_ frame: NSRect) -> NSRect? {
+        guard let screen = Self.bestScreen(for: frame) ?? NSScreen.main else {
+            return nil
+        }
+
+        return constrain(
+            frame,
+            to: screen.visibleFrame
+        )
+    }
+
     func persist(_ frame: NSRect) {
         placementStore.save(
             DesktopCharacterPlacement(
