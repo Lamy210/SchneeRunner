@@ -46,6 +46,8 @@ When upgrading either tool:
 
 This prevents a Homebrew update from silently changing CI behavior for an unchanged application commit.
 
+The reusable Swift quality job is also pinned to `macos-15` instead of the moving `macos-latest` label. This keeps the host toolchain predictable and avoids coupling required quality checks to a newer hosted-runner pool when the application itself already targets the macOS 15 CI image.
+
 ## Swift quality workflow
 
 `.github/workflows/swift-quality.yml` runs automatically when Swift source or Swift quality configuration changes. It calls `reusable-swift-quality.yml` and provides three separate gates so failures are easy to diagnose:
