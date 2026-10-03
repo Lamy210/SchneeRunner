@@ -105,6 +105,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onLoadRecentCharacter = { [weak self] id in
             self?.loadRecentCharacter(id: id)
         }
+        menuController.onRefreshRecentCharacters = { [weak self] in
+            self?.refreshRecentCharactersMenu()
+        }
         menuController.onToggleCPUAdaptiveSpeed = { [weak self] in
             self?.toggleCPUAdaptiveSpeed()
         }
