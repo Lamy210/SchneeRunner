@@ -34,6 +34,30 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
         XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
     }
 
+    func testDedicatedSingleSourceKindsUseCanonicalFileNames() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let cases: [(CharacterAssetKind, String)] = [
+            (.gif, "source.gif"),
+            (.apng, "source.png"),
+            (.webP, "source.webp")
+        ]
+
+        for (kind, fileName) in cases {
+            let asset = fixture.asset(kind: kind)
+            let assetDirectory = try fixture.makeAssetDirectory(for: asset)
+            try Data([1]).write(
+                to: assetDirectory.appendingPathComponent(fileName)
+            )
+
+            XCTAssertTrue(
+                fixture.validator.isStructurallyAvailable(asset),
+                "\(kind.rawValue) should use \(fileName)"
+            )
+        }
+    }
+
     func testSequenceRequiresTwoRegularPNGFrames() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
