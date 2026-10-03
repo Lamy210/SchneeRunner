@@ -11,12 +11,30 @@ final class CharacterPackFileNamePolicyTests: XCTestCase {
         )
     }
 
+    func testKeepsExistingCharacterPackExtensionCaseInsensitively() {
+        XCTAssertEqual(
+            CharacterPackFileNamePolicy.fileName(
+                for: "My Runner.SCHNEERUNNER"
+            ),
+            "My Runner.SCHNEERUNNER"
+        )
+    }
+
     func testAppendsCharacterPackExtensionWhenMissing() {
         XCTAssertEqual(
             CharacterPackFileNamePolicy.fileName(
                 for: "My Runner"
             ),
             "My Runner.schneerunner"
+        )
+    }
+
+    func testSanitizesPathSeparatorsBeforeAddingExtension() {
+        XCTAssertEqual(
+            CharacterPackFileNamePolicy.fileName(
+                for: "Team/Runner:Night"
+            ),
+            "Team-Runner-Night.schneerunner"
         )
     }
 }
