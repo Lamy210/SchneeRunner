@@ -89,7 +89,7 @@ final class DesktopWindowPlacementControllerTests: XCTestCase {
 
         let recovered = controller.recoveredFrame(
             NSRect(
-                x: 2_000,
+                x: 2000,
                 y: 500,
                 width: 256,
                 height: 256
@@ -98,14 +98,14 @@ final class DesktopWindowPlacementControllerTests: XCTestCase {
                 NSRect(
                     x: 0,
                     y: 0,
-                    width: 1_000,
+                    width: 1000,
                     height: 800
                 )
             ],
             mainVisibleFrame: NSRect(
                 x: 0,
                 y: 0,
-                width: 1_000,
+                width: 1000,
                 height: 800
             )
         )
@@ -126,7 +126,7 @@ final class DesktopWindowPlacementControllerTests: XCTestCase {
 
         let recovered = controller.recoveredFrame(
             NSRect(
-                x: 1_100,
+                x: 1100,
                 y: 100,
                 width: 256,
                 height: 256
@@ -135,20 +135,20 @@ final class DesktopWindowPlacementControllerTests: XCTestCase {
                 NSRect(
                     x: 0,
                     y: 0,
-                    width: 1_000,
+                    width: 1000,
                     height: 800
                 ),
                 NSRect(
-                    x: 1_000,
+                    x: 1000,
                     y: 0,
-                    width: 1_000,
+                    width: 1000,
                     height: 800
                 )
             ],
             mainVisibleFrame: NSRect(
                 x: 0,
                 y: 0,
-                width: 1_000,
+                width: 1000,
                 height: 800
             )
         )
@@ -156,7 +156,7 @@ final class DesktopWindowPlacementControllerTests: XCTestCase {
         XCTAssertEqual(
             recovered,
             NSRect(
-                x: 1_100,
+                x: 1100,
                 y: 100,
                 width: 256,
                 height: 256
