@@ -36,14 +36,7 @@ struct DesktopWindowPlacementController {
             width: placement.width,
             height: placement.height
         )
-        guard let screen = Self.bestScreen(for: storedFrame) else {
-            return nil
-        }
-
-        return constrainedFrame(
-            storedFrame,
-            to: screen.visibleFrame
-        )
+        return recoveredFrame(storedFrame)
     }
 
     func defaultFrame() -> NSRect {
@@ -59,13 +52,30 @@ struct DesktopWindowPlacementController {
     }
 
     func recoveredFrame(_ frame: NSRect) -> NSRect? {
-        guard let screen = Self.bestScreen(for: frame) ?? NSScreen.main else {
+        recoveredFrame(
+            frame,
+            visibleFrames: NSScreen.screens.map(\.visibleFrame),
+            mainVisibleFrame: NSScreen.main?.visibleFrame
+        )
+    }
+
+    func recoveredFrame(
+        _ frame: NSRect,
+        visibleFrames: [NSRect],
+        mainVisibleFrame: NSRect?
+    ) -> NSRect? {
+        guard
+            let visibleFrame = Self.bestVisibleFrame(
+                for: frame,
+                visibleFrames: visibleFrames
+            ) ?? mainVisibleFrame
+        else {
             return nil
         }
 
         return constrainedFrame(
             frame,
-            to: screen.visibleFrame
+            to: visibleFrame
         )
     }
 
@@ -80,16 +90,17 @@ struct DesktopWindowPlacementController {
         )
     }
 
-    private static func bestScreen(
-        for frame: NSRect
-    ) -> NSScreen? {
-        let candidates = NSScreen.screens
-            .map { screen in
+    private static func bestVisibleFrame(
+        for frame: NSRect,
+        visibleFrames: [NSRect]
+    ) -> NSRect? {
+        let candidates = visibleFrames
+            .map { visibleFrame in
                 (
-                    screen: screen,
+                    visibleFrame: visibleFrame,
                     area: intersectionArea(
                         frame,
-                        screen.visibleFrame
+                        visibleFrame
                     )
                 )
             }
@@ -97,7 +108,7 @@ struct DesktopWindowPlacementController {
 
         return candidates.max { lhs, rhs in
             lhs.area < rhs.area
-        }?.screen
+        }?.visibleFrame
     }
 
     private static func intersectionArea(
