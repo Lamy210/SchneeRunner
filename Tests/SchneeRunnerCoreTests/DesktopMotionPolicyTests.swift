@@ -117,6 +117,92 @@ final class DesktopMotionPolicyTests: XCTestCase {
         )
     }
 
+    func testNegativeElapsedDoesNotMoveWithinRange() {
+        let policy = DesktopMotionPolicy(
+            speedPointsPerSecond: 100
+        )
+
+        XCTAssertEqual(
+            policy.advance(
+                state: DesktopMotionState(
+                    x: 20,
+                    direction: .right
+                ),
+                windowWidth: 100,
+                visibleMinX: 0,
+                visibleMaxX: 300,
+                elapsedSeconds: -1
+            ),
+            DesktopMotionState(
+                x: 20,
+                direction: .right
+            )
+        )
+    }
+
+    func testNonFiniteElapsedLeavesStateUnchanged() {
+        let policy = DesktopMotionPolicy()
+        let state = DesktopMotionState(
+            x: 20,
+            direction: .right
+        )
+
+        XCTAssertEqual(
+            policy.advance(
+                state: state,
+                windowWidth: 100,
+                visibleMinX: 0,
+                visibleMaxX: 300,
+                elapsedSeconds: .infinity
+            ),
+            state
+        )
+    }
+
+    func testInvalidSpeedFallsBackToDefaultSpeed() {
+        let policy = DesktopMotionPolicy(
+            speedPointsPerSecond: .nan
+        )
+
+        XCTAssertEqual(
+            policy.advance(
+                state: DesktopMotionState(
+                    x: 20,
+                    direction: .right
+                ),
+                windowWidth: 100,
+                visibleMinX: 0,
+                visibleMaxX: 300,
+                elapsedSeconds: 0.1
+            ),
+            DesktopMotionState(
+                x: 27.2,
+                direction: .right
+            )
+        )
+    }
+
+    func testWindowWiderThanVisibleRangePinsToMinimumX() {
+        let policy = DesktopMotionPolicy()
+
+        XCTAssertEqual(
+            policy.advance(
+                state: DesktopMotionState(
+                    x: 120,
+                    direction: .left
+                ),
+                windowWidth: 400,
+                visibleMinX: 50,
+                visibleMaxX: 300,
+                elapsedSeconds: 0.05
+            ),
+            DesktopMotionState(
+                x: 50,
+                direction: .left
+            )
+        )
+    }
+
     func testInvalidGeometryLeavesStateUnchanged() {
         let policy = DesktopMotionPolicy()
         let state = DesktopMotionState(
