@@ -4,8 +4,12 @@ import SchneeRunnerCore
 enum RecentCharacterPolicy {
     static func availableAssets(
         _ assets: [StoredCharacterAsset],
-        excluding unavailableAssetIDs: Set<UUID>
+        excluding unavailableAssetIDs: Set<UUID>,
+        limit: Int = .max
     ) -> [StoredCharacterAsset] {
-        assets.filter { !unavailableAssetIDs.contains($0.id) }
+        let availableAssets = assets.filter {
+            !unavailableAssetIDs.contains($0.id)
+        }
+        return Array(availableAssets.prefix(max(limit, 0)))
     }
 }
