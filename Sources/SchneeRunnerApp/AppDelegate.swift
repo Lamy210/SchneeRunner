@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
     private var latestCPUUpdate: CPUMonitor.Update?
+    private var cpuStatus: CPUStatusValue = .sampling
     private var isCPUAdaptiveSpeedEnabled = true
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -135,6 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             latestCPUUpdate = update
+            cpuStatus = .utilization(update.utilization)
 
             if isCPUAdaptiveSpeedEnabled {
                 characterStateCoordinator.updateCPUState(
@@ -149,34 +151,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         cpuMonitor.onError = { [weak self] _ in
-            self?.latestCPUUpdate = nil
-            self?.menuController.setCPUStatus("CPU: unavailable")
+            guard let self else {
+                return
+            }
+
+            latestCPUUpdate = nil
+            cpuStatus = .unavailable
+            refreshCPUStatus()
         }
     }
 
     private func refreshCPUStatus() {
-        guard let latestCPUUpdate else {
-            return
-        }
-
-        let percentage = Int((latestCPUUpdate.utilization * 100).rounded())
-        let playbackRate = Self.playbackRateLabel(
-            animationController.playbackRate
-        )
-        let state = CharacterStateStatusFormatter.label(
-            requestedState: characterPlaybackController.requestedState,
-            resolvedState: characterPlaybackController.resolvedState
-        )
-
-        if isCPUAdaptiveSpeedEnabled {
-            menuController.setCPUStatus(
-                "CPU: \(percentage)% · \(state) · \(playbackRate)"
+        menuController.setCPUStatus(
+            CPUStatusFormatter.title(
+                status: cpuStatus,
+                requestedState: characterPlaybackController.requestedState,
+                resolvedState: characterPlaybackController.resolvedState,
+                playbackRate: animationController.playbackRate,
+                isAdaptiveSpeedEnabled: isCPUAdaptiveSpeedEnabled
             )
-        } else {
-            menuController.setCPUStatus(
-                "CPU: \(percentage)% · \(state) · Manual \(playbackRate)"
-            )
-        }
+        )
     }
 }
 
@@ -483,12 +477,5 @@ private extension AppDelegate {
         menuController.setAdaptiveSpeedEnabled(false)
         animationController.setFramesPerSecond(framesPerSecond)
         refreshCPUStatus()
-    }
-
-    static func playbackRateLabel(_ value: Double) -> String {
-        String(
-            format: "%.2g×",
-            value
-        )
     }
 }
