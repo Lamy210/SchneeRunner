@@ -9,6 +9,8 @@ final class CharacterPlaybackController {
     private(set) var requestedState: CharacterState = .run
     private(set) var resolvedState: CharacterState?
 
+    var onStateChange: (() -> Void)?
+
     init(animationController: AnimationController) {
         self.animationController = animationController
     }
@@ -22,14 +24,28 @@ final class CharacterPlaybackController {
     }
 
     func install(_ library: CharacterAnimationLibrary) {
+        let previousRequestedState = requestedState
+        let previousResolvedState = resolvedState
+
         self.library = library
         resolvedState = nil
         applyRequestedState()
+        notifyStateChangeIfNeeded(
+            previousRequestedState: previousRequestedState,
+            previousResolvedState: previousResolvedState
+        )
     }
 
     func requestState(_ state: CharacterState) {
+        let previousRequestedState = requestedState
+        let previousResolvedState = resolvedState
+
         requestedState = state
         applyRequestedState()
+        notifyStateChangeIfNeeded(
+            previousRequestedState: previousRequestedState,
+            previousResolvedState: previousResolvedState
+        )
     }
 
     private func applyRequestedState() {
@@ -48,5 +64,19 @@ final class CharacterPlaybackController {
             resolution.animation
         )
         resolvedState = resolution.resolvedState
+    }
+
+    private func notifyStateChangeIfNeeded(
+        previousRequestedState: CharacterState,
+        previousResolvedState: CharacterState?
+    ) {
+        guard
+            previousRequestedState != requestedState
+            || previousResolvedState != resolvedState
+        else {
+            return
+        }
+
+        onStateChange?()
     }
 }

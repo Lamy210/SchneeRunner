@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.setActivationPolicy(.accessory)
         configureStatusItem()
         configureAnimationCallback()
+        configurePlaybackCallback()
         configureMenuCallbacks()
         configureCPUMonitor()
         refreshRecentCharactersMenu()
@@ -56,6 +57,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func configureAnimationCallback() {
         animationController.onFrame = { [weak self] image in
             self?.frameRendererCoordinator.render(image)
+        }
+    }
+
+    private func configurePlaybackCallback() {
+        characterPlaybackController.onStateChange = { [weak self] in
+            self?.refreshCPUStatus()
         }
     }
 
