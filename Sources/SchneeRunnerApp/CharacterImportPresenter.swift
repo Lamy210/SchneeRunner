@@ -132,8 +132,8 @@ final class CharacterImportPresenter {
         panel.prompt = prompt
         panel.canCreateDirectories = true
         panel.isExtensionHidden = false
-        panel.nameFieldStringValue = characterPackFileName(
-            suggestedName
+        panel.nameFieldStringValue = CharacterPackFileNamePolicy.fileName(
+            for: suggestedName
         )
 
         guard panel.runModal() == .OK else {
@@ -141,16 +141,6 @@ final class CharacterImportPresenter {
         }
 
         return panel.url
-    }
-
-    private func characterPackFileName(
-        _ suggestedName: String
-    ) -> String {
-        let sanitizedName = suggestedName
-            .replacingOccurrences(of: "/", with: "-")
-            .replacingOccurrences(of: ":", with: "-")
-
-        return "\(sanitizedName).schneerunner"
     }
 
     private func chooseFile(
