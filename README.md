@@ -174,7 +174,7 @@ Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, GIF,
 
 When the current stored character is a Character Pack, **Export Current Character Pack…** writes a fresh canonical `.schneerunner` directory. Export reuses only manifest-referenced clips, reloads the staged result before commit, and refuses to overwrite an existing destination.
 
-Choose **Build Character Pack…** to set a pack name and default state, attach optional idle / walk / run / dash / sprint clips, and write a canonical `.schneerunner` package. PNG Sequence clips select a source directory; the other clip kinds select PNG or GIF files. Building a pack does not change the currently running character.
+Choose **Build Character Pack…** to set a pack name and default state, attach optional idle / walk / run / dash / sprint clips, and write a canonical `.schneerunner` package. PNG Sequence clips select a source directory; single-image and sprite-sheet clips select PNG files, GIF clips select GIF files, APNG clips select animated PNG files, and WebP clips select animated WebP files. Building a pack does not change the currently running character.
 
 See [docs/CHARACTER_PACK.md](docs/CHARACTER_PACK.md) for the manifest and layout specification.
 
