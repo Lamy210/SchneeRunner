@@ -102,12 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onExportCharacterPack = { [weak self] in
             self?.exportCurrentCharacterPack()
         }
-        menuController.onLoadRecentCharacter = { [weak self] id in
-            self?.loadRecentCharacter(id: id)
-        }
-        menuController.onRefreshRecentCharacters = { [weak self] in
-            self?.refreshRecentCharactersMenu()
-        }
+        configureRecentCharacterCallbacks()
         menuController.onToggleCPUAdaptiveSpeed = { [weak self] in
             self?.toggleCPUAdaptiveSpeed()
         }
@@ -130,6 +125,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         menuController.onQuit = {
             NSApplication.shared.terminate(nil)
+        }
+    }
+
+    private func configureRecentCharacterCallbacks() {
+        menuController.onLoadRecentCharacter = { [weak self] id in
+            self?.loadRecentCharacter(id: id)
+        }
+        menuController.onRefreshRecentCharacters = { [weak self] in
+            self?.refreshRecentCharactersMenu()
         }
     }
 
