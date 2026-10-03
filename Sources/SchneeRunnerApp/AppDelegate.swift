@@ -156,9 +156,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let playbackRate = Self.playbackRateLabel(
             animationController.playbackRate
         )
-        let state = characterPlaybackController
-            .requestedState
-            .displayName
+        let state = CharacterStateStatusFormatter.label(
+            requestedState: characterPlaybackController.requestedState,
+            resolvedState: characterPlaybackController.resolvedState
+        )
 
         if isCPUAdaptiveSpeedEnabled {
             menuController.setCPUStatus(
