@@ -175,19 +175,18 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
     }
 
     func windowDidMove(_ notification: Notification) {
-        guard
-            !isAutonomousMovementActive,
-            !isApplyingManagedFrame
-        else {
+        switch DesktopMovePersistencePolicy.action(
+            isApplyingManagedFrame: isApplyingManagedFrame,
+            isUserInteracting: isUserInteracting,
+            isAutonomousMovementActive: isAutonomousMovementActive
+        ) {
+        case .ignore:
             return
-        }
-
-        if isUserInteracting {
+        case .deferUntilInteractionEnds:
             isMovePersistenceDeferred = true
-            return
+        case .persistNow:
+            persistFrame(from: notification)
         }
-
-        persistFrame(from: notification)
     }
 
     func windowWillStartLiveResize(_ notification: Notification) {
@@ -293,11 +292,12 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         isUserInteracting = isInteracting
 
         let shouldPersistDeferredMove =
-            wasInteracting
-                && !isInteracting
-                && isMovePersistenceDeferred
-                && !isLiveResizing
-                && !isAutonomousMovementActive
+            DesktopMovePersistencePolicy.shouldPersistDeferredMove(
+                wasInteracting: wasInteracting,
+                isInteracting: isInteracting,
+                isMovePersistenceDeferred: isMovePersistenceDeferred,
+                isLiveResizing: isLiveResizing
+            )
 
         if shouldPersistDeferredMove {
             isMovePersistenceDeferred = false
