@@ -16,6 +16,23 @@ final class RecentCharacterPolicyTests: XCTestCase {
         XCTAssertEqual(result.map(\.id), [first.id, third.id])
     }
 
+    func testFillsLimitAfterExcludingUnavailableAssets() {
+        let unavailable = makeAsset(id: UUID())
+        let firstAvailable = makeAsset(id: UUID())
+        let secondAvailable = makeAsset(id: UUID())
+
+        let result = RecentCharacterPolicy.availableAssets(
+            [unavailable, firstAvailable, secondAvailable],
+            excluding: [unavailable.id],
+            limit: 2
+        )
+
+        XCTAssertEqual(
+            result.map(\.id),
+            [firstAvailable.id, secondAvailable.id]
+        )
+    }
+
     func testReturnsAllAssetsWhenNothingIsExcluded() {
         let first = makeAsset(id: UUID())
         let second = makeAsset(id: UUID())
