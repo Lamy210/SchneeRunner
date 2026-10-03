@@ -64,7 +64,7 @@ Choose **Load Single Image…** to turn one PNG into an eight-frame procedural r
 
 Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. If that stored selection can no longer be loaded, SchneeRunner clears the saved selection and continues launching with the placeholder. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
 
-CPU adaptive speed is enabled by default. Selecting a manual playback rate disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again. The rate scales the animation's base timing, so GIF frame-duration ratios remain intact.
+CPU adaptive speed is enabled by default. Selecting a manual playback rate disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again. Disabling CPU adaptation clears the CPU-derived character-state trigger, and a CPU sampling error clears it as well, so stale CPU state does not remain active while other state triggers continue to resolve normally. The rate scales the animation's base timing, so GIF frame-duration ratios remain intact.
 
 ## CPU adaptive speed
 

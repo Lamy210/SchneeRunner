@@ -73,6 +73,13 @@ final class CharacterStateCoordinator {
         applyResolvedState()
     }
 
+    func clearCPUState() {
+        triggerEngine.remove(
+            id: Self.cpuTriggerID
+        )
+        applyResolvedState()
+    }
+
     func updateBatteryWarning(_ level: BatteryWarningLevel) {
         if let state = batteryWarningPolicy.state(for: level) {
             triggerEngine.set(

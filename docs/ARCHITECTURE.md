@@ -304,7 +304,7 @@ Examples:
 
 Loading a bad asset must not terminate the application or replace the last valid animation.
 
-A transient CPU sampling failure does not terminate playback. The menu reports CPU availability and keeps the current animation speed.
+A transient CPU sampling failure does not terminate playback. The menu reports CPU availability and keeps the current animation speed. The CPU-derived character-state trigger is removed on sampling failure and whenever CPU adaptation is disabled, allowing the trigger engine to fall back to the next active source instead of retaining stale CPU state.
 
 ## 7. Performance direction
 
