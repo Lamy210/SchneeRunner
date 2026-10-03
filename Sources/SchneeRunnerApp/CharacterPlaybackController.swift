@@ -72,7 +72,7 @@ final class CharacterPlaybackController {
     ) {
         guard
             previousRequestedState != requestedState
-                || previousResolvedState != resolvedState
+            || previousResolvedState != resolvedState
         else {
             return
         }
