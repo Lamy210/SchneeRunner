@@ -137,6 +137,19 @@ final class DesktopCharacterRenderer: NSObject, NSWindowDelegate {
         )
     }
 
+    func reconcilePointerInteraction(
+        isPrimaryButtonPressed: Bool
+    ) {
+        guard DesktopPointerInteractionPolicy.shouldEndInteraction(
+            isUserInteracting: isUserInteracting,
+            isPrimaryButtonPressed: isPrimaryButtonPressed
+        ) else {
+            return
+        }
+
+        setUserInteracting(false)
+    }
+
     func setMotionDirection(_ direction: DesktopMotionDirection) {
         imageView.wantsLayer = true
         let transform: CGAffineTransform = switch direction {
