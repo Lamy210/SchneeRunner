@@ -4,6 +4,7 @@ import SchneeRunnerCore
 @MainActor
 final class CharacterLibraryController {
     private let store: CharacterAssetStore
+    private let backingStoreValidator: CharacterAssetBackingStoreValidator
     private let sequenceStore: PNGSequenceAssetStore
     private let gifStore: GIFAssetStore
     private let animatedImageStore: AnimatedImageAssetStore
@@ -26,6 +27,10 @@ final class CharacterLibraryController {
             .appendingPathComponent("Characters", isDirectory: true)
 
         store = CharacterAssetStore(
+            rootDirectory: rootDirectory,
+            fileManager: fileManager
+        )
+        backingStoreValidator = CharacterAssetBackingStoreValidator(
             rootDirectory: rootDirectory,
             fileManager: fileManager
         )
@@ -155,8 +160,12 @@ final class CharacterLibraryController {
         limit: Int = 8,
         excluding unavailableAssetIDs: Set<UUID> = []
     ) throws -> [StoredCharacterAsset] {
-        try RecentCharacterPolicy.availableAssets(
-            store.listAssets(),
+        let structurallyAvailableAssets = try store.listAssets().filter {
+            backingStoreValidator.isStructurallyAvailable($0)
+        }
+
+        return RecentCharacterPolicy.availableAssets(
+            structurallyAvailableAssets,
             excluding: unavailableAssetIDs,
             limit: limit
         )
