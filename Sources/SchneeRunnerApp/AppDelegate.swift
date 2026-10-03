@@ -157,6 +157,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             latestCPUUpdate = nil
             cpuStatus = .unavailable
+            characterStateCoordinator.clearCPUState()
             refreshCPUStatus()
         }
     }
@@ -454,13 +455,17 @@ private extension AppDelegate {
         isCPUAdaptiveSpeedEnabled.toggle()
         menuController.setAdaptiveSpeedEnabled(isCPUAdaptiveSpeedEnabled)
 
-        if isCPUAdaptiveSpeedEnabled, let latestCPUUpdate {
-            characterStateCoordinator.updateCPUState(
-                for: latestCPUUpdate.pace
-            )
-            animationController.setFramesPerSecond(
-                latestCPUUpdate.pace.framesPerSecond
-            )
+        if isCPUAdaptiveSpeedEnabled {
+            if let latestCPUUpdate {
+                characterStateCoordinator.updateCPUState(
+                    for: latestCPUUpdate.pace
+                )
+                animationController.setFramesPerSecond(
+                    latestCPUUpdate.pace.framesPerSecond
+                )
+            }
+        } else {
+            characterStateCoordinator.clearCPUState()
         }
 
         refreshCPUStatus()
@@ -475,6 +480,7 @@ private extension AppDelegate {
     func changeAnimationSpeed(_ framesPerSecond: Double) {
         isCPUAdaptiveSpeedEnabled = false
         menuController.setAdaptiveSpeedEnabled(false)
+        characterStateCoordinator.clearCPUState()
         animationController.setFramesPerSecond(framesPerSecond)
         refreshCPUStatus()
     }
