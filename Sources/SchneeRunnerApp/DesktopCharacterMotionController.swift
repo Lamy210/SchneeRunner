@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SchneeRunnerCore
 
@@ -84,6 +85,9 @@ final class DesktopCharacterMotionController: NSObject {
         }
 
         let timestamp = ProcessInfo.processInfo.systemUptime
+        renderer.reconcilePointerInteraction(
+            isPrimaryButtonPressed: (NSEvent.pressedMouseButtons & 1) != 0
+        )
 
         guard
             !renderer.isUserInteracting,
