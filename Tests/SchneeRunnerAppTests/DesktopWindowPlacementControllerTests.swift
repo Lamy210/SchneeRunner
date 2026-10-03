@@ -84,6 +84,86 @@ final class DesktopWindowPlacementControllerTests: XCTestCase {
         XCTAssertEqual(constrained.height, 128.4)
     }
 
+    func testRecoveryFallsBackToMainVisibleFrameWhenPlacementIsOffscreen() {
+        let controller = DesktopWindowPlacementController()
+
+        let recovered = controller.recoveredFrame(
+            NSRect(
+                x: 2_000,
+                y: 500,
+                width: 256,
+                height: 256
+            ),
+            visibleFrames: [
+                NSRect(
+                    x: 0,
+                    y: 0,
+                    width: 1_000,
+                    height: 800
+                )
+            ],
+            mainVisibleFrame: NSRect(
+                x: 0,
+                y: 0,
+                width: 1_000,
+                height: 800
+            )
+        )
+
+        XCTAssertEqual(
+            recovered,
+            NSRect(
+                x: 744,
+                y: 500,
+                width: 256,
+                height: 256
+            )
+        )
+    }
+
+    func testRecoveryPrefersIntersectingDisplayOverMainFallback() {
+        let controller = DesktopWindowPlacementController()
+
+        let recovered = controller.recoveredFrame(
+            NSRect(
+                x: 1_100,
+                y: 100,
+                width: 256,
+                height: 256
+            ),
+            visibleFrames: [
+                NSRect(
+                    x: 0,
+                    y: 0,
+                    width: 1_000,
+                    height: 800
+                ),
+                NSRect(
+                    x: 1_000,
+                    y: 0,
+                    width: 1_000,
+                    height: 800
+                )
+            ],
+            mainVisibleFrame: NSRect(
+                x: 0,
+                y: 0,
+                width: 1_000,
+                height: 800
+            )
+        )
+
+        XCTAssertEqual(
+            recovered,
+            NSRect(
+                x: 1_100,
+                y: 100,
+                width: 256,
+                height: 256
+            )
+        )
+    }
+
     func testInvalidVisibleFrameLeavesInputUnchanged() {
         let controller = DesktopWindowPlacementController()
         let frame = NSRect(
