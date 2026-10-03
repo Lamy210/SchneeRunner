@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var latestCPUUpdate: CPUMonitor.Update?
     private var cpuStatus: CPUStatusValue = .sampling
     private var isCPUAdaptiveSpeedEnabled = true
+    private var unavailableRecentCharacterIDs: Set<UUID> = []
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -31,8 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configurePlaybackCallback()
         configureMenuCallbacks()
         configureCPUMonitor()
-        refreshRecentCharactersMenu()
         restoreLastCharacter()
+        refreshRecentCharactersMenu()
         characterStateCoordinator.start()
         cpuMonitor.start()
     }
@@ -394,6 +395,7 @@ private extension AppDelegate {
             setCurrentAsset(asset)
             characterLibrary.rememberSelection(asset)
         } catch {
+            unavailableRecentCharacterIDs.insert(id)
             importPresenter.presentLoadError(error)
             refreshRecentCharactersMenu()
         }
@@ -401,7 +403,10 @@ private extension AppDelegate {
 
     func refreshRecentCharactersMenu() {
         do {
-            let assets = try characterLibrary.recentAssets()
+            let assets = RecentCharacterPolicy.availableAssets(
+                try characterLibrary.recentAssets(),
+                excluding: unavailableRecentCharacterIDs
+            )
             menuController.setRecentCharacters(assets)
         } catch {
             menuController.setRecentCharactersUnavailable()
@@ -418,6 +423,9 @@ private extension AppDelegate {
             play(library)
             setCurrentAsset(asset)
         } catch {
+            if let asset = try? characterLibrary.lastSelectedAsset() {
+                unavailableRecentCharacterIDs.insert(asset.id)
+            }
             characterLibrary.clearLastSelection()
         }
     }
