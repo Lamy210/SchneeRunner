@@ -403,8 +403,7 @@ private extension AppDelegate {
 
     func refreshRecentCharactersMenu() {
         do {
-            let assets = try RecentCharacterPolicy.availableAssets(
-                characterLibrary.recentAssets(),
+            let assets = try characterLibrary.recentAssets(
                 excluding: unavailableRecentCharacterIDs
             )
             menuController.setRecentCharacters(assets)
