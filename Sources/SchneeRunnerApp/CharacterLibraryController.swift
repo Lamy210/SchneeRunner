@@ -151,9 +151,15 @@ final class CharacterLibraryController {
         )
     }
 
-    func recentAssets(limit: Int = 8) throws -> [StoredCharacterAsset] {
-        let assets = try store.listAssets()
-        return Array(assets.prefix(max(limit, 0)))
+    func recentAssets(
+        limit: Int = 8,
+        excluding unavailableAssetIDs: Set<UUID> = []
+    ) throws -> [StoredCharacterAsset] {
+        try RecentCharacterPolicy.availableAssets(
+            store.listAssets(),
+            excluding: unavailableAssetIDs,
+            limit: limit
+        )
     }
 
     func frames(for asset: StoredCharacterAsset) throws -> [NSImage] {
