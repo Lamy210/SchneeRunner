@@ -4,7 +4,7 @@ import SchneeRunnerCore
 import XCTest
 
 @MainActor
-final class CharacterPlaybackControllerStateChangeTests: XCTestCase {
+final class CharacterPlaybackStateTests: XCTestCase {
     func testNotifiesAfterInstallResolvesState() throws {
         let controller = CharacterPlaybackController(
             animationController: AnimationController()
