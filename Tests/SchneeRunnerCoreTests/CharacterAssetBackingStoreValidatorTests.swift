@@ -102,13 +102,67 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
 
         XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
 
-        try Data("{}".utf8).write(
+        let clipDirectory = packageDirectory.appendingPathComponent(
+            "clips/run",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: clipDirectory,
+            withIntermediateDirectories: true
+        )
+        try Data([1]).write(
+            to: clipDirectory.appendingPathComponent("source.png")
+        )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "clips/run/source.png"
+        )
+
+        XCTAssertTrue(fixture.validator.isStructurallyAvailable(asset))
+    }
+
+    func testCharacterPackRejectsMissingReferencedClip() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let asset = fixture.asset(kind: .characterPack)
+        let assetDirectory = try fixture.makeAssetDirectory(for: asset)
+        let packageDirectory = assetDirectory.appendingPathComponent(
+            CharacterPackStore.packageDirectoryName,
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: packageDirectory,
+            withIntermediateDirectories: false
+        )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "clips/run/source.png"
+        )
+
+        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
+    }
+
+    private func writeCharacterPackManifest(
+        to packageDirectory: URL,
+        clipPath: String
+    ) throws {
+        let manifest = CharacterPackManifest(
+            name: "Stored Pack",
+            defaultState: .run,
+            clips: [
+                CharacterPackClip(
+                    state: .run,
+                    kind: .singleImage,
+                    path: clipPath
+                )
+            ]
+        )
+        try JSONEncoder().encode(manifest).write(
             to: packageDirectory.appendingPathComponent(
                 CharacterPackLoader.manifestFileName
             )
         )
-
-        XCTAssertTrue(fixture.validator.isStructurallyAvailable(asset))
     }
 
     private func makeFixture() throws -> BackingStoreFixture {

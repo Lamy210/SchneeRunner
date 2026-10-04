@@ -4,6 +4,7 @@ public struct CharacterAssetBackingStoreValidator {
     public let rootDirectory: URL
 
     private let fileManager: FileManager
+    private let characterPackLoader: CharacterPackLoader
 
     public init(
         rootDirectory: URL,
@@ -11,6 +12,9 @@ public struct CharacterAssetBackingStoreValidator {
     ) {
         self.rootDirectory = rootDirectory
         self.fileManager = fileManager
+        characterPackLoader = CharacterPackLoader(
+            fileManager: fileManager
+        )
     }
 
     public func isStructurallyAvailable(
@@ -88,11 +92,9 @@ public struct CharacterAssetBackingStoreValidator {
             return false
         }
 
-        return isRegularFile(
-            packageDirectory.appendingPathComponent(
-                CharacterPackLoader.manifestFileName
-            )
-        )
+        return (try? characterPackLoader.validatedManifest(
+            from: packageDirectory
+        )) != nil
     }
 
     private func isRegularDirectory(_ url: URL) -> Bool {
