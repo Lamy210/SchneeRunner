@@ -71,6 +71,49 @@ final class CharacterAssetStoreSecurityTests: XCTestCase {
         }
     }
 
+    func testRejectsSymlinkedManifest() throws {
+        let fixture = try makeFixture()
+        defer {
+            fixture.cleanup()
+        }
+
+        let assetID = UUID()
+        let directory = fixture.store.rootDirectory
+            .appendingPathComponent(assetID.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+
+        let asset = StoredCharacterAsset(
+            id: assetID,
+            displayName: "linked-manifest",
+            kind: .singleImage,
+            createdAt: Date(timeIntervalSince1970: 100)
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let externalManifest = fixture.temporaryRoot
+            .appendingPathComponent("external-manifest.json")
+        try encoder.encode(asset).write(to: externalManifest)
+
+        let manifestURL = directory.appendingPathComponent("manifest.json")
+        try FileManager.default.createSymbolicLink(
+            at: manifestURL,
+            withDestinationURL: externalManifest
+        )
+
+        XCTAssertThrowsError(
+            try fixture.store.asset(id: assetID)
+        ) { error in
+            XCTAssertEqual(
+                error as? CharacterAssetStoreError,
+                .symbolicLinkNotAllowed(manifestURL)
+            )
+        }
+        XCTAssertTrue(try fixture.store.listAssets().isEmpty)
+    }
+
     func testListSkipsSymlinkedAssetDirectories() throws {
         let fixture = try makeFixture()
         defer {

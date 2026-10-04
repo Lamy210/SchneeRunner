@@ -309,6 +309,7 @@ public struct CharacterAssetStore {
         let manifestURL = directory.appendingPathComponent(Self.manifestFileName)
 
         do {
+            try validateRegularNonSymlinkFile(at: manifestURL)
             let data = try Data(contentsOf: manifestURL)
             let asset = try decoder.decode(StoredCharacterAsset.self, from: data)
 
