@@ -149,9 +149,13 @@ public struct CharacterPackLoader {
 
         try validateManifest(manifest)
         for clip in manifest.clips {
-            _ = try resolveClipURL(
+            let url = try resolveClipURL(
                 path: clip.path,
                 packageURL: packageURL
+            )
+            try validateClipResourceType(
+                url,
+                kind: clip.kind
             )
         }
 
@@ -220,6 +224,24 @@ public struct CharacterPackLoader {
 }
 
 private extension CharacterPackLoader {
+    func validateClipResourceType(
+        _ url: URL,
+        kind: CharacterPackClipKind
+    ) throws {
+        switch kind {
+        case .pngSequence:
+            try resolver.validateDirectory(
+                url,
+                kind: kind
+            )
+        case .singleImage, .spriteSheet4x2, .gif, .apng, .webP:
+            try resolver.validateRegularFile(
+                url,
+                kind: kind
+            )
+        }
+    }
+
     func accountAnimation(
         _ animation: LoadedAnimation,
         totalFrameCount: inout Int,
