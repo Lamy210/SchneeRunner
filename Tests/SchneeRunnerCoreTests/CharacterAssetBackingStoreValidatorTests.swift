@@ -143,9 +143,62 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
         XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
     }
 
+    func testCharacterPackRejectsFileClipBackedByDirectory() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let asset = fixture.asset(kind: .characterPack)
+        let assetDirectory = try fixture.makeAssetDirectory(for: asset)
+        let packageDirectory = assetDirectory.appendingPathComponent(
+            CharacterPackStore.packageDirectoryName,
+            isDirectory: true
+        )
+        let clipDirectory = packageDirectory.appendingPathComponent(
+            "run.png",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: clipDirectory,
+            withIntermediateDirectories: true
+        )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "run.png"
+        )
+
+        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
+    }
+
+    func testCharacterPackRejectsSequenceClipBackedByFile() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let asset = fixture.asset(kind: .characterPack)
+        let assetDirectory = try fixture.makeAssetDirectory(for: asset)
+        let packageDirectory = assetDirectory.appendingPathComponent(
+            CharacterPackStore.packageDirectoryName,
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: packageDirectory,
+            withIntermediateDirectories: true
+        )
+        try Data([1]).write(
+            to: packageDirectory.appendingPathComponent("frames")
+        )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "frames",
+            clipKind: .pngSequence
+        )
+
+        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
+    }
+
     private func writeCharacterPackManifest(
         to packageDirectory: URL,
-        clipPath: String
+        clipPath: String,
+        clipKind: CharacterPackClipKind = .singleImage
     ) throws {
         let manifest = CharacterPackManifest(
             name: "Stored Pack",
@@ -153,7 +206,7 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
             clips: [
                 CharacterPackClip(
                     state: .run,
-                    kind: .singleImage,
+                    kind: clipKind,
                     path: clipPath
                 )
             ]
