@@ -1,6 +1,17 @@
 import AppKit
 import SchneeRunnerCore
 
+enum CPUMonitorError: Error, Equatable, LocalizedError {
+    case sampleUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .sampleUnavailable:
+            "CPU utilization sample is temporarily unavailable."
+        }
+    }
+}
+
 @MainActor
 final class CPUMonitor: NSObject {
     struct Update {
@@ -16,7 +27,6 @@ final class CPUMonitor: NSObject {
     private var hasProducedUpdate = false
 
     var onUpdate: ((Update) -> Void)?
-    var onUnavailable: (() -> Void)?
     var onError: ((Error) -> Void)?
 
     init(
@@ -57,7 +67,7 @@ final class CPUMonitor: NSObject {
             guard let utilization = calculator.utilization(for: snapshot) else {
                 if hasProducedUpdate {
                     hasProducedUpdate = false
-                    onUnavailable?()
+                    onError?(CPUMonitorError.sampleUnavailable)
                 }
                 return
             }
