@@ -35,11 +35,7 @@ final class SystemBatteryWarningMonitor {
             return
         }
 
-        CFRunLoopAddSource(
-            CFRunLoopGetMain(),
-            source,
-            .defaultMode
-        )
+        CommonRunLoopSourceScheduler.add(source)
         runLoopSource = source
     }
 
@@ -48,11 +44,7 @@ final class SystemBatteryWarningMonitor {
             return
         }
 
-        CFRunLoopRemoveSource(
-            CFRunLoopGetMain(),
-            runLoopSource,
-            .defaultMode
-        )
+        CommonRunLoopSourceScheduler.remove(runLoopSource)
         self.runLoopSource = nil
     }
 
