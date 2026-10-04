@@ -3,14 +3,16 @@ import Foundation
 
 @MainActor
 enum CommonRunLoopSourceScheduler {
-    private static let eventTrackingMode = RunLoop.Mode.eventTracking.rawValue as CFString
+    private static let eventTrackingMode = CFRunLoopMode(
+        rawValue: RunLoop.Mode.eventTracking.rawValue as CFString
+    )
 
     static func add(_ source: CFRunLoopSource) {
         let runLoop = CFRunLoopGetMain()
         CFRunLoopAddSource(
             runLoop,
             source,
-            kCFRunLoopCommonModes
+            .commonModes
         )
         CFRunLoopAddSource(
             runLoop,
@@ -24,7 +26,7 @@ enum CommonRunLoopSourceScheduler {
         CFRunLoopRemoveSource(
             runLoop,
             source,
-            kCFRunLoopCommonModes
+            .commonModes
         )
         CFRunLoopRemoveSource(
             runLoop,
