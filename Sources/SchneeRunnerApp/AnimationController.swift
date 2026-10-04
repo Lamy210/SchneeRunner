@@ -74,6 +74,14 @@ final class AnimationController: NSObject {
         )
     }
 
+    func setCPUAdaptivePace(_ pace: AnimationPace?) {
+        setFramesPerSecond(
+            CPUAdaptivePlaybackPolicy.framesPerSecond(
+                for: pace
+            )
+        )
+    }
+
     func setFramesPerSecond(_ value: Double) {
         guard
             value.isFinite,
