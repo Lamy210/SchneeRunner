@@ -1,5 +1,5 @@
-@testable import SchneeRunnerApp
 import Foundation
+@testable import SchneeRunnerApp
 import XCTest
 
 @MainActor
