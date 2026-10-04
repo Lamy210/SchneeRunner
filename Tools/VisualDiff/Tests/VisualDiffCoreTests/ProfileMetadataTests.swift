@@ -81,6 +81,35 @@ final class ProfileMetadataTests: XCTestCase {
         XCTAssertEqual(metadata.controlled.fingerprint, fingerprint)
     }
 
+    func testLoadRejectsOversizedMetadataFile() throws {
+        let metadata = try ProfileMetadata(
+            profile: "canonical-macos",
+            controlled: makeControlledProfile(),
+            observed: ObservedRuntime(
+                macOSBuild: "25G83",
+                runnerImageVersion: "20260907.0351.1",
+                xcodeBuild: "17G29"
+            ),
+            currentSHA: "abcdef"
+        )
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let url = directory.appendingPathComponent("profile.json")
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        var data = try JSONEncoder().encode(metadata)
+        data.append(Data(repeating: 0x20, count: 70 * 1024))
+        try data.write(to: url)
+
+        XCTAssertThrowsError(try ProfileMetadata.load(from: url))
+    }
+
     func testRejectsStoredFingerprintThatDoesNotMatchControlledProfile() {
         let json = """
         {
