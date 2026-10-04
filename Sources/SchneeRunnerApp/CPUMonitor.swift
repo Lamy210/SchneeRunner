@@ -19,9 +19,13 @@ final class CPUMonitor: NSObject {
         let pace: AnimationPace
     }
 
+    private static let smoothingAlpha = 0.25
+
     private let snapshotProvider: () throws -> CPUTickSnapshot
     private var calculator = CPUUsageCalculator()
-    private var smoother = ExponentialMovingAverage(alpha: 0.25)
+    private var smoother = ExponentialMovingAverage(
+        alpha: CPUMonitor.smoothingAlpha
+    )
     private var speedPolicy = AdaptiveAnimationSpeedPolicy()
     private var timer: Timer?
     private var hasProducedUpdate = false
@@ -67,6 +71,9 @@ final class CPUMonitor: NSObject {
             guard let utilization = calculator.utilization(for: snapshot) else {
                 if hasProducedUpdate {
                     hasProducedUpdate = false
+                    smoother = ExponentialMovingAverage(
+                        alpha: Self.smoothingAlpha
+                    )
                     onError?(CPUMonitorError.sampleUnavailable)
                 }
                 return
