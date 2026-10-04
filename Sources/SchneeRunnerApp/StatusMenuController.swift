@@ -15,6 +15,7 @@ final class StatusMenuController: NSObject {
     var onBuildCharacterPack: (() -> Void)?
     var onExportCharacterPack: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
+    var onRefreshRecentCharacters: (() -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -358,6 +359,7 @@ private extension StatusMenuController {
 
 extension StatusMenuController: NSMenuDelegate {
     func menuWillOpen(_: NSMenu) {
+        onRefreshRecentCharacters?()
         launchAtLoginMenuController.refresh()
     }
 }
