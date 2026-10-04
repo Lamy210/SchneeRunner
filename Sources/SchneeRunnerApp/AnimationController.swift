@@ -131,7 +131,7 @@ final class AnimationController: NSObject {
             return
         }
 
-        timer = Timer.scheduledTimer(
+        timer = CommonRunLoopTimerScheduler.schedule(
             timeInterval: baseDuration / playbackRate,
             target: self,
             selector: #selector(advanceFrame),
