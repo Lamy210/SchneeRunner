@@ -1,5 +1,6 @@
 import AppKit
 @testable import SchneeRunnerApp
+import SchneeRunnerCore
 import XCTest
 
 @MainActor
