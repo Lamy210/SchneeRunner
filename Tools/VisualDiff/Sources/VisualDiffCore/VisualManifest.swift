@@ -1,6 +1,7 @@
 import Foundation
 
 public enum VisualManifestError: Error, Equatable {
+    case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case emptyProfile
     case emptyCases
@@ -50,6 +51,8 @@ public struct VisualCase: Codable, Sendable, Equatable {
 }
 
 public struct VisualManifest: Codable, Sendable, Equatable {
+    private static let maximumFileBytes = 64 * 1024
+
     public let schemaVersion: Int
     public let profile: String
     public let cases: [VisualCase]
@@ -72,7 +75,15 @@ public struct VisualManifest: Codable, Sendable, Equatable {
     }
 
     public static func load(from url: URL) throws -> VisualManifest {
-        try decode(Data(contentsOf: url))
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
+            throw VisualManifestError.fileTooLarge(
+                actualBytes: fileSize,
+                maximumBytes: Self.maximumFileBytes
+            )
+        }
+
+        return try decode(Data(contentsOf: url))
     }
 
     private func validate() throws {
