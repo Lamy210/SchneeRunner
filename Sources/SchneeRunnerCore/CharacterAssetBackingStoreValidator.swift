@@ -3,7 +3,7 @@ import Foundation
 public struct CharacterAssetBackingStoreValidator {
     public let rootDirectory: URL
 
-    private let fileManager: FileManager
+    private let sequenceStructureValidator: PNGSequenceStructureValidator
     private let characterPackLoader: CharacterPackLoader
 
     public init(
@@ -11,7 +11,9 @@ public struct CharacterAssetBackingStoreValidator {
         fileManager: FileManager = .default
     ) {
         self.rootDirectory = rootDirectory
-        self.fileManager = fileManager
+        sequenceStructureValidator = PNGSequenceStructureValidator(
+            fileManager: fileManager
+        )
         characterPackLoader = CharacterPackLoader(
             fileManager: fileManager
         )
@@ -34,8 +36,8 @@ public struct CharacterAssetBackingStoreValidator {
                 assetDirectory.appendingPathComponent("source.png")
             )
         case .pngSequence:
-            return isSequenceAvailable(
-                in: assetDirectory.appendingPathComponent(
+            return sequenceStructureValidator.isStructurallyAvailable(
+                at: assetDirectory.appendingPathComponent(
                     "frames",
                     isDirectory: true
                 )
@@ -54,30 +56,6 @@ public struct CharacterAssetBackingStoreValidator {
             )
         case .characterPack:
             return isCharacterPackAvailable(in: assetDirectory)
-        }
-    }
-
-    private func isSequenceAvailable(
-        in framesDirectory: URL
-    ) -> Bool {
-        guard
-            isRegularDirectory(framesDirectory),
-            let frameURLs = try? fileManager.contentsOfDirectory(
-                at: framesDirectory,
-                includingPropertiesForKeys: [
-                    .isRegularFileKey,
-                    .isSymbolicLinkKey
-                ],
-                options: [.skipsHiddenFiles]
-            ),
-            frameURLs.count >= 2
-        else {
-            return false
-        }
-
-        return frameURLs.allSatisfy { url in
-            url.pathExtension.lowercased() == "png"
-                && isRegularFile(url)
         }
     }
 

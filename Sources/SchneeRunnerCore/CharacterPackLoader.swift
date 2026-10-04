@@ -73,6 +73,7 @@ public struct CharacterPackLoader {
 
     private let fileManager: FileManager
     private let resolver: CharacterPackResourceResolver
+    private let sequenceStructureValidator: PNGSequenceStructureValidator
     private let decoder: JSONDecoder
 
     public init(
@@ -91,6 +92,9 @@ public struct CharacterPackLoader {
         self.fileManager = fileManager
         resolver = CharacterPackResourceResolver(
             maximumManifestBytes: maximumManifestBytes,
+            fileManager: fileManager
+        )
+        sequenceStructureValidator = PNGSequenceStructureValidator(
             fileManager: fileManager
         )
         decoder = JSONDecoder()
@@ -230,10 +234,14 @@ private extension CharacterPackLoader {
     ) throws {
         switch kind {
         case .pngSequence:
-            try resolver.validateDirectory(
-                url,
-                kind: kind
-            )
+            guard sequenceStructureValidator.isStructurallyAvailable(
+                at: url
+            ) else {
+                throw CharacterPackLoaderError.wrongClipResourceType(
+                    path: url.lastPathComponent,
+                    kind: kind
+                )
+            }
         case .singleImage, .spriteSheet4x2, .gif, .apng, .webP:
             try resolver.validateRegularFile(
                 url,
