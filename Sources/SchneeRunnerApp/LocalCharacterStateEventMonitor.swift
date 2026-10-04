@@ -88,7 +88,7 @@ final class LocalCharacterStateEventMonitor: NSObject {
             return
         }
 
-        expiryTimers[channel] = Timer.scheduledTimer(
+        expiryTimers[channel] = CommonRunLoopTimerScheduler.schedule(
             timeInterval: duration,
             target: self,
             selector: #selector(expireEvent(_:)),
