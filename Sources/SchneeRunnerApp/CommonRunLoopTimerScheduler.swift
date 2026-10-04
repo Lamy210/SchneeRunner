@@ -21,6 +21,10 @@ enum CommonRunLoopTimerScheduler {
             timer,
             forMode: .common
         )
+        RunLoop.main.add(
+            timer,
+            forMode: .eventTracking
+        )
         return timer
     }
 }
