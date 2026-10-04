@@ -1,6 +1,17 @@
 import AppKit
 import SchneeRunnerCore
 
+enum CPUMonitorError: Error, Equatable, LocalizedError {
+    case sampleUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .sampleUnavailable:
+            "CPU utilization sample is temporarily unavailable."
+        }
+    }
+}
+
 @MainActor
 final class CPUMonitor: NSObject {
     struct Update {
@@ -8,26 +19,36 @@ final class CPUMonitor: NSObject {
         let pace: AnimationPace
     }
 
-    private let sampler = SystemCPUUsageSampler()
+    private let snapshotProvider: () throws -> CPUTickSnapshot
     private var calculator = CPUUsageCalculator()
     private var smoother = ExponentialMovingAverage(alpha: 0.25)
     private var speedPolicy = AdaptiveAnimationSpeedPolicy()
     private var timer: Timer?
+    private var hasProducedUpdate = false
 
     var onUpdate: ((Update) -> Void)?
     var onError: ((Error) -> Void)?
+
+    init(
+        snapshotProvider: @escaping () throws -> CPUTickSnapshot = {
+            try SystemCPUUsageSampler().readSnapshot()
+        }
+    ) {
+        self.snapshotProvider = snapshotProvider
+        super.init()
+    }
 
     func start() {
         guard timer == nil else {
             return
         }
 
-        sample()
+        sampleNow()
 
         timer = Timer.scheduledTimer(
             timeInterval: 1,
             target: self,
-            selector: #selector(sample),
+            selector: #selector(sampleNow),
             userInfo: nil,
             repeats: true
         )
@@ -39,16 +60,21 @@ final class CPUMonitor: NSObject {
     }
 
     @objc
-    private func sample() {
+    func sampleNow() {
         do {
-            let snapshot = try sampler.readSnapshot()
+            let snapshot = try snapshotProvider()
 
             guard let utilization = calculator.utilization(for: snapshot) else {
+                if hasProducedUpdate {
+                    hasProducedUpdate = false
+                    onError?(CPUMonitorError.sampleUnavailable)
+                }
                 return
             }
 
             let smoothed = smoother.add(utilization)
             let pace = speedPolicy.pace(for: smoothed)
+            hasProducedUpdate = true
 
             onUpdate?(
                 Update(
@@ -57,6 +83,7 @@ final class CPUMonitor: NSObject {
                 )
             )
         } catch {
+            hasProducedUpdate = false
             onError?(error)
         }
     }
