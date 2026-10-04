@@ -111,6 +111,40 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
         XCTAssertTrue(fixture.validator.isStructurallyAvailable(asset))
     }
 
+    func testCharacterPackRejectsMissingReferencedClip() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let asset = fixture.asset(kind: .characterPack)
+        let assetDirectory = try fixture.makeAssetDirectory(for: asset)
+        let packageDirectory = assetDirectory.appendingPathComponent(
+            CharacterPackStore.packageDirectoryName,
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: packageDirectory,
+            withIntermediateDirectories: false
+        )
+        let manifest = CharacterPackManifest(
+            name: "Missing Clip",
+            defaultState: .run,
+            clips: [
+                CharacterPackClip(
+                    state: .run,
+                    kind: .singleImage,
+                    path: "clips/run/source.png"
+                )
+            ]
+        )
+        try JSONEncoder().encode(manifest).write(
+            to: packageDirectory.appendingPathComponent(
+                CharacterPackLoader.manifestFileName
+            )
+        )
+
+        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
+    }
+
     private func makeFixture() throws -> BackingStoreFixture {
         let rootURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
