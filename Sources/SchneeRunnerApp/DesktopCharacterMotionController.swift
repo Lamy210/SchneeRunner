@@ -67,7 +67,7 @@ final class DesktopCharacterMotionController: NSObject {
         renderer.setMotionDirection(direction)
         lastTimestamp = ProcessInfo.processInfo.systemUptime
 
-        let timer = Timer.scheduledTimer(
+        let timer = CommonRunLoopTimerScheduler.schedule(
             timeInterval: Self.timerInterval,
             target: self,
             selector: #selector(advance),
