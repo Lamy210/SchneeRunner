@@ -129,12 +129,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureRecentCharacterCallbacks() {
-        menuController.onLoadRecentCharacter = { [weak self] id in
-            self?.loadRecentCharacter(id: id)
-        }
-        menuController.onRefreshRecentCharacters = { [weak self] in
-            self?.refreshRecentCharactersMenu()
-        }
+        menuController.onLoadRecentCharacter = { [weak self] id in self?.loadRecentCharacter(id: id) }
+        menuController.onRefreshRecentCharacters = { [weak self] in self?.refreshRecentCharactersMenu() }
     }
 
     private func configureCPUMonitor() {
