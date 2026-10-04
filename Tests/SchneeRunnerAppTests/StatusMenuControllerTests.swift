@@ -12,7 +12,8 @@ final class StatusMenuControllerTests: XCTestCase {
         }
 
         controller.menuWillOpen(controller.menu)
+        controller.menuWillOpen(controller.menu)
 
-        XCTAssertEqual(refreshCount, 1)
+        XCTAssertEqual(refreshCount, 2)
     }
 }
