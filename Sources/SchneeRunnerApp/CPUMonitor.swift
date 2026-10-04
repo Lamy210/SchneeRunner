@@ -74,6 +74,7 @@ final class CPUMonitor: NSObject {
                     smoother = ExponentialMovingAverage(
                         alpha: Self.smoothingAlpha
                     )
+                    speedPolicy = AdaptiveAnimationSpeedPolicy()
                     onError?(CPUMonitorError.sampleUnavailable)
                 }
                 return
