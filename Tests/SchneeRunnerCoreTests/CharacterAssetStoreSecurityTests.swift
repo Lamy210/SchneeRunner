@@ -111,6 +111,7 @@ final class CharacterAssetStoreSecurityTests: XCTestCase {
                 .symbolicLinkNotAllowed(manifestURL)
             )
         }
+        XCTAssertTrue(try fixture.store.listAssets().isEmpty)
     }
 
     func testListSkipsSymlinkedAssetDirectories() throws {
