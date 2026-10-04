@@ -49,7 +49,7 @@ final class CPUMonitor: NSObject {
 
         sampleNow()
 
-        timer = Timer.scheduledTimer(
+        timer = CommonRunLoopTimerScheduler.schedule(
             timeInterval: 1,
             target: self,
             selector: #selector(sampleNow),
