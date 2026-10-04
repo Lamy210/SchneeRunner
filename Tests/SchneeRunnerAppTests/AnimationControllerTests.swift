@@ -1,5 +1,6 @@
 import AppKit
 @testable import SchneeRunnerApp
+import SchneeRunnerCore
 import XCTest
 
 @MainActor
@@ -29,5 +30,26 @@ final class AnimationControllerTests: XCTestCase {
         }
 
         XCTAssertGreaterThanOrEqual(renderedFrameCount, 2)
+    }
+
+    func testCPUAdaptivePaceUsesReferenceRateWhenUnavailable() {
+        let controller = AnimationController()
+        controller.setFramesPerSecond(24)
+
+        controller.setCPUAdaptivePace(nil)
+
+        XCTAssertEqual(controller.framesPerSecond, 12)
+        XCTAssertEqual(controller.playbackRate, 1)
+    }
+
+    func testCPUAdaptivePaceUsesSampledRateWhenAvailable() {
+        let controller = AnimationController()
+
+        controller.setCPUAdaptivePace(.sprint)
+
+        XCTAssertEqual(
+            controller.framesPerSecond,
+            AnimationPace.sprint.framesPerSecond
+        )
     }
 }
