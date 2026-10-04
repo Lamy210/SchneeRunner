@@ -102,10 +102,20 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
 
         XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
 
-        try Data("{}".utf8).write(
-            to: packageDirectory.appendingPathComponent(
-                CharacterPackLoader.manifestFileName
-            )
+        let clipDirectory = packageDirectory.appendingPathComponent(
+            "clips/run",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: clipDirectory,
+            withIntermediateDirectories: true
+        )
+        try Data([1]).write(
+            to: clipDirectory.appendingPathComponent("source.png")
+        )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "clips/run/source.png"
         )
 
         XCTAssertTrue(fixture.validator.isStructurallyAvailable(asset))
@@ -125,14 +135,26 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
             at: packageDirectory,
             withIntermediateDirectories: false
         )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "clips/run/source.png"
+        )
+
+        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
+    }
+
+    private func writeCharacterPackManifest(
+        to packageDirectory: URL,
+        clipPath: String
+    ) throws {
         let manifest = CharacterPackManifest(
-            name: "Missing Clip",
+            name: "Stored Pack",
             defaultState: .run,
             clips: [
                 CharacterPackClip(
                     state: .run,
                     kind: .singleImage,
-                    path: "clips/run/source.png"
+                    path: clipPath
                 )
             ]
         )
@@ -141,8 +163,6 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
                 CharacterPackLoader.manifestFileName
             )
         )
-
-        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
     }
 
     private func makeFixture() throws -> BackingStoreFixture {
