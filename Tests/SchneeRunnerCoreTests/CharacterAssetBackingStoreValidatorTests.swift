@@ -195,6 +195,74 @@ final class CharacterAssetBackingStoreValidatorTests: XCTestCase {
         XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
     }
 
+    func testCharacterPackRejectsSequenceWithOneFrame() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let asset = fixture.asset(kind: .characterPack)
+        let assetDirectory = try fixture.makeAssetDirectory(for: asset)
+        let packageDirectory = assetDirectory.appendingPathComponent(
+            CharacterPackStore.packageDirectoryName,
+            isDirectory: true
+        )
+        let framesDirectory = packageDirectory.appendingPathComponent(
+            "frames",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: framesDirectory,
+            withIntermediateDirectories: true
+        )
+        try Data([1]).write(
+            to: framesDirectory.appendingPathComponent("0001.png")
+        )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "frames",
+            clipKind: .pngSequence
+        )
+
+        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
+    }
+
+    func testCharacterPackRejectsSequenceWithSymlinkedFrame() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+
+        let asset = fixture.asset(kind: .characterPack)
+        let assetDirectory = try fixture.makeAssetDirectory(for: asset)
+        let packageDirectory = assetDirectory.appendingPathComponent(
+            CharacterPackStore.packageDirectoryName,
+            isDirectory: true
+        )
+        let framesDirectory = packageDirectory.appendingPathComponent(
+            "frames",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: framesDirectory,
+            withIntermediateDirectories: true
+        )
+        try Data([1]).write(
+            to: framesDirectory.appendingPathComponent("0001.png")
+        )
+        let externalFrame = fixture.rootURL.appendingPathComponent(
+            "external.png"
+        )
+        try Data([2]).write(to: externalFrame)
+        try FileManager.default.createSymbolicLink(
+            at: framesDirectory.appendingPathComponent("0002.png"),
+            withDestinationURL: externalFrame
+        )
+        try writeCharacterPackManifest(
+            to: packageDirectory,
+            clipPath: "frames",
+            clipKind: .pngSequence
+        )
+
+        XCTAssertFalse(fixture.validator.isStructurallyAvailable(asset))
+    }
+
     private func writeCharacterPackManifest(
         to packageDirectory: URL,
         clipPath: String,
