@@ -106,4 +106,59 @@ final class CPUMonitorTests: XCTestCase {
             accuracy: 0.000_1
         )
     }
+
+    func testInvalidSampleResetsAdaptivePaceBeforeNextUpdate() throws {
+        var snapshots = [
+            CPUTickSnapshot(
+                user: 100,
+                system: 0,
+                idle: 900,
+                nice: 0
+            ),
+            CPUTickSnapshot(
+                user: 200,
+                system: 0,
+                idle: 900,
+                nice: 0
+            ),
+            CPUTickSnapshot(
+                user: 10,
+                system: 10,
+                idle: 10,
+                nice: 0
+            ),
+            CPUTickSnapshot(
+                user: 26,
+                system: 10,
+                idle: 94,
+                nice: 0
+            )
+        ]
+        let monitor = CPUMonitor(
+            snapshotProvider: {
+                snapshots.removeFirst()
+            }
+        )
+        var updates: [CPUMonitor.Update] = []
+
+        monitor.onUpdate = { update in
+            updates.append(update)
+        }
+
+        monitor.sampleNow()
+        monitor.sampleNow()
+        monitor.sampleNow()
+        monitor.sampleNow()
+
+        XCTAssertEqual(updates.count, 2)
+        XCTAssertEqual(
+            try XCTUnwrap(updates.last).utilization,
+            0.16,
+            accuracy: 0.000_1
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(updates.last).pace,
+            .idle
+        )
+    }
 }
