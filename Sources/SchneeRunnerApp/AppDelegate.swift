@@ -146,9 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 characterStateCoordinator.updateCPUState(
                     for: update.pace
                 )
-                animationController.setFramesPerSecond(
-                    update.pace.framesPerSecond
-                )
+                animationController.setCPUAdaptivePace(update.pace)
             }
 
             refreshCPUStatus()
@@ -162,6 +160,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             latestCPUUpdate = nil
             cpuStatus = .unavailable
             characterStateCoordinator.clearCPUState()
+            if isCPUAdaptiveSpeedEnabled {
+                animationController.setCPUAdaptivePace(nil)
+            }
             refreshCPUStatus()
         }
     }
@@ -470,10 +471,10 @@ private extension AppDelegate {
                 characterStateCoordinator.updateCPUState(
                     for: latestCPUUpdate.pace
                 )
-                animationController.setFramesPerSecond(
-                    latestCPUUpdate.pace.framesPerSecond
-                )
             }
+            animationController.setCPUAdaptivePace(
+                latestCPUUpdate?.pace
+            )
         } else {
             characterStateCoordinator.clearCPUState()
         }
