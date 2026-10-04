@@ -1,6 +1,7 @@
 import Foundation
 
 public enum ProfileMetadataError: Error, Equatable {
+    case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case emptyProfile
     case emptyControlledField(String)
@@ -98,6 +99,8 @@ public struct ObservedRuntime: Codable, Sendable, Equatable {
 }
 
 public struct ProfileMetadata: Codable, Sendable, Equatable {
+    private static let maximumFileBytes = 64 * 1024
+
     public let schemaVersion: Int
     public let profile: String
     public let controlled: ControlledProfile
@@ -130,7 +133,15 @@ public struct ProfileMetadata: Codable, Sendable, Equatable {
     }
 
     public static func load(from url: URL) throws -> ProfileMetadata {
-        try decode(Data(contentsOf: url))
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
+            throw ProfileMetadataError.fileTooLarge(
+                actualBytes: fileSize,
+                maximumBytes: Self.maximumFileBytes
+            )
+        }
+
+        return try decode(Data(contentsOf: url))
     }
 
     private func validate() throws {
