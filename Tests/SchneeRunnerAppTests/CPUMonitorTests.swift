@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class CPUMonitorTests: XCTestCase {
-    func testInvalidSampleAfterUpdateBecomesUnavailableWithoutTreatingWarmupAsUnavailable() {
+    func testInvalidSampleAfterUpdateReportsErrorWithoutTreatingWarmupAsError() {
         var snapshots = [
             CPUTickSnapshot(
                 user: 100,
@@ -31,25 +31,28 @@ final class CPUMonitorTests: XCTestCase {
             }
         )
         var updates: [CPUMonitor.Update] = []
-        var unavailableCount = 0
+        var errors: [Error] = []
 
         monitor.onUpdate = { update in
             updates.append(update)
         }
-        monitor.onUnavailable = {
-            unavailableCount += 1
+        monitor.onError = { error in
+            errors.append(error)
         }
 
         monitor.sampleNow()
         XCTAssertTrue(updates.isEmpty)
-        XCTAssertEqual(unavailableCount, 0)
+        XCTAssertTrue(errors.isEmpty)
 
         monitor.sampleNow()
         XCTAssertEqual(updates.count, 1)
-        XCTAssertEqual(unavailableCount, 0)
+        XCTAssertTrue(errors.isEmpty)
 
         monitor.sampleNow()
         XCTAssertEqual(updates.count, 1)
-        XCTAssertEqual(unavailableCount, 1)
+        XCTAssertEqual(
+            errors.first as? CPUMonitorError,
+            .sampleUnavailable
+        )
     }
 }
