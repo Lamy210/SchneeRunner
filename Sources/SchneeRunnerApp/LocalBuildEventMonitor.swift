@@ -73,12 +73,12 @@ final class LocalBuildEventMonitor: NSObject {
         )
     }
 
-    private func scheduleExpiry(after duration: Double?) {
+    func scheduleExpiry(after duration: Double?) {
         guard let duration else {
             return
         }
 
-        expiryTimer = Timer.scheduledTimer(
+        expiryTimer = CommonRunLoopTimerScheduler.schedule(
             timeInterval: duration,
             target: self,
             selector: #selector(expireEvent),
