@@ -80,6 +80,7 @@ public struct CharacterAssetStore {
 
     private static let sourceFileName = "source.png"
     private static let manifestFileName = "manifest.json"
+    private static let maximumManifestBytes = 64 * 1024
 
     private let fileManager: FileManager
     private let imageValidator: ImageAssetValidator
@@ -310,6 +311,7 @@ public struct CharacterAssetStore {
 
         do {
             try validateRegularNonSymlinkFile(at: manifestURL)
+            try validateManifestSize(at: manifestURL)
             let data = try Data(contentsOf: manifestURL)
             let asset = try decoder.decode(StoredCharacterAsset.self, from: data)
 
@@ -357,6 +359,16 @@ public struct CharacterAssetStore {
         }
         guard values.isRegularFile == true else {
             throw CharacterAssetStoreError.sourceIsNotRegularFile(url)
+        }
+    }
+
+    private func validateManifestSize(at url: URL) throws {
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        guard
+            let fileSize = values.fileSize,
+            fileSize <= Self.maximumManifestBytes
+        else {
+            throw CharacterAssetStoreError.invalidManifest(url)
         }
     }
 }
