@@ -13,6 +13,25 @@ final class VisualManifestTests: XCTestCase {
         XCTAssertEqual(manifest.cases[1].baseline, .rollingMain)
     }
 
+    func testLoadRejectsOversizedManifestFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let url = directory.appendingPathComponent("visual-manifest.json")
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        let oversized = validManifest
+            + String(repeating: " ", count: 70 * 1024)
+        try Data(oversized.utf8).write(to: url)
+
+        XCTAssertThrowsError(try VisualManifest.load(from: url))
+    }
+
     func testRejectsUnsupportedSchemaVersion() {
         let invalid = validManifest.replacingOccurrences(
             of: "\"schemaVersion\": 1",
