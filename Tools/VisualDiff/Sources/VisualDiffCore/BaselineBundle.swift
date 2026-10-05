@@ -54,15 +54,18 @@ public struct BaselineBundleManifest: Codable, Sendable, Equatable {
     }
 
     public static func load(from url: URL) throws -> BaselineBundleManifest {
-        let values = try url.resourceValues(forKeys: [.fileSizeKey])
-        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
-            throw BaselineBundleError.fileTooLarge(
-                actualBytes: fileSize,
-                maximumBytes: Self.maximumFileBytes
-            )
-        }
-
-        return try decode(Data(contentsOf: url))
+        let data = try BoundedRegularFileReader.read(
+            from: url,
+            maximumBytes: Self.maximumFileBytes,
+            notRegularFile: BaselineBundleError.notRegularManifest,
+            fileTooLarge: { actualBytes, maximumBytes in
+                BaselineBundleError.fileTooLarge(
+                    actualBytes: actualBytes,
+                    maximumBytes: maximumBytes
+                )
+            }
+        )
+        return try decode(data)
     }
 }
 
@@ -92,6 +95,7 @@ public struct ValidatedBaselineBundle: Sendable, Equatable {
 }
 
 public enum BaselineBundleError: Error, Equatable {
+    case notRegularManifest
     case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case invalidManifestField(String)
