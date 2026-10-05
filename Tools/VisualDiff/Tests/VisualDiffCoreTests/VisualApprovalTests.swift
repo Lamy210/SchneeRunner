@@ -1,3 +1,4 @@
+import Foundation
 @testable import VisualDiffCore
 import XCTest
 
@@ -16,6 +17,25 @@ final class VisualApprovalTests: XCTestCase {
         XCTAssertEqual(approval.caseID, "settings-light")
         XCTAssertEqual(approval.profileFingerprint, "profile-v1")
         XCTAssertEqual(approval.reason, "Redesigned settings sidebar")
+    }
+
+    func testLoadRejectsOversizedApprovalFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let url = directory.appendingPathComponent("approval.json")
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        let oversized = validApproval
+            + String(repeating: " ", count: 70 * 1024)
+        try Data(oversized.utf8).write(to: url)
+
+        XCTAssertThrowsError(try VisualApproval.load(from: url))
     }
 
     func testRejectsUnsupportedSchemaVersion() {
