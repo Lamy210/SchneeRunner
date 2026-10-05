@@ -12,7 +12,7 @@ public enum ImageDigest {
     public static func sha256(fileAt url: URL) throws -> String {
         try sha256(
             fileAt: url,
-            chunkSize: Self.fileReadChunkSize
+            chunkSize: fileReadChunkSize
         )
     }
 
