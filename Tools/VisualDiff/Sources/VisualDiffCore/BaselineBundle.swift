@@ -11,6 +11,8 @@ public struct BaselineBundleCase: Codable, Sendable, Equatable {
 }
 
 public struct BaselineBundleManifest: Codable, Sendable, Equatable {
+    private static let maximumFileBytes = 64 * 1024
+
     public let schemaVersion: Int
     public let sourceRepository: String
     public let workflow: String
@@ -50,6 +52,18 @@ public struct BaselineBundleManifest: Codable, Sendable, Equatable {
         }
         return manifest
     }
+
+    public static func load(from url: URL) throws -> BaselineBundleManifest {
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
+            throw BaselineBundleError.fileTooLarge(
+                actualBytes: fileSize,
+                maximumBytes: Self.maximumFileBytes
+            )
+        }
+
+        return try decode(Data(contentsOf: url))
+    }
 }
 
 public struct ValidatedBaselineBundle: Sendable, Equatable {
@@ -78,6 +92,7 @@ public struct ValidatedBaselineBundle: Sendable, Equatable {
 }
 
 public enum BaselineBundleError: Error, Equatable {
+    case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case invalidManifestField(String)
     case profileMismatch(expected: String, actual: String)
