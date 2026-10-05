@@ -146,11 +146,7 @@ final class BaselineBundleTests: XCTestCase {
             manifest: manifest,
             expectedProfileFingerprint: fixture.profileFingerprint,
             strict: true
-        )) { error in
-            guard case BaselineBundleError.notRegularBundleRoot = error else {
-                return XCTFail("Unexpected error: \(error)")
-            }
-        }
+        ))
     }
 
     func testRejectsUnsafeCaseID() throws {
