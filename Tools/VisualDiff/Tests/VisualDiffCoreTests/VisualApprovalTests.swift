@@ -38,6 +38,28 @@ final class VisualApprovalTests: XCTestCase {
         XCTAssertThrowsError(try VisualApproval.load(from: url))
     }
 
+    func testLoadRejectsSymlinkedApprovalFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let targetURL = directory.appendingPathComponent("outside.json")
+        let approvalURL = directory.appendingPathComponent("approval.json")
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        try Data(validApproval.utf8).write(to: targetURL)
+        try FileManager.default.createSymbolicLink(
+            at: approvalURL,
+            withDestinationURL: targetURL
+        )
+
+        XCTAssertThrowsError(try VisualApproval.load(from: approvalURL))
+    }
+
     func testRejectsUnsupportedSchemaVersion() {
         assertApprovalFails(validApproval.replacingOccurrences(
             of: "\"schemaVersion\": 1",
