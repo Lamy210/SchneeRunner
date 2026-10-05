@@ -187,7 +187,7 @@ public enum ManifestRunner {
         guard ManifestPathResolver.isRegularFile(bundleManifestURL) else {
             throw ManifestRunnerError.missingRollingBundleManifest
         }
-        let bundleManifest = try BaselineBundleManifest.decode(Data(contentsOf: bundleManifestURL))
+        let bundleManifest = try BaselineBundleManifest.load(from: bundleManifestURL)
         return try BaselineBundleValidator.validate(
             root: rollingRoot,
             manifest: bundleManifest,
