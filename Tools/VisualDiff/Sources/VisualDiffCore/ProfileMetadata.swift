@@ -1,6 +1,7 @@
 import Foundation
 
 public enum ProfileMetadataError: Error, Equatable {
+    case notRegularFile
     case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case emptyProfile
@@ -133,15 +134,18 @@ public struct ProfileMetadata: Codable, Sendable, Equatable {
     }
 
     public static func load(from url: URL) throws -> ProfileMetadata {
-        let values = try url.resourceValues(forKeys: [.fileSizeKey])
-        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
-            throw ProfileMetadataError.fileTooLarge(
-                actualBytes: fileSize,
-                maximumBytes: Self.maximumFileBytes
-            )
-        }
-
-        return try decode(Data(contentsOf: url))
+        let data = try BoundedRegularFileReader.read(
+            from: url,
+            maximumBytes: Self.maximumFileBytes,
+            notRegularFile: ProfileMetadataError.notRegularFile,
+            fileTooLarge: { actualBytes, maximumBytes in
+                ProfileMetadataError.fileTooLarge(
+                    actualBytes: actualBytes,
+                    maximumBytes: maximumBytes
+                )
+            }
+        )
+        return try decode(data)
     }
 
     private func validate() throws {
