@@ -126,6 +126,33 @@ final class BaselineBundleTests: XCTestCase {
         }
     }
 
+    func testRejectsSymlinkedBundleRoot() throws {
+        let fixture = try BundleFixture()
+        let image = Data("declared".utf8)
+        try fixture.write(image, caseID: "declared")
+        let manifest = fixture.manifest(cases: [
+            .init(id: "declared", digest: ImageDigest.sha256(image))
+        ])
+        let symlinkRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createSymbolicLink(
+            at: symlinkRoot,
+            withDestinationURL: fixture.root
+        )
+        defer { try? FileManager.default.removeItem(at: symlinkRoot) }
+
+        XCTAssertThrowsError(try BaselineBundleValidator.validate(
+            root: symlinkRoot,
+            manifest: manifest,
+            expectedProfileFingerprint: fixture.profileFingerprint,
+            strict: true
+        )) { error in
+            guard case BaselineBundleError.notRegularBundleRoot = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        }
+    }
+
     func testRejectsUnsafeCaseID() throws {
         let fixture = try BundleFixture()
         let manifest = fixture.manifest(cases: [
