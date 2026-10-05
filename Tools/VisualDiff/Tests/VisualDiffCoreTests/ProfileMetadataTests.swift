@@ -82,16 +82,7 @@ final class ProfileMetadataTests: XCTestCase {
     }
 
     func testLoadRejectsOversizedMetadataFile() throws {
-        let metadata = try ProfileMetadata(
-            profile: "canonical-macos",
-            controlled: makeControlledProfile(),
-            observed: ObservedRuntime(
-                macOSBuild: "25G83",
-                runnerImageVersion: "20260907.0351.1",
-                xcodeBuild: "17G29"
-            ),
-            currentSHA: "abcdef"
-        )
+        let metadata = try makeMetadata()
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let url = directory.appendingPathComponent("profile.json")
@@ -108,6 +99,29 @@ final class ProfileMetadataTests: XCTestCase {
         try data.write(to: url)
 
         XCTAssertThrowsError(try ProfileMetadata.load(from: url))
+    }
+
+    func testLoadRejectsSymlinkedMetadataFile() throws {
+        let metadata = try makeMetadata()
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let targetURL = directory.appendingPathComponent("outside.json")
+        let metadataURL = directory.appendingPathComponent("profile.json")
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        try JSONEncoder().encode(metadata).write(to: targetURL)
+        try FileManager.default.createSymbolicLink(
+            at: metadataURL,
+            withDestinationURL: targetURL
+        )
+
+        XCTAssertThrowsError(try ProfileMetadata.load(from: metadataURL))
     }
 
     func testRejectsStoredFingerprintThatDoesNotMatchControlledProfile() {
@@ -144,6 +158,19 @@ final class ProfileMetadataTests: XCTestCase {
 }
 
 private extension ProfileMetadataTests {
+    func makeMetadata() throws -> ProfileMetadata {
+        try ProfileMetadata(
+            profile: "canonical-macos",
+            controlled: makeControlledProfile(),
+            observed: ObservedRuntime(
+                macOSBuild: "25G83",
+                runnerImageVersion: "20260907.0351.1",
+                xcodeBuild: "17G29"
+            ),
+            currentSHA: "abcdef"
+        )
+    }
+
     func makeControlledProfile(appearance: String = "light") -> ControlledProfile {
         ControlledProfile(
             runnerFamily: "macos-26",
