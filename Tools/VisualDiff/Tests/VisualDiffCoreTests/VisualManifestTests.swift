@@ -32,6 +32,28 @@ final class VisualManifestTests: XCTestCase {
         XCTAssertThrowsError(try VisualManifest.load(from: url))
     }
 
+    func testLoadRejectsSymlinkedManifestFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let targetURL = directory.appendingPathComponent("outside.json")
+        let manifestURL = directory.appendingPathComponent("visual-manifest.json")
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        try Data(validManifest.utf8).write(to: targetURL)
+        try FileManager.default.createSymbolicLink(
+            at: manifestURL,
+            withDestinationURL: targetURL
+        )
+
+        XCTAssertThrowsError(try VisualManifest.load(from: manifestURL))
+    }
+
     func testRejectsUnsupportedSchemaVersion() {
         let invalid = validManifest.replacingOccurrences(
             of: "\"schemaVersion\": 1",
