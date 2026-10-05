@@ -34,10 +34,20 @@ STRING_CONTROLLED_KEYS = CONTROLLED_KEYS - {
 SHA256_RE = re.compile(r"sha256:[0-9a-f]{64}")
 GIT_SHA_RE = re.compile(r"[0-9a-f]{40}")
 CASE_ID_RE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9._-]{0,127}")
+MAX_METADATA_BYTES = 64 * 1024
 
 
 def _load_json(path: Path, label: str) -> dict[str, Any]:
+    if path.is_symlink():
+        raise ValueError(f"{label} must not be a symlink")
     try:
+        if not path.is_file():
+            raise ValueError(f"{label} must be a regular file")
+        file_size = path.stat().st_size
+        if file_size > MAX_METADATA_BYTES:
+            raise ValueError(
+                f"{label} is too large: {file_size} bytes exceeds {MAX_METADATA_BYTES}"
+            )
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"cannot read {label}: {exc}") from exc
@@ -230,8 +240,6 @@ def build_bundle(
     previous_baseline_reference: str | None,
 ) -> None:
     repo_root = repo_root.resolve()
-    manifest_path = manifest_path.resolve()
-    current_profile_path = current_profile_path.resolve()
     if output_root.is_symlink():
         raise ValueError("output directory must not be a symlink")
     output_root = output_root.resolve()
