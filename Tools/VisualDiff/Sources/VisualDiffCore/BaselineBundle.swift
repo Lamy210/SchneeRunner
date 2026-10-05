@@ -96,6 +96,7 @@ public struct ValidatedBaselineBundle: Sendable, Equatable {
 
 public enum BaselineBundleError: Error, Equatable {
     case notRegularManifest
+    case notRegularBundleRoot
     case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case invalidManifestField(String)
@@ -127,6 +128,9 @@ public enum BaselineBundleValidator {
 
         let caseDigests = try validateCases(manifest.cases)
         let standardizedRoot = root.standardizedFileURL
+        guard try isDirectoryWithoutSymlink(standardizedRoot) else {
+            throw BaselineBundleError.notRegularBundleRoot
+        }
         let imagesRoot = standardizedRoot.appendingPathComponent("images", isDirectory: true)
         guard try isDirectoryWithoutSymlink(imagesRoot) else {
             throw BaselineBundleError.missingImagesDirectory
