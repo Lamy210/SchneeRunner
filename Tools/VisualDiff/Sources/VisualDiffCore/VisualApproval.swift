@@ -1,6 +1,7 @@
 import Foundation
 
 public enum VisualApprovalError: Error, Equatable {
+    case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case emptyCaseID
     case invalidDigest(String)
@@ -28,6 +29,8 @@ public struct VisualApprovalContext: Sendable, Equatable {
 }
 
 public struct VisualApproval: Codable, Sendable, Equatable {
+    private static let maximumFileBytes = 64 * 1024
+
     public let schemaVersion: Int
     public let caseID: String
     public let fromDigest: String
@@ -67,7 +70,15 @@ public struct VisualApproval: Codable, Sendable, Equatable {
     }
 
     public static func load(from url: URL) throws -> VisualApproval {
-        try decode(Data(contentsOf: url))
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
+            throw VisualApprovalError.fileTooLarge(
+                actualBytes: fileSize,
+                maximumBytes: Self.maximumFileBytes
+            )
+        }
+
+        return try decode(Data(contentsOf: url))
     }
 
     public func matches(_ context: VisualApprovalContext) -> Bool {
