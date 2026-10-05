@@ -1,6 +1,7 @@
 import Foundation
 
 public enum VisualApprovalError: Error, Equatable {
+    case notRegularFile
     case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case emptyCaseID
@@ -70,15 +71,18 @@ public struct VisualApproval: Codable, Sendable, Equatable {
     }
 
     public static func load(from url: URL) throws -> VisualApproval {
-        let values = try url.resourceValues(forKeys: [.fileSizeKey])
-        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
-            throw VisualApprovalError.fileTooLarge(
-                actualBytes: fileSize,
-                maximumBytes: Self.maximumFileBytes
-            )
-        }
-
-        return try decode(Data(contentsOf: url))
+        let data = try BoundedRegularFileReader.read(
+            from: url,
+            maximumBytes: Self.maximumFileBytes,
+            notRegularFile: VisualApprovalError.notRegularFile,
+            fileTooLarge: { actualBytes, maximumBytes in
+                VisualApprovalError.fileTooLarge(
+                    actualBytes: actualBytes,
+                    maximumBytes: maximumBytes
+                )
+            }
+        )
+        return try decode(data)
     }
 
     public func matches(_ context: VisualApprovalContext) -> Bool {
