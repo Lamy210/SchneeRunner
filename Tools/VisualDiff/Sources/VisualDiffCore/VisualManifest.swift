@@ -1,6 +1,7 @@
 import Foundation
 
 public enum VisualManifestError: Error, Equatable {
+    case notRegularFile
     case fileTooLarge(actualBytes: Int, maximumBytes: Int)
     case unsupportedSchemaVersion(Int)
     case emptyProfile
@@ -75,15 +76,18 @@ public struct VisualManifest: Codable, Sendable, Equatable {
     }
 
     public static func load(from url: URL) throws -> VisualManifest {
-        let values = try url.resourceValues(forKeys: [.fileSizeKey])
-        if let fileSize = values.fileSize, fileSize > Self.maximumFileBytes {
-            throw VisualManifestError.fileTooLarge(
-                actualBytes: fileSize,
-                maximumBytes: Self.maximumFileBytes
-            )
-        }
-
-        return try decode(Data(contentsOf: url))
+        let data = try BoundedRegularFileReader.read(
+            from: url,
+            maximumBytes: Self.maximumFileBytes,
+            notRegularFile: VisualManifestError.notRegularFile,
+            fileTooLarge: { actualBytes, maximumBytes in
+                VisualManifestError.fileTooLarge(
+                    actualBytes: actualBytes,
+                    maximumBytes: maximumBytes
+                )
+            }
+        )
+        return try decode(data)
     }
 
     private func validate() throws {
