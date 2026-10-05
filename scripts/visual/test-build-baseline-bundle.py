@@ -151,6 +151,46 @@ class BaselineBundleBuilderTests(unittest.TestCase):
         self.assertTrue(self.output.is_symlink())
         self.assertFalse(redirected.exists())
 
+    def test_rejects_symlinked_manifest_input(self):
+        target = self.repo / "outside-manifest.json"
+        target.write_text(self.manifest.read_text(encoding="utf-8"), encoding="utf-8")
+        self.manifest.unlink()
+        self.manifest.symlink_to(target)
+
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_rejects_symlinked_profile_input(self):
+        target = self.repo / "outside-profile.json"
+        target.write_text(self.profile.read_text(encoding="utf-8"), encoding="utf-8")
+        self.profile.unlink()
+        self.profile.symlink_to(target)
+
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_rejects_oversized_manifest_input(self):
+        self.manifest.write_text(
+            self.manifest.read_text(encoding="utf-8") + " " * (64 * 1024),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(ValueError, "too large"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_rejects_oversized_profile_input(self):
+        self.profile.write_text(
+            self.profile.read_text(encoding="utf-8") + " " * (64 * 1024),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(ValueError, "too large"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
     def test_rejects_tampered_profile_fingerprint(self):
         payload = profile_payload()
         payload["profileFingerprint"] = "sha256:" + "0" * 64
