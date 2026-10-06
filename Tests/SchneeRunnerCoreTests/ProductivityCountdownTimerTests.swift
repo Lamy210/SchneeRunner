@@ -43,7 +43,7 @@ final class ProductivityCountdownTimerTests: XCTestCase {
         let completed = timer.reconciling(at: completionTime)
         let reconciledAgain = completed.reconciling(at: completionTime.addingTimeInterval(100))
         XCTAssertEqual(completed.state, .completed)
-        XCTAssertEqual(completed.completedAt, completionTime)
+        XCTAssertEqual(completed.completedAt, start.addingTimeInterval(1_500))
         XCTAssertEqual(completed.remaining(at: completionTime), 0, accuracy: 0.001)
         XCTAssertEqual(reconciledAgain, completed)
     }
