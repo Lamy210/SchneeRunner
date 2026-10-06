@@ -80,8 +80,8 @@ public enum ReminderSchedule: Codable, Equatable, Sendable {
             let minute = try container.decode(Int.self, forKey: .minute)
             self = .daily(hour: hour, minute: minute)
         case .weekdays:
-            let weekdays = Set(
-                try container.decode([Weekday].self, forKey: .weekdays)
+            let weekdays = try Set(
+                container.decode([Weekday].self, forKey: .weekdays)
             )
             let hour = try container.decode(Int.self, forKey: .hour)
             let minute = try container.decode(Int.self, forKey: .minute)
