@@ -23,6 +23,10 @@ final class ProductivityCharacterStateCoordinator {
         self.transientReactionDuration = max(0, transientReactionDuration)
     }
 
+    var isEnabled: Bool {
+        reactionStore.isEnabled
+    }
+
     func updateTimers(
         _ timers: [ProductivityCountdownTimer],
         now: Date = Date()
