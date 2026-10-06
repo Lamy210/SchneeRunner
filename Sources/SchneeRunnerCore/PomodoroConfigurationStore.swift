@@ -25,8 +25,11 @@ public struct PomodoroConfigurationStore {
     }
 
     public func load() throws -> PomodoroConfiguration {
-        guard let data = defaults.data(forKey: key) else {
+        guard let storedValue = defaults.object(forKey: key) else {
             return try PomodoroConfiguration()
+        }
+        guard let data = storedValue as? Data else {
+            throw PomodoroConfigurationStoreError.invalidStoredConfiguration
         }
 
         do {
