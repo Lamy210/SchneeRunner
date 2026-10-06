@@ -76,7 +76,9 @@ private extension TimerMenuController {
         menu.addItem(manageItem)
         menu.addItem(.separator())
 
-        let activeTimers = timers.filter(\.isActive)
+        let activeTimers = timers.filter {
+            $0.state == .running || $0.state == .paused
+        }
         guard !activeTimers.isEmpty else {
             let emptyItem = NSMenuItem(
                 title: "No active timers",
