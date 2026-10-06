@@ -83,6 +83,42 @@ class BaselineProvenanceTests(unittest.TestCase):
         result = self.validate(expected_events=("push", "schedule"))
         self.assertEqual(result["event"], "schedule")
 
+    def test_rejects_symlinked_resolver_metadata(self):
+        target = self.resolver.parent / "resolver-target.json"
+        target.write_text(self.resolver.read_text(encoding="utf-8"), encoding="utf-8")
+        self.resolver.unlink()
+        self.resolver.symlink_to(target)
+
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            self.validate()
+
+    def test_rejects_symlinked_bundle_manifest(self):
+        target = self.bundle.parent / "bundle-target.json"
+        target.write_text(self.bundle.read_text(encoding="utf-8"), encoding="utf-8")
+        self.bundle.unlink()
+        self.bundle.symlink_to(target)
+
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            self.validate()
+
+    def test_rejects_oversized_resolver_metadata(self):
+        self.resolver.write_text(
+            self.resolver.read_text(encoding="utf-8") + " " * (64 * 1024),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(ValueError, "too large"):
+            self.validate()
+
+    def test_rejects_oversized_bundle_manifest(self):
+        self.bundle.write_text(
+            self.bundle.read_text(encoding="utf-8") + " " * (64 * 1024),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(ValueError, "too large"):
+            self.validate()
+
     def test_rejects_resolver_event_outside_expected_policy(self):
         self.resolver_payload["event"] = "pull_request"
         self.write_payloads()
