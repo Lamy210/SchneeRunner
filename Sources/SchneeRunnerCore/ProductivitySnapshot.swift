@@ -9,10 +9,15 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
 
     public let schemaVersion: Int
     public let timers: [ProductivityCountdownTimer]
+    public let reminders: [ProductivityReminder]
 
-    public init(timers: [ProductivityCountdownTimer] = []) {
+    public init(
+        timers: [ProductivityCountdownTimer] = [],
+        reminders: [ProductivityReminder] = []
+    ) {
         schemaVersion = Self.currentSchemaVersion
         self.timers = timers
+        self.reminders = reminders
     }
 
     public init(from decoder: Decoder) throws {
@@ -24,11 +29,16 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
 
         self.schemaVersion = schemaVersion
         timers = try container.decode([ProductivityCountdownTimer].self, forKey: .timers)
+        reminders = try container.decodeIfPresent(
+            [ProductivityReminder].self,
+            forKey: .reminders
+        ) ?? []
     }
 
     public func reconciling(at now: Date) -> ProductivitySnapshot {
         ProductivitySnapshot(
-            timers: timers.map { $0.reconciling(at: now) }
+            timers: timers.map { $0.reconciling(at: now) },
+            reminders: reminders
         )
     }
 }

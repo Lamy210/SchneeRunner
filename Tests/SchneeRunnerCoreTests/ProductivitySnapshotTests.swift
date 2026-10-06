@@ -61,12 +61,44 @@ final class ProductivitySnapshotTests: XCTestCase {
         XCTAssertEqual(twice, once)
     }
 
+    func testReminderRoundTripsInCurrentSnapshot() throws {
+        let reminder = try makeReminder()
+        let snapshot = ProductivitySnapshot(reminders: [reminder])
+
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(ProductivitySnapshot.self, from: data)
+
+        XCTAssertEqual(decoded.reminders, [reminder])
+    }
+
+    func testLegacySnapshotWithoutRemindersDecodesEmptyCollection() throws {
+        let data = Data("""
+        {"schemaVersion":1,"timers":[]}
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(ProductivitySnapshot.self, from: data)
+
+        XCTAssertEqual(decoded.reminders, [])
+    }
+
     private func makeTimer(duration: TimeInterval) throws -> ProductivityCountdownTimer {
         try ProductivityCountdownTimer(
             id: UUID(),
             title: "Focus",
             duration: duration,
             startedAt: start
+        )
+    }
+
+    private func makeReminder() throws -> ProductivityReminder {
+        try ProductivityReminder(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            title: "Standup",
+            body: nil,
+            enabled: true,
+            schedule: .daily(hour: 9, minute: 0),
+            createdAt: start,
+            updatedAt: start
         )
     }
 }
