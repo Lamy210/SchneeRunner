@@ -173,7 +173,9 @@ private extension ProductivityManagementWindowController {
 
     func addTimerSection(to stack: NSStackView) {
         stack.addArrangedSubview(sectionTitle("Timers"))
-        let activeTimers = timers.filter(\.isActive)
+        let activeTimers = timers.filter {
+            $0.state == .running || $0.state == .paused
+        }
         guard !activeTimers.isEmpty else {
             stack.addArrangedSubview(
                 NSTextField(labelWithString: "No active timers")
