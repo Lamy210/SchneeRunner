@@ -35,7 +35,7 @@ final class ReminderMenuControllerTests: XCTestCase {
     func testShowsEarliestEnabledReminder() throws {
         let controller = ReminderMenuController()
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
         let later = try reminder(
             title: "Later",
             schedule: .once(now.addingTimeInterval(7200))
