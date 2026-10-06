@@ -12,7 +12,7 @@ final class ReminderApplicationController {
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: any ReminderNotificationScheduling
     private let editor = ReminderEditorController()
-    private let managementWindow = ProductivityManagementWindowController()
+    private let managementWindow: ProductivityManagementWindowController
     private let calendar: Calendar
 
     private var coordinator: ReminderCoordinator?
@@ -22,11 +22,13 @@ final class ReminderApplicationController {
         baseDirectory: URL? = nil,
         fileManager: FileManager = .default,
         notificationScheduler: any ReminderNotificationScheduling = ProductivityNotificationScheduler(),
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        managementWindow: ProductivityManagementWindowController? = nil
     ) {
         self.menuController = menuController
         self.notificationScheduler = notificationScheduler
         self.calendar = calendar
+        self.managementWindow = managementWindow ?? ProductivityManagementWindowController()
 
         let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
             for: .applicationSupportDirectory,
@@ -154,10 +156,8 @@ private extension ReminderApplicationController {
             now: now,
             calendar: calendar
         )
-        managementWindow.setContent(
-            reminders: reminders,
-            history: loadHistory()
-        )
+        managementWindow.setReminders(reminders)
+        managementWindow.setHistory(loadHistory())
     }
 
     func loadHistory() -> ProductivityHistory {
