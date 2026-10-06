@@ -122,7 +122,7 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
             deadline: nil,
             pausedRemaining: nil,
             state: .completed,
-            completedAt: now
+            completedAt: deadline
         )
     }
 
