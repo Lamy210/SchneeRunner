@@ -2,7 +2,7 @@ import Foundation
 import SchneeRunnerCore
 import UserNotifications
 
-enum ProductivityNotificationAuthorizationState: Equatable, Sendable {
+enum NotificationAuthorizationState: Equatable, Sendable {
     case authorized
     case denied
     case notDetermined
@@ -22,7 +22,7 @@ struct ProductivityNotificationRequest: Equatable, Sendable {
 
 @MainActor
 protocol ProductivityNotificationCenterClient: AnyObject {
-    func currentAuthorizationState() async -> ProductivityNotificationAuthorizationState
+    func currentAuthorizationState() async -> NotificationAuthorizationState
     func requestAuthorization() async throws -> Bool
     func pendingIdentifiers() async -> Set<String>
     func add(_ request: ProductivityNotificationRequest) async throws
@@ -51,7 +51,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
     private let center: any ProductivityNotificationCenterClient
 
     convenience init() {
-        self.init(center: SystemProductivityNotificationCenterClient())
+        self.init(center: SystemProductivityNotificationClient())
     }
 
     init(center: any ProductivityNotificationCenterClient) {
@@ -137,11 +137,11 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
     private func notificationsAreEnabled() async throws -> Bool {
         switch await center.currentAuthorizationState() {
         case .authorized:
-            return true
+            true
         case .denied:
-            return false
+            false
         case .notDetermined:
-            return try await center.requestAuthorization()
+            try await center.requestAuthorization()
         }
     }
 
@@ -160,36 +160,53 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
 }
 
 @MainActor
-private final class SystemProductivityNotificationCenterClient: ProductivityNotificationCenterClient {
+private final class SystemProductivityNotificationClient: ProductivityNotificationCenterClient {
     private let center: UNUserNotificationCenter
 
     init(center: UNUserNotificationCenter = .current()) {
         self.center = center
     }
 
-    func currentAuthorizationState() async -> ProductivityNotificationAuthorizationState {
-        let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return .authorized
-        case .denied:
-            return .denied
-        case .notDetermined:
-            return .notDetermined
-        @unknown default:
-            return .denied
+    func currentAuthorizationState() async -> NotificationAuthorizationState {
+        await withCheckedContinuation { continuation in
+            center.getNotificationSettings { settings in
+                let state: NotificationAuthorizationState = switch settings.authorizationStatus {
+                case .authorized, .provisional, .ephemeral:
+                    .authorized
+                case .denied:
+                    .denied
+                case .notDetermined:
+                    .notDetermined
+                @unknown default:
+                    .denied
+                }
+                continuation.resume(returning: state)
+            }
         }
     }
 
     func requestAuthorization() async throws -> Bool {
-        try await center.requestAuthorization(
-            options: [.alert, .sound]
-        )
+        try await withCheckedThrowingContinuation { continuation in
+            center.requestAuthorization(
+                options: [.alert, .sound]
+            ) { granted, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
     }
 
     func pendingIdentifiers() async -> Set<String> {
-        let requests = await center.pendingNotificationRequests()
-        return Set(requests.map(\.identifier))
+        await withCheckedContinuation { continuation in
+            center.getPendingNotificationRequests { requests in
+                continuation.resume(
+                    returning: Set(requests.map(\.identifier))
+                )
+            }
+        }
     }
 
     func add(_ request: ProductivityNotificationRequest) async throws {
@@ -198,17 +215,23 @@ private final class SystemProductivityNotificationCenterClient: ProductivityNoti
         content.body = request.body
         content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: request.timeInterval,
-            repeats: false
-        )
-        try await center.add(
-            UNNotificationRequest(
-                identifier: request.identifier,
-                content: content,
-                trigger: trigger
+        let notificationRequest = UNNotificationRequest(
+            identifier: request.identifier,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: request.timeInterval,
+                repeats: false
             )
         )
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            center.add(notificationRequest) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
     }
 
     func removePending(identifiers: Set<String>) {
