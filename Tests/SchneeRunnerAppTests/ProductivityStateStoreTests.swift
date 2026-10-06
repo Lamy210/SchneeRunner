@@ -8,8 +8,8 @@ final class ProductivityStateStoreTests: XCTestCase {
     func testSaveAndLoadRoundTrip() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        let snapshot = ProductivitySnapshot(
-            timers: [try makeTimer(title: "Focus")]
+        let snapshot = try ProductivitySnapshot(
+            timers: [makeTimer(title: "Focus")]
         )
 
         try fixture.store.save(snapshot)
@@ -56,17 +56,17 @@ final class ProductivityStateStoreTests: XCTestCase {
     func testReplacementFailurePreservesPreviousValidState() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        let initial = ProductivitySnapshot(
-            timers: [try makeTimer(title: "Initial")]
+        let initial = try ProductivitySnapshot(
+            timers: [makeTimer(title: "Initial")]
         )
-        let replacement = ProductivitySnapshot(
-            timers: [try makeTimer(title: "Replacement")]
+        let replacement = try ProductivitySnapshot(
+            timers: [makeTimer(title: "Replacement")]
         )
         try fixture.store.save(initial)
 
         let failingStore = ProductivityStateStore(
             baseDirectory: fixture.baseDirectory,
-            fileManager: .default,
+            fileManager: FileManager.default,
             replaceItem: { _, _ in
                 throw ReplacementFailure.expected
             }
@@ -94,7 +94,7 @@ final class ProductivityStateStoreTests: XCTestCase {
             stateURL: stateURL,
             store: ProductivityStateStore(
                 baseDirectory: baseDirectory,
-                fileManager: .default
+                fileManager: FileManager.default
             )
         )
     }
