@@ -92,11 +92,7 @@ protocol ReminderNotificationScheduling: AnyObject {
 }
 
 @MainActor
-final class ProductivityNotificationScheduler:
-    ProductivityNotificationScheduling,
-    ReminderNotificationScheduling,
-    PomodoroNotificationScheduling
-{
+final class ProductivityNotificationScheduler: ProductivityNotificationScheduling, ReminderNotificationScheduling {
     private static let timerPrefix = "schneerunner.timer."
     private static let reminderPrefix = "schneerunner.reminder."
     private static let snoozePrefix = "schneerunner.snooze."
@@ -335,6 +331,8 @@ final class ProductivityNotificationScheduler:
         }
     }
 }
+
+extension ProductivityNotificationScheduler: PomodoroNotificationScheduling {}
 
 private extension ProductivityNotificationScheduler {
     static func isReminderOwned(_ identifier: String) -> Bool {
