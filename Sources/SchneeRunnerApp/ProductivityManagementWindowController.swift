@@ -1,20 +1,51 @@
 import AppKit
+import Foundation
 import SchneeRunnerCore
 
 @MainActor
 final class ProductivityManagementWindowController: NSObject, NSWindowDelegate {
+    var onPauseTimer: ((UUID) -> Void)?
+    var onResumeTimer: ((UUID) -> Void)?
+    var onCancelTimer: ((UUID) -> Void)?
+    var onEditPomodoroSettings: ((PomodoroConfiguration) -> Void)?
     var onNewReminder: (() -> Void)?
     var onEditReminder: ((UUID) -> Void)?
     var onDeleteReminder: ((UUID) -> Void)?
     var onSetReminderEnabled: ((UUID, Bool) -> Void)?
     var onSnoozeReminder: ((UUID, ReminderSnoozeDuration) -> Void)?
 
+    private(set) var timerIDs: [UUID] = []
     private(set) var reminderIDs: [UUID] = []
+    private(set) var pomodoroConfiguration: PomodoroConfiguration?
     private(set) var historyCount = 0
 
+    private var timers: [ProductivityCountdownTimer] = []
     private var reminders: [ProductivityReminder] = []
     private var history = ProductivityHistory()
     private var panel: NSPanel?
+
+    func setTimers(_ timers: [ProductivityCountdownTimer]) {
+        self.timers = timers
+        timerIDs = timers.map(\.id)
+        rebuildContentIfVisible()
+    }
+
+    func setReminders(_ reminders: [ProductivityReminder]) {
+        self.reminders = reminders
+        reminderIDs = reminders.map(\.id)
+        rebuildContentIfVisible()
+    }
+
+    func setPomodoroConfiguration(_ configuration: PomodoroConfiguration) {
+        pomodoroConfiguration = configuration
+        rebuildContentIfVisible()
+    }
+
+    func setHistory(_ history: ProductivityHistory) {
+        self.history = history
+        historyCount = history.entries.count
+        rebuildContentIfVisible()
+    }
 
     func setContent(
         reminders: [ProductivityReminder],
@@ -34,6 +65,22 @@ final class ProductivityManagementWindowController: NSObject, NSWindowDelegate {
         panel.center()
         panel.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    func requestPauseTimer(id: UUID) {
+        onPauseTimer?(id)
+    }
+
+    func requestResumeTimer(id: UUID) {
+        onResumeTimer?(id)
+    }
+
+    func requestCancelTimer(id: UUID) {
+        onCancelTimer?(id)
+    }
+
+    func requestEditPomodoroSettings(_ configuration: PomodoroConfiguration) {
+        onEditPomodoroSettings?(configuration)
     }
 
     func requestEditReminder(id: UUID) {
@@ -66,7 +113,7 @@ final class ProductivityManagementWindowController: NSObject, NSWindowDelegate {
 private extension ProductivityManagementWindowController {
     func makePanel() -> NSPanel {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: 760, height: 620),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
@@ -98,7 +145,11 @@ private extension ProductivityManagementWindowController {
         stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
 
+        addTimerSection(to: stack)
+        stack.addArrangedSubview(separator())
         addReminderSection(to: stack)
+        stack.addArrangedSubview(separator())
+        addPomodoroSection(to: stack)
         stack.addArrangedSubview(separator())
         addHistorySection(to: stack)
         documentView.addSubview(stack)
@@ -118,6 +169,65 @@ private extension ProductivityManagementWindowController {
             documentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor)
         ])
         panel.contentView = content
+    }
+
+    func addTimerSection(to stack: NSStackView) {
+        stack.addArrangedSubview(sectionTitle("Timers"))
+        let activeTimers = timers.filter(\.isActive)
+        guard !activeTimers.isEmpty else {
+            stack.addArrangedSubview(
+                NSTextField(labelWithString: "No active timers")
+            )
+            return
+        }
+
+        for timer in activeTimers {
+            stack.addArrangedSubview(timerRow(timer))
+        }
+    }
+
+    func timerRow(_ timer: ProductivityCountdownTimer) -> NSView {
+        let label = NSTextField(labelWithString: timerStatus(timer))
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        let actionTitle = timer.state == .paused ? "Resume" : "Pause"
+        let action = timer.state == .paused
+            ? #selector(resumeTimer(_:))
+            : #selector(pauseTimer(_:))
+        let actionButton = timerButton(
+            title: actionTitle,
+            action: action,
+            id: timer.id
+        )
+        let cancelButton = timerButton(
+            title: "Cancel",
+            action: #selector(cancelTimer(_:)),
+            id: timer.id
+        )
+        let row = NSStackView(views: [label, actionButton, cancelButton])
+        row.orientation = .horizontal
+        row.spacing = 8
+        return row
+    }
+
+    func timerButton(
+        title: String,
+        action: Selector,
+        id: UUID
+    ) -> NSButton {
+        let button = NSButton(
+            title: title,
+            target: self,
+            action: action
+        )
+        button.identifier = NSUserInterfaceItemIdentifier(id.uuidString)
+        return button
+    }
+
+    func timerStatus(_ timer: ProductivityCountdownTimer) -> String {
+        let state = timer.state == .paused ? "Paused" : "Running"
+        let seconds = max(0, Int(timer.remaining(at: Date()).rounded(.down)))
+        return "\(timer.title) · \(state) · \(seconds / 60):\(String(format: "%02d", seconds % 60))"
     }
 
     func addReminderSection(to stack: NSStackView) {
@@ -160,6 +270,28 @@ private extension ProductivityManagementWindowController {
         }
     }
 
+    func addPomodoroSection(to stack: NSStackView) {
+        stack.addArrangedSubview(sectionTitle("Pomodoro"))
+        guard let configuration = pomodoroConfiguration else {
+            stack.addArrangedSubview(
+                NSTextField(labelWithString: "Pomodoro settings unavailable")
+            )
+            return
+        }
+
+        let focusMinutes = Int(configuration.focusDuration / 60)
+        let shortMinutes = Int(configuration.shortBreakDuration / 60)
+        let longMinutes = Int(configuration.longBreakDuration / 60)
+        let summary = "Focus \(focusMinutes)m · Short \(shortMinutes)m · Long \(longMinutes)m"
+        stack.addArrangedSubview(NSTextField(labelWithString: summary))
+        let editButton = NSButton(
+            title: "Edit Settings…",
+            target: self,
+            action: #selector(editPomodoroSettings)
+        )
+        stack.addArrangedSubview(editButton)
+    }
+
     func addHistorySection(to stack: NSStackView) {
         stack.addArrangedSubview(sectionTitle("Recent History"))
         let entries = history.entries.suffix(20).reversed()
@@ -192,6 +324,45 @@ private extension ProductivityManagementWindowController {
         let box = NSBox()
         box.boxType = .separator
         return box
+    }
+
+    func timerID(from button: NSButton) -> UUID? {
+        guard let identifier = button.identifier?.rawValue else {
+            return nil
+        }
+        return UUID(uuidString: identifier)
+    }
+
+    @objc
+    func pauseTimer(_ sender: NSButton) {
+        guard let id = timerID(from: sender) else {
+            return
+        }
+        requestPauseTimer(id: id)
+    }
+
+    @objc
+    func resumeTimer(_ sender: NSButton) {
+        guard let id = timerID(from: sender) else {
+            return
+        }
+        requestResumeTimer(id: id)
+    }
+
+    @objc
+    func cancelTimer(_ sender: NSButton) {
+        guard let id = timerID(from: sender) else {
+            return
+        }
+        requestCancelTimer(id: id)
+    }
+
+    @objc
+    func editPomodoroSettings() {
+        guard let pomodoroConfiguration else {
+            return
+        }
+        requestEditPomodoroSettings(pomodoroConfiguration)
     }
 
     @objc
