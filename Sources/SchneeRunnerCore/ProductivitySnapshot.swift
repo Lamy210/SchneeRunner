@@ -11,16 +11,19 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
     public let timers: [ProductivityCountdownTimer]
     public let reminders: [ProductivityReminder]
     public let pomodoro: PomodoroSession?
+    public let snoozes: [ReminderSnooze]
 
     public init(
         timers: [ProductivityCountdownTimer] = [],
         reminders: [ProductivityReminder] = [],
-        pomodoro: PomodoroSession? = nil
+        pomodoro: PomodoroSession? = nil,
+        snoozes: [ReminderSnooze] = []
     ) {
         schemaVersion = Self.currentSchemaVersion
         self.timers = timers
         self.reminders = reminders
         self.pomodoro = pomodoro
+        self.snoozes = snoozes
     }
 
     public init(from decoder: Decoder) throws {
@@ -40,6 +43,10 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
             PomodoroSession.self,
             forKey: .pomodoro
         )
+        snoozes = try container.decodeIfPresent(
+            [ReminderSnooze].self,
+            forKey: .snoozes
+        ) ?? []
     }
 
     public func replacingTimers(
@@ -48,7 +55,8 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
         ProductivitySnapshot(
             timers: timers,
             reminders: reminders,
-            pomodoro: pomodoro
+            pomodoro: pomodoro,
+            snoozes: snoozes
         )
     }
 
@@ -58,7 +66,8 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
         ProductivitySnapshot(
             timers: timers,
             reminders: reminders,
-            pomodoro: pomodoro
+            pomodoro: pomodoro,
+            snoozes: snoozes
         )
     }
 
@@ -66,7 +75,8 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
         ProductivitySnapshot(
             timers: timers.map { $0.reconciling(at: now) },
             reminders: reminders,
-            pomodoro: pomodoro?.advancing(at: now)
+            pomodoro: pomodoro?.advancing(at: now),
+            snoozes: snoozes.filter { $0.fireDate > now }
         )
     }
 }

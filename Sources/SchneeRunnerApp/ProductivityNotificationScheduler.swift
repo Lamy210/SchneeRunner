@@ -13,11 +13,49 @@ enum ProductivityNotificationDeliveryStatus: Equatable, Sendable {
     case disabled
 }
 
+enum ProductivityNotificationTrigger: Equatable, Sendable {
+    case timeInterval(TimeInterval)
+    case calendar(hour: Int, minute: Int, weekday: Int?)
+}
+
 struct ProductivityNotificationRequest: Equatable, Sendable {
     let identifier: String
     let title: String
     let body: String
-    let timeInterval: TimeInterval
+    let trigger: ProductivityNotificationTrigger
+
+    init(
+        identifier: String,
+        title: String,
+        body: String,
+        timeInterval: TimeInterval
+    ) {
+        self.init(
+            identifier: identifier,
+            title: title,
+            body: body,
+            trigger: .timeInterval(timeInterval)
+        )
+    }
+
+    init(
+        identifier: String,
+        title: String,
+        body: String,
+        trigger: ProductivityNotificationTrigger
+    ) {
+        self.identifier = identifier
+        self.title = title
+        self.body = body
+        self.trigger = trigger
+    }
+
+    var timeInterval: TimeInterval? {
+        guard case let .timeInterval(timeInterval) = trigger else {
+            return nil
+        }
+        return timeInterval
+    }
 }
 
 @MainActor
@@ -45,8 +83,20 @@ protocol ProductivityNotificationScheduling: AnyObject {
 }
 
 @MainActor
-final class ProductivityNotificationScheduler: ProductivityNotificationScheduling {
+protocol ReminderNotificationScheduling: AnyObject {
+    func reconcileReminders(
+        _ reminders: [ProductivityReminder],
+        snoozes: [ReminderSnooze],
+        now: Date,
+        calendar: Calendar
+    ) async throws -> ProductivityNotificationDeliveryStatus
+}
+
+@MainActor
+final class ProductivityNotificationScheduler: ProductivityNotificationScheduling, ReminderNotificationScheduling {
     private static let timerPrefix = "schneerunner.timer."
+    private static let reminderPrefix = "schneerunner.reminder."
+    private static let snoozePrefix = "schneerunner.snooze."
 
     private let center: any ProductivityNotificationCenterClient
 
@@ -60,6 +110,17 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
 
     static func timerIdentifier(for id: UUID) -> String {
         timerPrefix + id.uuidString.lowercased()
+    }
+
+    static func reminderIdentifier(
+        for id: UUID,
+        occurrenceKey: String
+    ) -> String {
+        reminderPrefix + id.uuidString.lowercased() + "." + occurrenceKey
+    }
+
+    static func snoozeIdentifier(for id: UUID) -> String {
+        snoozePrefix + id.uuidString.lowercased()
     }
 
     func scheduleTimer(
@@ -134,6 +195,41 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
         return .scheduled
     }
 
+    func reconcileReminders(
+        _ reminders: [ProductivityReminder],
+        snoozes: [ReminderSnooze],
+        now: Date,
+        calendar: Calendar
+    ) async throws -> ProductivityNotificationDeliveryStatus {
+        guard try await notificationsAreEnabled() else {
+            return .disabled
+        }
+
+        let requests = reminders.flatMap {
+            Self.requests(for: $0, now: now, calendar: calendar)
+        } + snoozes.compactMap {
+            Self.request(for: $0, now: now)
+        }
+        let desiredIdentifiers = Set(requests.map(\.identifier))
+        let pendingIdentifiers = await center.pendingIdentifiers()
+        let obsoleteIdentifiers = Set(
+            pendingIdentifiers.filter { identifier in
+                Self.isReminderOwned(identifier)
+                    && !desiredIdentifiers.contains(identifier)
+            }
+        )
+
+        if !obsoleteIdentifiers.isEmpty {
+            center.removePending(identifiers: obsoleteIdentifiers)
+        }
+
+        for request in requests {
+            try await center.add(request)
+        }
+
+        return .scheduled
+    }
+
     private func notificationsAreEnabled() async throws -> Bool {
         switch await center.currentAuthorizationState() {
         case .authorized:
@@ -144,8 +240,15 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
             try await center.requestAuthorization()
         }
     }
+}
 
-    private static func request(
+private extension ProductivityNotificationScheduler {
+    static func isReminderOwned(_ identifier: String) -> Bool {
+        identifier.hasPrefix(reminderPrefix)
+            || identifier.hasPrefix(snoozePrefix)
+    }
+
+    static func request(
         for timer: ProductivityCountdownTimer,
         now: Date,
         deadline: Date
@@ -155,6 +258,82 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
             title: timer.title,
             body: "Timer finished",
             timeInterval: deadline.timeIntervalSince(now)
+        )
+    }
+
+    static func requests(
+        for reminder: ProductivityReminder,
+        now: Date,
+        calendar: Calendar
+    ) -> [ProductivityNotificationRequest] {
+        guard reminder.nextOccurrence(after: now, calendar: calendar) != nil else {
+            return []
+        }
+
+        let body = reminder.body ?? "Reminder"
+        switch reminder.schedule {
+        case let .once(date):
+            return [
+                ProductivityNotificationRequest(
+                    identifier: reminderIdentifier(
+                        for: reminder.id,
+                        occurrenceKey: "once"
+                    ),
+                    title: reminder.title,
+                    body: body,
+                    trigger: .timeInterval(date.timeIntervalSince(now))
+                )
+            ]
+        case let .daily(hour, minute):
+            return [
+                ProductivityNotificationRequest(
+                    identifier: reminderIdentifier(
+                        for: reminder.id,
+                        occurrenceKey: "daily"
+                    ),
+                    title: reminder.title,
+                    body: body,
+                    trigger: .calendar(
+                        hour: hour,
+                        minute: minute,
+                        weekday: nil
+                    )
+                )
+            ]
+        case let .weekdays(weekdays, hour, minute):
+            return weekdays
+                .sorted { $0.rawValue < $1.rawValue }
+                .map { weekday in
+                    ProductivityNotificationRequest(
+                        identifier: reminderIdentifier(
+                            for: reminder.id,
+                            occurrenceKey: "weekday.\(weekday.rawValue)"
+                        ),
+                        title: reminder.title,
+                        body: body,
+                        trigger: .calendar(
+                            hour: hour,
+                            minute: minute,
+                            weekday: weekday.rawValue
+                        )
+                    )
+                }
+        }
+    }
+
+    static func request(
+        for snooze: ReminderSnooze,
+        now: Date
+    ) -> ProductivityNotificationRequest? {
+        guard snooze.fireDate > now else {
+            return nil
+        }
+
+        return ProductivityNotificationRequest(
+            identifier: snoozeIdentifier(for: snooze.id),
+            title: snooze.title,
+            body: snooze.body ?? "Reminder",
+            trigger: .timeInterval(snooze.fireDate.timeIntervalSince(now))
         )
     }
 }
@@ -218,10 +397,7 @@ private final class SystemProductivityNotificationClient: ProductivityNotificati
         let notificationRequest = UNNotificationRequest(
             identifier: request.identifier,
             content: content,
-            trigger: UNTimeIntervalNotificationTrigger(
-                timeInterval: request.timeInterval,
-                repeats: false
-            )
+            trigger: Self.systemTrigger(for: request.trigger)
         )
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
             center.add(notificationRequest) { error in
@@ -238,5 +414,26 @@ private final class SystemProductivityNotificationClient: ProductivityNotificati
         center.removePendingNotificationRequests(
             withIdentifiers: Array(identifiers)
         )
+    }
+
+    private static func systemTrigger(
+        for trigger: ProductivityNotificationTrigger
+    ) -> UNNotificationTrigger {
+        switch trigger {
+        case let .timeInterval(timeInterval):
+            UNTimeIntervalNotificationTrigger(
+                timeInterval: timeInterval,
+                repeats: false
+            )
+        case let .calendar(hour, minute, weekday):
+            UNCalendarNotificationTrigger(
+                dateMatching: DateComponents(
+                    hour: hour,
+                    minute: minute,
+                    weekday: weekday
+                ),
+                repeats: true
+            )
+        }
     }
 }
