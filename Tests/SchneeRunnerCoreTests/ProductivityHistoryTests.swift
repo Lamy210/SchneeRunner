@@ -3,7 +3,7 @@ import Foundation
 import XCTest
 
 final class ProductivityHistoryTests: XCTestCase {
-    func testAppendingKeepsNewestFiveHundredEntries() throws {
+    func testAppendingKeepsNewestFiveHundredEntries() {
         let base = Date(timeIntervalSince1970: 1_791_331_200)
         var history = ProductivityHistory()
 
