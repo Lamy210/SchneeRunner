@@ -11,15 +11,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let packBuilderPresenter = CharacterPackBuilderPresenter()
     private let menuController = StatusMenuController()
 
-    private lazy var characterPlaybackController = CharacterPlaybackController(
-        animationController: animationController
-    )
-    private lazy var characterStateCoordinator = CharacterStateCoordinator(
-        playbackController: characterPlaybackController
-    )
-    private lazy var timerApplicationController = TimerApplicationController(
-        menuController: menuController
-    )
+    private lazy var characterPlaybackController = CharacterPlaybackController(animationController: animationController)
+    private lazy var characterStateCoordinator = CharacterStateCoordinator(playbackController: characterPlaybackController)
+    private lazy var timerApplicationController = TimerApplicationController(menuController: menuController)
 
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
