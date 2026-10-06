@@ -156,7 +156,9 @@ final class TimerCoordinator: NSObject {
         now: Date
     ) async throws -> ProductivitySnapshot {
         let previous = snapshot
-        let reconciled = previous.reconciling(at: now)
+        let reconciled = previous.replacingTimers(
+            previous.timers.map { $0.reconciling(at: now) }
+        )
 
         if reconciled != previous {
             try store.save(reconciled)
@@ -193,7 +195,7 @@ final class TimerCoordinator: NSObject {
     }
 
     private func persist(_ timers: [ProductivityCountdownTimer]) throws {
-        let updated = ProductivitySnapshot(timers: timers)
+        let updated = snapshot.replacingTimers(timers)
         try store.save(updated)
         snapshot = updated
     }
