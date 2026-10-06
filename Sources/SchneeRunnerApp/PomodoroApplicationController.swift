@@ -1,4 +1,5 @@
 import Foundation
+import SchneeRunnerCore
 
 @MainActor
 final class PomodoroApplicationController: NSObject {
