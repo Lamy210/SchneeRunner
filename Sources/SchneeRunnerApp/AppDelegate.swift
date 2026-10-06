@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var characterStateCoordinator = CharacterStateCoordinator(
         playbackController: characterPlaybackController
     )
-    private lazy var productivityApplicationController = ProductivityApplicationController(menuController: menuController)
+    private lazy var productivityController = ProductivityApplicationController(menuController: menuController)
 
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
@@ -33,13 +33,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureCPUMonitor()
         restoreLastCharacter()
         refreshRecentCharactersMenu()
-        productivityApplicationController.start()
+        productivityController.start()
         characterStateCoordinator.start()
         cpuMonitor.start()
     }
 
     func applicationWillTerminate(_: Notification) {
-        productivityApplicationController.stop()
+        productivityController.stop()
         characterStateCoordinator.stop()
         cpuMonitor.stop()
         animationController.stop()
