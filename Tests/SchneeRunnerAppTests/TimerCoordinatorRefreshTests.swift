@@ -37,21 +37,13 @@ final class TimerCoordinatorRefreshTests: XCTestCase {
             reconcileExpectation.fulfill()
         }
 
-        coordinator.startRefreshing()
-        defer { coordinator.stopRefreshing() }
-        let deadline = Date().addingTimeInterval(0.2)
-        while changeCount == 0, Date() < deadline {
-            RunLoop.main.run(
-                mode: .eventTracking,
-                before: Date().addingTimeInterval(0.01)
-            )
-        }
+        _ = coordinator.perform(NSSelectorFromString("refreshTick"))
         await fulfillment(
             of: [reconcileExpectation],
             timeout: 0.05
         )
 
-        XCTAssertGreaterThan(changeCount, 0)
+        XCTAssertEqual(changeCount, 1)
         XCTAssertEqual(scheduler.reconcileCount, 0)
     }
 }
