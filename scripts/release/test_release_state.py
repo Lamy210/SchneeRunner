@@ -33,6 +33,26 @@ def release_metadata() -> dict[str, object]:
     }
 
 
+def run_state_cli(metadata: Path) -> subprocess.CompletedProcess[str]:
+    command = [
+        sys.executable,
+        str(CLI),
+        "--metadata",
+        str(metadata),
+        "--tag",
+        TAG,
+    ]
+    for asset in ASSETS:
+        command.extend(["--asset", asset])
+    return subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
 class ReleaseStateTests(unittest.TestCase):
     def test_release_expectations_accept_stable_tag_and_exact_safe_assets(self) -> None:
         self.assertEqual(
@@ -138,28 +158,37 @@ class ReleaseStateTests(unittest.TestCase):
             document = release_metadata()
             document["isDraft"] = True
             metadata.write_text(json.dumps(document) + "\n", encoding="utf-8")
-
-            command = [
-                sys.executable,
-                str(CLI),
-                "--metadata",
-                str(metadata),
-                "--tag",
-                TAG,
-            ]
-            for asset in ASSETS:
-                command.extend(["--asset", asset])
-
-            result = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
+            result = run_state_cli(metadata)
 
         self.assertEqual(1, result.returncode)
         self.assertIn("published, not draft", result.stderr)
+
+    def test_cli_rejects_symlinked_release_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            target = root / "release-target.json"
+            metadata = root / "release.json"
+            target.write_text(
+                json.dumps(release_metadata()) + "\n",
+                encoding="utf-8",
+            )
+            metadata.symlink_to(target)
+            result = run_state_cli(metadata)
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("symlink", result.stderr)
+
+    def test_cli_rejects_oversized_release_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            metadata = Path(temporary_directory) / "release.json"
+            metadata.write_text(
+                json.dumps(release_metadata()) + " " * (64 * 1024),
+                encoding="utf-8",
+            )
+            result = run_state_cli(metadata)
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("too large", result.stderr)
 
 
 if __name__ == "__main__":
