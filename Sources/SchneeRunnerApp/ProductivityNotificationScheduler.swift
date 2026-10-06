@@ -93,10 +93,15 @@ protocol ReminderNotificationScheduling: AnyObject {
 }
 
 @MainActor
-final class ProductivityNotificationScheduler: ProductivityNotificationScheduling, ReminderNotificationScheduling {
+final class ProductivityNotificationScheduler:
+    ProductivityNotificationScheduling,
+    ReminderNotificationScheduling,
+    PomodoroNotificationScheduling
+{
     private static let timerPrefix = "schneerunner.timer."
     private static let reminderPrefix = "schneerunner.reminder."
     private static let snoozePrefix = "schneerunner.snooze."
+    private static let pomodoroPrefix = "schneerunner.pomodoro."
 
     private let center: any ProductivityNotificationCenterClient
 
@@ -121,6 +126,13 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
 
     static func snoozeIdentifier(for id: UUID) -> String {
         snoozePrefix + id.uuidString.lowercased()
+    }
+
+    static func pomodoroIdentifier(
+        for id: UUID,
+        phase: PomodoroPhase
+    ) -> String {
+        "\(pomodoroPrefix)\(id.uuidString.lowercased()).\(phase.rawValue)"
     }
 
     func scheduleTimer(
@@ -225,6 +237,89 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
 
         for request in requests {
             try await center.add(request)
+        }
+
+        return .scheduled
+    }
+
+    func schedulePomodoro(
+        _ session: PomodoroSession,
+        now: Date
+    ) async throws -> ProductivityNotificationDeliveryStatus {
+        guard try await notificationsAreEnabled() else {
+            return .disabled
+        }
+
+        guard
+            session.state == .running,
+            let deadline = session.phaseDeadline,
+            deadline > now
+        else {
+            await cancelPomodoro(id: session.id)
+            return .scheduled
+        }
+
+        try await center.add(
+            Self.request(for: session, now: now, deadline: deadline)
+        )
+        return .scheduled
+    }
+
+    func cancelPomodoro(id: UUID) async {
+        let prefix = Self.pomodoroSessionPrefix(for: id)
+        let pendingIdentifiers = await center.pendingIdentifiers()
+        let ownedIdentifiers = Set(
+            pendingIdentifiers.filter { $0.hasPrefix(prefix) }
+        )
+        if !ownedIdentifiers.isEmpty {
+            center.removePending(identifiers: ownedIdentifiers)
+        }
+    }
+
+    func reconcilePomodoro(
+        _ session: PomodoroSession?,
+        now: Date
+    ) async throws -> ProductivityNotificationDeliveryStatus {
+        guard try await notificationsAreEnabled() else {
+            return .disabled
+        }
+
+        let desired = session.flatMap { session -> (PomodoroSession, Date)? in
+            guard
+                session.state == .running,
+                let deadline = session.phaseDeadline,
+                deadline > now
+            else {
+                return nil
+            }
+            return (session, deadline)
+        }
+        let desiredIdentifier = desired.map {
+            Self.pomodoroIdentifier(
+                for: $0.0.id,
+                phase: $0.0.currentPhase
+            )
+        }
+        let pendingIdentifiers = await center.pendingIdentifiers()
+        let obsoleteOwnedIdentifiers = Set(
+            pendingIdentifiers.filter { identifier in
+                identifier.hasPrefix(Self.pomodoroPrefix)
+                    && identifier != desiredIdentifier
+            }
+        )
+
+        if !obsoleteOwnedIdentifiers.isEmpty {
+            center.removePending(identifiers: obsoleteOwnedIdentifiers)
+        }
+
+        if let desired {
+            try await center.add(
+                Self.request(
+                    for: desired.0,
+                    now: now,
+                    deadline: desired.1
+                )
+            )
         }
 
         return .scheduled
@@ -335,6 +430,37 @@ private extension ProductivityNotificationScheduler {
             body: snooze.body ?? "Reminder",
             trigger: .timeInterval(snooze.fireDate.timeIntervalSince(now))
         )
+    }
+
+    static func request(
+        for session: PomodoroSession,
+        now: Date,
+        deadline: Date
+    ) -> ProductivityNotificationRequest {
+        ProductivityNotificationRequest(
+            identifier: pomodoroIdentifier(
+                for: session.id,
+                phase: session.currentPhase
+            ),
+            title: "Pomodoro",
+            body: "\(phaseTitle(session.currentPhase)) finished",
+            trigger: .timeInterval(deadline.timeIntervalSince(now))
+        )
+    }
+
+    static func pomodoroSessionPrefix(for id: UUID) -> String {
+        "\(pomodoroPrefix)\(id.uuidString.lowercased())."
+    }
+
+    static func phaseTitle(_ phase: PomodoroPhase) -> String {
+        switch phase {
+        case .focus:
+            "Focus"
+        case .shortBreak:
+            "Short break"
+        case .longBreak:
+            "Long break"
+        }
     }
 }
 
