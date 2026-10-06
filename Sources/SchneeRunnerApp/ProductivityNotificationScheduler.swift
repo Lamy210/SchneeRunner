@@ -223,7 +223,7 @@ private final class SystemProductivityNotificationCenterClient: ProductivityNoti
                 repeats: false
             )
         )
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
             center.add(notificationRequest) { error in
                 if let error {
                     continuation.resume(throwing: error)
