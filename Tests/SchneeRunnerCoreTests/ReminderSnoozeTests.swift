@@ -59,6 +59,45 @@ final class ReminderSnoozeTests: XCTestCase {
 
         XCTAssertEqual(reconciled.snoozes, [future])
     }
+
+    func testSupportedDurationsMatchProductContract() {
+        XCTAssertEqual(
+            ReminderSnoozeDuration.allCases.map(\.rawValue),
+            [5, 10, 15, 30, 60]
+        )
+    }
+
+    func testCreatingSnoozeFromReminderDoesNotMutateRecurrence() throws {
+        let reminder = try makeReminder()
+        let originalSchedule = reminder.schedule
+        let snooze = ReminderSnooze(
+            id: UUID(),
+            reminder: reminder,
+            duration: .fifteenMinutes,
+            now: now
+        )
+
+        XCTAssertEqual(snooze.reminderID, reminder.id)
+        XCTAssertEqual(snooze.title, reminder.title)
+        XCTAssertEqual(snooze.body, reminder.body)
+        XCTAssertEqual(
+            snooze.fireDate,
+            now.addingTimeInterval(15 * 60)
+        )
+        XCTAssertEqual(reminder.schedule, originalSchedule)
+    }
+
+    private func makeReminder() throws -> ProductivityReminder {
+        try ProductivityReminder(
+            id: UUID(),
+            title: "Standup",
+            body: "Join the team call",
+            enabled: true,
+            schedule: .weekdays([.monday, .wednesday, .friday], hour: 9, minute: 0),
+            createdAt: now,
+            updatedAt: now
+        )
+    }
 }
 
 private struct SnoozeFixture: Codable {
