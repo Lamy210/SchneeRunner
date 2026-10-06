@@ -2,6 +2,7 @@
 import XCTest
 
 final class ProductivityCountdownTimerTests: XCTestCase {
+    // Fixed UTC reference keeps deadline behavior deterministic.
     private let start = Date(timeIntervalSince1970: 1_791_331_200)
 
     func testRunningTimerDerivesRemainingFromDeadline() throws {
