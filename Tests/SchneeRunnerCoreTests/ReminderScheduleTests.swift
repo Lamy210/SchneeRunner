@@ -4,7 +4,7 @@ import XCTest
 final class ReminderScheduleTests: XCTestCase {
     private var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         return calendar
     }
 
@@ -62,7 +62,11 @@ final class ReminderScheduleTests: XCTestCase {
 
     func testSpringForwardMissingDailyTimeUsesNextValidTime() {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        guard let timeZone = TimeZone(identifier: "America/Los_Angeles") else {
+            XCTFail("Expected America/Los_Angeles time zone")
+            return
+        }
+        calendar.timeZone = timeZone
         let now = date("2026-03-08 00:00", calendar: calendar)
         let schedule = ReminderSchedule.daily(hour: 2, minute: 30)
 
@@ -92,6 +96,10 @@ final class ReminderScheduleTests: XCTestCase {
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter.date(from: value)!
+        guard let date = formatter.date(from: value) else {
+            XCTFail("Failed to parse test date: \(value)")
+            return .distantPast
+        }
+        return date
     }
 }
