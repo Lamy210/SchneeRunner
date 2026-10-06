@@ -71,14 +71,6 @@ final class TimerCoordinator: NSObject {
         now: Date
     ) async throws {
         let timer = try timer(id: id)
-        let reconciled = timer.reconciling(at: now)
-        if reconciled != timer {
-            try persist(replacing: reconciled)
-            publish()
-            await notificationScheduler.cancelTimer(id: id)
-            return
-        }
-
         let paused = try timer.pausing(at: now)
         try persist(replacing: paused)
         publish()
