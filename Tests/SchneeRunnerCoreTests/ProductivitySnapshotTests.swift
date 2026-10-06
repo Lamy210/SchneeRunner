@@ -6,8 +6,8 @@ final class ProductivitySnapshotTests: XCTestCase {
     private let start = Date(timeIntervalSince1970: 1_791_331_200)
 
     func testCurrentVersionRoundTrips() throws {
-        let snapshot = ProductivitySnapshot(
-            timers: [try makeTimer(duration: 1500)]
+        let snapshot = try ProductivitySnapshot(
+            timers: [makeTimer(duration: 1500)]
         )
 
         let data = try JSONEncoder().encode(snapshot)
@@ -37,8 +37,8 @@ final class ProductivitySnapshotTests: XCTestCase {
     }
 
     func testReconcileCompletesOverdueTimerOnce() throws {
-        let snapshot = ProductivitySnapshot(
-            timers: [try makeTimer(duration: 10)]
+        let snapshot = try ProductivitySnapshot(
+            timers: [makeTimer(duration: 10)]
         )
         let now = start.addingTimeInterval(11)
 
@@ -50,8 +50,8 @@ final class ProductivitySnapshotTests: XCTestCase {
     }
 
     func testSecondReconciliationIsIdempotent() throws {
-        let snapshot = ProductivitySnapshot(
-            timers: [try makeTimer(duration: 10)]
+        let snapshot = try ProductivitySnapshot(
+            timers: [makeTimer(duration: 10)]
         )
         let now = start.addingTimeInterval(11)
 
