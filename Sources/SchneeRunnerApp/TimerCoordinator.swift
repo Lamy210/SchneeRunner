@@ -11,11 +11,13 @@ final class TimerCoordinator: NSObject {
     var onNotificationStatus: ((ProductivityNotificationDeliveryStatus) -> Void)?
     var onNotificationError: ((Error) -> Void)?
     var onPersistenceError: ((Error) -> Void)?
+    var onHistoryError: ((Error) -> Void)?
 
     private(set) var snapshot: ProductivitySnapshot
 
     private let store: ProductivityStateStore
     private let notificationScheduler: any ProductivityNotificationScheduling
+    private let historyRecorder: (any ProductivityHistoryRecording)?
     private let refreshInterval: TimeInterval
     private var refreshTimer: Timer?
 
@@ -27,11 +29,13 @@ final class TimerCoordinator: NSObject {
         snapshot: ProductivitySnapshot,
         store: ProductivityStateStore,
         notificationScheduler: any ProductivityNotificationScheduling,
+        historyRecorder: (any ProductivityHistoryRecording)? = nil,
         refreshInterval: TimeInterval = 1
     ) {
         self.snapshot = snapshot
         self.store = store
         self.notificationScheduler = notificationScheduler
+        self.historyRecorder = historyRecorder
         self.refreshInterval = refreshInterval
         super.init()
     }
@@ -39,12 +43,14 @@ final class TimerCoordinator: NSObject {
     convenience init(
         store: ProductivityStateStore,
         notificationScheduler: any ProductivityNotificationScheduling,
+        historyRecorder: (any ProductivityHistoryRecording)? = nil,
         refreshInterval: TimeInterval = 1
     ) throws {
         try self.init(
             snapshot: store.load(),
             store: store,
             notificationScheduler: notificationScheduler,
+            historyRecorder: historyRecorder,
             refreshInterval: refreshInterval
         )
     }
@@ -76,6 +82,7 @@ final class TimerCoordinator: NSObject {
         let paused = try timer.pausing(at: now)
         try persist(replacing: paused)
         publish()
+        recordCompletionIfNeeded(before: timer, after: paused)
         await notificationScheduler.cancelTimer(id: id)
     }
 
@@ -170,11 +177,12 @@ final class TimerCoordinator: NSObject {
             snapshot = reconciled
             publish()
 
-            for id in newlyCompletedTimerIDs(
+            for timer in newlyCompletedTimers(
                 before: previous,
                 after: reconciled
             ) {
-                await notificationScheduler.cancelTimer(id: id)
+                recordCompletion(timer)
+                await notificationScheduler.cancelTimer(id: timer.id)
             }
         }
 
@@ -228,21 +236,48 @@ final class TimerCoordinator: NSObject {
         onChange?(timers)
     }
 
-    private func newlyCompletedTimerIDs(
+    private func recordCompletionIfNeeded(
+        before: ProductivityCountdownTimer,
+        after: ProductivityCountdownTimer
+    ) {
+        guard before.state != .completed, after.state == .completed else {
+            return
+        }
+        recordCompletion(after)
+    }
+
+    private func recordCompletion(_ timer: ProductivityCountdownTimer) {
+        guard let historyRecorder, let completedAt = timer.completedAt else {
+            return
+        }
+
+        do {
+            try historyRecorder.record(
+                ProductivityHistoryEntry(
+                    id: UUID(),
+                    kind: .countdownCompleted,
+                    sourceID: timer.id,
+                    title: timer.title,
+                    occurredAt: completedAt
+                )
+            )
+        } catch {
+            onHistoryError?(error)
+        }
+    }
+
+    private func newlyCompletedTimers(
         before: ProductivitySnapshot,
         after: ProductivitySnapshot
-    ) -> [UUID] {
+    ) -> [ProductivityCountdownTimer] {
         let previousByID = Dictionary(
             uniqueKeysWithValues: before.timers.map { ($0.id, $0) }
         )
-        return after.timers.compactMap { timer in
-            guard
-                timer.state == .completed,
-                previousByID[timer.id]?.state == .running
-            else {
-                return nil
+        return after.timers.filter { timer in
+            guard timer.state == .completed else {
+                return false
             }
-            return timer.id
+            return previousByID[timer.id]?.state != .completed
         }
     }
 }

@@ -26,11 +26,13 @@ final class PomodoroCoordinator {
     var onChange: ((PomodoroSession?) -> Void)?
     var onNotificationStatus: ((ProductivityNotificationDeliveryStatus) -> Void)?
     var onNotificationError: ((Error) -> Void)?
+    var onHistoryError: ((Error) -> Void)?
 
     private(set) var snapshot: ProductivitySnapshot
 
     private let store: ProductivityStateStore
     private let notificationScheduler: any PomodoroNotificationScheduling
+    private let historyRecorder: (any ProductivityHistoryRecording)?
 
     var session: PomodoroSession? {
         snapshot.pomodoro
@@ -39,21 +41,25 @@ final class PomodoroCoordinator {
     init(
         snapshot: ProductivitySnapshot,
         store: ProductivityStateStore,
-        notificationScheduler: any PomodoroNotificationScheduling
+        notificationScheduler: any PomodoroNotificationScheduling,
+        historyRecorder: (any ProductivityHistoryRecording)? = nil
     ) {
         self.snapshot = snapshot
         self.store = store
         self.notificationScheduler = notificationScheduler
+        self.historyRecorder = historyRecorder
     }
 
     convenience init(
         store: ProductivityStateStore,
-        notificationScheduler: any PomodoroNotificationScheduling
+        notificationScheduler: any PomodoroNotificationScheduling,
+        historyRecorder: (any ProductivityHistoryRecording)? = nil
     ) throws {
         try self.init(
             snapshot: store.load(),
             store: store,
-            notificationScheduler: notificationScheduler
+            notificationScheduler: notificationScheduler,
+            historyRecorder: historyRecorder
         )
     }
 
@@ -83,6 +89,7 @@ final class PomodoroCoordinator {
         let paused = try session.pausing(at: now)
         try persist(paused)
         publish()
+        recordCompletedPhaseIfNeeded(before: session, after: paused)
 
         if paused.state == .running {
             await schedule(paused, now: now)
@@ -123,6 +130,7 @@ final class PomodoroCoordinator {
         if reconciled != previous {
             try persist(reconciled)
             publish()
+            recordCompletedPhaseIfNeeded(before: previous, after: reconciled)
             await reconcileNotifications(reconciled, now: now)
         } else {
             publish()
@@ -137,6 +145,7 @@ final class PomodoroCoordinator {
         if reconciled != previous {
             try persist(reconciled)
             publish()
+            recordCompletedPhaseIfNeeded(before: previous, after: reconciled)
         }
 
         await reconcileNotifications(reconciled, now: now)
@@ -193,5 +202,57 @@ private extension PomodoroCoordinator {
 
     func publish() {
         onChange?(session)
+    }
+
+    func recordCompletedPhaseIfNeeded(
+        before: PomodoroSession?,
+        after: PomodoroSession?
+    ) {
+        guard
+            let before,
+            let after,
+            before.currentPhase != after.currentPhase,
+            let occurredAt = before.phaseDeadline
+        else {
+            return
+        }
+        recordCompletedPhase(before, occurredAt: occurredAt)
+    }
+
+    func recordCompletedPhase(
+        _ session: PomodoroSession,
+        occurredAt: Date
+    ) {
+        guard let historyRecorder else {
+            return
+        }
+
+        let kind: ProductivityHistoryKind
+        let title: String
+        switch session.currentPhase {
+        case .focus:
+            kind = .pomodoroFocusCompleted
+            title = "Pomodoro Focus"
+        case .shortBreak:
+            kind = .pomodoroBreakCompleted
+            title = "Pomodoro Short Break"
+        case .longBreak:
+            kind = .pomodoroBreakCompleted
+            title = "Pomodoro Long Break"
+        }
+
+        do {
+            try historyRecorder.record(
+                ProductivityHistoryEntry(
+                    id: UUID(),
+                    kind: kind,
+                    sourceID: session.id,
+                    title: title,
+                    occurredAt: occurredAt
+                )
+            )
+        } catch {
+            onHistoryError?(error)
+        }
     }
 }
