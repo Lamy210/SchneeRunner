@@ -7,6 +7,7 @@ final class CharacterStateCoordinator {
     private static let memoryPressureTriggerID = "memory-pressure"
     private static let buildTriggerID = "build"
     private static let localEventTriggerPrefix = "local-event:"
+    private static let productivityTriggerID = "productivity"
     private static let manualTriggerID = "manual"
 
     private let playbackController: CharacterPlaybackController
@@ -154,6 +155,23 @@ final class CharacterStateCoordinator {
         triggerEngine.remove(
             id: Self.localEventTriggerID(for: channel)
         )
+        applyResolvedState()
+    }
+
+    func setProductivityState(_ state: CharacterState?) {
+        if let state {
+            triggerEngine.set(
+                CharacterStateTrigger(
+                    id: Self.productivityTriggerID,
+                    state: state,
+                    priority: .event
+                )
+            )
+        } else {
+            triggerEngine.remove(
+                id: Self.productivityTriggerID
+            )
+        }
         applyResolvedState()
     }
 
