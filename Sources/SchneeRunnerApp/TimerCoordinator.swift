@@ -84,21 +84,7 @@ final class TimerCoordinator: NSObject {
     }
 
     func reconcile(now: Date) async throws {
-        let previous = snapshot
-        let reconciled = previous.reconciling(at: now)
-
-        if reconciled != previous {
-            try store.save(reconciled)
-            snapshot = reconciled
-            publish()
-
-            for id in newlyCompletedTimerIDs(
-                before: previous,
-                after: reconciled
-            ) {
-                await notificationScheduler.cancelTimer(id: id)
-            }
-        }
+        let reconciled = try await reconcileState(now: now)
 
         do {
             _ = try await notificationScheduler.reconcileTimers(
@@ -137,11 +123,34 @@ final class TimerCoordinator: NSObject {
                 return
             }
             do {
-                try await reconcile(now: Date())
+                _ = try await reconcileState(now: Date())
             } catch {
                 onNotificationError?(error)
             }
         }
+    }
+
+    @discardableResult
+    private func reconcileState(
+        now: Date
+    ) async throws -> ProductivitySnapshot {
+        let previous = snapshot
+        let reconciled = previous.reconciling(at: now)
+
+        if reconciled != previous {
+            try store.save(reconciled)
+            snapshot = reconciled
+            publish()
+
+            for id in newlyCompletedTimerIDs(
+                before: previous,
+                after: reconciled
+            ) {
+                await notificationScheduler.cancelTimer(id: id)
+            }
+        }
+
+        return reconciled
     }
 
     private func timer(id: UUID) throws -> ProductivityCountdownTimer {
