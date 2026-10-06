@@ -8,7 +8,9 @@ enum TimerCoordinatorError: Error, Equatable {
 @MainActor
 final class TimerCoordinator: NSObject {
     var onChange: (([ProductivityCountdownTimer]) -> Void)?
+    var onNotificationStatus: ((ProductivityNotificationDeliveryStatus) -> Void)?
     var onNotificationError: ((Error) -> Void)?
+    var onPersistenceError: ((Error) -> Void)?
 
     private(set) var snapshot: ProductivitySnapshot
 
@@ -32,6 +34,19 @@ final class TimerCoordinator: NSObject {
         self.notificationScheduler = notificationScheduler
         self.refreshInterval = refreshInterval
         super.init()
+    }
+
+    convenience init(
+        store: ProductivityStateStore,
+        notificationScheduler: any ProductivityNotificationScheduling,
+        refreshInterval: TimeInterval = 1
+    ) throws {
+        try self.init(
+            snapshot: store.load(),
+            store: store,
+            notificationScheduler: notificationScheduler,
+            refreshInterval: refreshInterval
+        )
     }
 
     func start(
@@ -87,10 +102,11 @@ final class TimerCoordinator: NSObject {
         let reconciled = try await reconcileState(now: now)
 
         do {
-            _ = try await notificationScheduler.reconcileTimers(
+            let status = try await notificationScheduler.reconcileTimers(
                 reconciled.timers,
                 now: now
             )
+            onNotificationStatus?(status)
         } catch {
             onNotificationError?(error)
         }
@@ -125,7 +141,7 @@ final class TimerCoordinator: NSObject {
             do {
                 _ = try await reconcileState(now: Date())
             } catch {
-                onNotificationError?(error)
+                onPersistenceError?(error)
             }
         }
     }
@@ -182,10 +198,11 @@ final class TimerCoordinator: NSObject {
         now: Date
     ) async {
         do {
-            _ = try await notificationScheduler.scheduleTimer(
+            let status = try await notificationScheduler.scheduleTimer(
                 timer,
                 now: now
             )
+            onNotificationStatus?(status)
         } catch {
             onNotificationError?(error)
         }
