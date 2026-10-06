@@ -47,6 +47,19 @@ final class StatusMenuControllerTests: XCTestCase {
         XCTAssertEqual(selectedDuration, 5 * 60)
     }
 
+    func testTimerManageCallbackIsForwarded() throws {
+        let controller = StatusMenuController()
+        var manageCount = 0
+        controller.onManageTimers = { manageCount += 1 }
+        let timersMenu = try XCTUnwrap(
+            controller.menu.item(withTitle: "Timers")?.submenu
+        )
+
+        try perform(XCTUnwrap(timersMenu.item(withTitle: "Manage Timers…")))
+
+        XCTAssertEqual(manageCount, 1)
+    }
+
     func testStatusMenuContainsSinglePomodoroSubmenu() {
         let controller = StatusMenuController()
 
@@ -73,6 +86,19 @@ final class StatusMenuControllerTests: XCTestCase {
         perform(item)
 
         XCTAssertEqual(startCount, 1)
+    }
+
+    func testPomodoroSettingsCallbackIsForwarded() throws {
+        let controller = StatusMenuController()
+        var settingsCount = 0
+        controller.onPomodoroSettings = { settingsCount += 1 }
+        let pomodoroMenu = try XCTUnwrap(
+            controller.menu.item(withTitle: "Pomodoro")?.submenu
+        )
+
+        try perform(XCTUnwrap(pomodoroMenu.item(withTitle: "Settings…")))
+
+        XCTAssertEqual(settingsCount, 1)
     }
 
     func testStatusMenuContainsSingleRemindersSubmenu() {
