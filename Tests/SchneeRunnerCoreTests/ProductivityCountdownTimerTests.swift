@@ -85,6 +85,28 @@ final class ProductivityCountdownTimerTests: XCTestCase {
         }
     }
 
+    func testDecodeRejectsRunningTimerWithoutDeadline() throws {
+        let timer = try makeTimer()
+        let encoded = try JSONEncoder().encode(timer)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object["deadline"] = NSNull()
+        let invalid = try JSONSerialization.data(withJSONObject: object)
+
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(
+                ProductivityCountdownTimer.self,
+                from: invalid
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ProductivityCountdownTimerError,
+                .invalidStoredState
+            )
+        }
+    }
+
     func testClockJumpUsesDeadlineRatherThanTickCount() throws {
         let timer = try makeTimer()
 
