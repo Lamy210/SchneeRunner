@@ -10,11 +10,13 @@ final class ReminderCoordinator {
     var onChange: (([ProductivityReminder], [ReminderSnooze]) -> Void)?
     var onNotificationStatus: ((ProductivityNotificationDeliveryStatus) -> Void)?
     var onNotificationError: ((Error) -> Void)?
+    var onHistoryError: ((Error) -> Void)?
 
     private(set) var snapshot: ProductivitySnapshot
 
     private let store: ProductivityStateStore
     private let notificationScheduler: any ReminderNotificationScheduling
+    private let historyRecorder: (any ProductivityHistoryRecording)?
     private let calendar: Calendar
 
     var reminders: [ProductivityReminder] {
@@ -29,23 +31,27 @@ final class ReminderCoordinator {
         snapshot: ProductivitySnapshot,
         store: ProductivityStateStore,
         notificationScheduler: any ReminderNotificationScheduling,
+        historyRecorder: (any ProductivityHistoryRecording)? = nil,
         calendar: Calendar = .current
     ) {
         self.snapshot = snapshot
         self.store = store
         self.notificationScheduler = notificationScheduler
+        self.historyRecorder = historyRecorder
         self.calendar = calendar
     }
 
     convenience init(
         store: ProductivityStateStore,
         notificationScheduler: any ReminderNotificationScheduling,
+        historyRecorder: (any ProductivityHistoryRecording)? = nil,
         calendar: Calendar = .current
     ) throws {
         try self.init(
             snapshot: store.load(),
             store: store,
             notificationScheduler: notificationScheduler,
+            historyRecorder: historyRecorder,
             calendar: calendar
         )
     }
@@ -153,6 +159,7 @@ final class ReminderCoordinator {
             snoozes: snoozes.filter { $0.reminderID != id } + [snooze]
         )
         publish()
+        recordAcknowledgement(reminder, at: now)
         await reconcileNotifications(now: now)
         return snooze.id
     }
@@ -218,6 +225,29 @@ final class ReminderCoordinator {
             onNotificationStatus?(status)
         } catch {
             onNotificationError?(error)
+        }
+    }
+
+    private func recordAcknowledgement(
+        _ reminder: ProductivityReminder,
+        at date: Date
+    ) {
+        guard let historyRecorder else {
+            return
+        }
+
+        do {
+            try historyRecorder.record(
+                ProductivityHistoryEntry(
+                    id: UUID(),
+                    kind: .reminderAcknowledged,
+                    sourceID: reminder.id,
+                    title: reminder.title,
+                    occurredAt: date
+                )
+            )
+        } catch {
+            onHistoryError?(error)
         }
     }
 
