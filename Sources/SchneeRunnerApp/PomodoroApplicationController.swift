@@ -5,6 +5,7 @@ import SchneeRunnerCore
 final class PomodoroApplicationController: NSObject {
     private let menuController: StatusMenuController
     private let stateStore: ProductivityStateStore
+    private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: ProductivityNotificationScheduler
     private let refreshInterval: TimeInterval
     private var coordinator: PomodoroCoordinator?
@@ -26,6 +27,10 @@ final class PomodoroApplicationController: NSObject {
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
+        historyStore = ProductivityHistoryStore(
+            baseDirectory: applicationSupportDirectory,
+            fileManager: fileManager
+        )
         notificationScheduler = ProductivityNotificationScheduler()
         super.init()
         configureMenuCallbacks()
@@ -35,7 +40,8 @@ final class PomodoroApplicationController: NSObject {
         do {
             let coordinator = try PomodoroCoordinator(
                 store: stateStore,
-                notificationScheduler: notificationScheduler
+                notificationScheduler: notificationScheduler,
+                historyRecorder: historyStore
             )
             configureCoordinatorCallbacks(coordinator)
             self.coordinator = coordinator
@@ -89,6 +95,9 @@ final class PomodoroApplicationController: NSObject {
         }
         coordinator.onNotificationError = { [weak self] error in
             self?.log("Pomodoro notification error", error: error)
+        }
+        coordinator.onHistoryError = { [weak self] error in
+            self?.log("Pomodoro history error", error: error)
         }
     }
 
