@@ -78,7 +78,7 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
         try ProductivityCountdownTimer(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             title: "Focus",
-            duration: 1_500,
+            duration: 1500,
             startedAt: start
         )
     }
@@ -86,14 +86,14 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
 
 @MainActor
 private final class FakeProductivityNotificationCenterClient: ProductivityNotificationCenterClient {
-    var authorizationState: ProductivityNotificationAuthorizationState = .notDetermined
+    var authorizationState: NotificationAuthorizationState = .notDetermined
     var pending: Set<String> = []
     var addedRequests: [ProductivityNotificationRequest] = []
     var removedIdentifiers: Set<String> = []
     var requestAuthorizationResult = true
     var requestAuthorizationCount = 0
 
-    func currentAuthorizationState() async -> ProductivityNotificationAuthorizationState {
+    func currentAuthorizationState() async -> NotificationAuthorizationState {
         authorizationState
     }
 
