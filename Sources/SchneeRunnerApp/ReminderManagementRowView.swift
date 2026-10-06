@@ -55,7 +55,7 @@ final class ReminderManagementRowView: NSStackView {
 
     @available(*, unavailable)
     required init?(coder _: NSCoder) {
-        nil
+        fatalError("init(coder:) is unavailable")
     }
 }
 
