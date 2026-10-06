@@ -2,7 +2,12 @@ import Foundation
 import SchneeRunnerCore
 
 @MainActor
-final class ProductivityHistoryStore {
+protocol ProductivityHistoryRecording: AnyObject {
+    func record(_ entry: ProductivityHistoryEntry) throws
+}
+
+@MainActor
+final class ProductivityHistoryStore: ProductivityHistoryRecording {
     typealias ReplaceItem = (URL, URL) throws -> Void
 
     private static let applicationDirectoryName = "SchneeRunner"
@@ -65,6 +70,10 @@ final class ProductivityHistoryStore {
 
         let data = try Data(contentsOf: historyURL)
         return try decoder.decode(ProductivityHistory.self, from: data)
+    }
+
+    func record(_ entry: ProductivityHistoryEntry) throws {
+        try save(load().appending(entry))
     }
 
     func save(_ history: ProductivityHistory) throws {
