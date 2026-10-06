@@ -1,6 +1,6 @@
 name: Release Publisher
 
-on:
+on: # zizmor: ignore[dangerous-triggers] Intentional trusted default-branch publisher; source/artifact identity is revalidated before secrets.
   workflow_run:
     workflows:
       - "Release Build"
@@ -204,7 +204,8 @@ jobs:
     permissions:
       actions: read
       contents: write
-    uses: ./.github/workflows/reusable-macos-release.yml
+    # actionlint 1.7.12 still requires GitHub's workspace-relative reusable-workflow syntax.
+    uses: ./.github/workflows/reusable-macos-release.yml # zizmor: ignore[self-repository]
     with:
       validated_artifact_name: ${{ needs.validate.outputs.validated_artifact_name }}
       validated_artifact_id: ${{ needs.validate.outputs.validated_artifact_id }}
