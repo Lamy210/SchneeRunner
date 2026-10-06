@@ -30,6 +30,7 @@ final class StatusMenuController: NSObject {
     var onPomodoroSettings: (() -> Void)?
     var onNewReminder: (() -> Void)?
     var onManageReminders: (() -> Void)?
+    var onToggleProductivityCharacterReactions: (() -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -44,6 +45,11 @@ final class StatusMenuController: NSObject {
     )
     private let adaptiveSpeedItem = NSMenuItem(
         title: "CPU Adaptive Speed",
+        action: nil,
+        keyEquivalent: ""
+    )
+    private let productivityCharacterReactionsItem = NSMenuItem(
+        title: "Productivity Character Reactions",
         action: nil,
         keyEquivalent: ""
     )
@@ -88,6 +94,10 @@ final class StatusMenuController: NSObject {
 
     func setAdaptiveSpeedEnabled(_ isEnabled: Bool) {
         adaptiveSpeedItem.state = isEnabled ? .on : .off
+    }
+
+    func setProductivityCharacterReactionsEnabled(_ isEnabled: Bool) {
+        productivityCharacterReactionsItem.state = isEnabled ? .on : .off
     }
 
     func setCharacterStateOverride(_ state: CharacterState?) {
@@ -214,6 +224,7 @@ private extension StatusMenuController {
         menu.addItem(timerMenuController.rootItem)
         menu.addItem(pomodoroMenuController.rootItem)
         menu.addItem(reminderMenuController.rootItem)
+        addProductivityReactionItem()
         menu.addItem(.separator())
         addCPUItems()
         menu.addItem(stateMenuController.rootItem)
@@ -305,6 +316,13 @@ private extension StatusMenuController {
         )
         item.submenu = recentCharactersMenu
         menu.addItem(item)
+    }
+
+    func addProductivityReactionItem() {
+        productivityCharacterReactionsItem.target = self
+        productivityCharacterReactionsItem.action = #selector(toggleProductivityCharacterReactions)
+        productivityCharacterReactionsItem.state = .on
+        menu.addItem(productivityCharacterReactionsItem)
     }
 
     func addCPUItems() {
