@@ -1,5 +1,6 @@
 import Foundation
 @testable import SchneeRunnerApp
+import SchneeRunnerCore
 import XCTest
 
 @MainActor
@@ -43,5 +44,35 @@ final class ProductivityDeliveryMonitorTests: XCTestCase {
             identifier: "schneerunner.reminder.abc.daily"
         )
         XCTAssertEqual(firedCount, 1)
+    }
+
+    func testProductivityApplicationBridgesDeliveredReminderIntoCharacterReaction() throws {
+        let suiteName = "SchneeRunnerAppTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let reactionStore = ProductivityCharacterReactionStore(
+            defaults: defaults,
+            key: "productivity-reactions"
+        )
+        let playbackController = CharacterPlaybackController(
+            animationController: AnimationController()
+        )
+        let characterStateCoordinator = CharacterStateCoordinator(
+            playbackController: playbackController
+        )
+        let monitor = ProductivityNotificationDeliveryMonitor()
+        let controller = ProductivityApplicationController(
+            menuController: StatusMenuController(),
+            characterStateCoordinator: characterStateCoordinator,
+            reactionStore: reactionStore,
+            notificationDeliveryMonitor: monitor
+        )
+
+        monitor.handleDeliveredNotification(
+            identifier: "schneerunner.reminder.abc.daily"
+        )
+
+        XCTAssertEqual(playbackController.requestedState, .idle)
+        _ = controller
     }
 }
