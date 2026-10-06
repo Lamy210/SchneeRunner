@@ -1,11 +1,12 @@
+import Foundation
 @testable import SchneeRunnerCore
 import XCTest
 
 final class PomodoroConfigStoreTests: XCTestCase {
     func testMissingValueReturnsApprovedDefaults() throws {
-        let defaults = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName(defaults)) }
-        let store = PomodoroConfigurationStore(defaults: defaults)
+        let fixture = try makeDefaults()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.name) }
+        let store = PomodoroConfigurationStore(defaults: fixture.defaults)
 
         let configuration = try store.load()
 
@@ -17,9 +18,9 @@ final class PomodoroConfigStoreTests: XCTestCase {
     }
 
     func testSavedConfigurationRoundTrips() throws {
-        let defaults = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName(defaults)) }
-        let store = PomodoroConfigurationStore(defaults: defaults)
+        let fixture = try makeDefaults()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.name) }
+        let store = PomodoroConfigurationStore(defaults: fixture.defaults)
         let expected = try PomodoroConfiguration(
             focusDuration: 50 * 60,
             shortBreakDuration: 10 * 60,
@@ -34,22 +35,30 @@ final class PomodoroConfigStoreTests: XCTestCase {
     }
 
     func testMalformedStoredValueFailsClosed() throws {
-        let defaults = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName(defaults)) }
-        defaults.set(Data("not-json".utf8), forKey: PomodoroConfigurationStore.defaultKey)
-        let store = PomodoroConfigurationStore(defaults: defaults)
+        let fixture = try makeDefaults()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.name) }
+        fixture.defaults.set(
+            Data("not-json".utf8),
+            forKey: PomodoroConfigurationStore.defaultKey
+        )
+        let store = PomodoroConfigurationStore(defaults: fixture.defaults)
 
         XCTAssertThrowsError(try store.load()) { error in
-            XCTAssertEqual(error as? PomodoroConfigurationStoreError, .invalidStoredConfiguration)
+            XCTAssertEqual(
+                error as? PomodoroConfigurationStoreError,
+                .invalidStoredConfiguration
+            )
         }
     }
 
-    private func makeDefaults() throws -> UserDefaults {
+    private func makeDefaults() throws -> (
+        defaults: UserDefaults,
+        name: String
+    ) {
         let name = "SchneeRunnerTests.\(UUID().uuidString)"
-        return try XCTUnwrap(UserDefaults(suiteName: name))
-    }
-
-    private func suiteName(_ defaults: UserDefaults) -> String {
-        defaults.volatileDomainNames.first { $0.hasPrefix("SchneeRunnerTests.") } ?? ""
+        return (
+            try XCTUnwrap(UserDefaults(suiteName: name)),
+            name
+        )
     }
 }
