@@ -6,7 +6,7 @@ final class ProductivityReminderTests: XCTestCase {
 
     func testEnabledReminderComputesNextOccurrence() throws {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         let reminder = try ProductivityReminder(
             id: UUID(),
             title: "Standup",
@@ -24,7 +24,7 @@ final class ProductivityReminderTests: XCTestCase {
 
     func testDisabledReminderHasNoNextOccurrence() throws {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         let reminder = try ProductivityReminder(
             id: UUID(),
             title: "Standup",
