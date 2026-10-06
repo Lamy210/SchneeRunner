@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SchneeRunnerCore
 
 @MainActor
 final class TimerApplicationController {
