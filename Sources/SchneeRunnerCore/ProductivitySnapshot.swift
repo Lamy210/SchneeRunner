@@ -35,6 +35,15 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
         ) ?? []
     }
 
+    public func replacingTimers(
+        _ timers: [ProductivityCountdownTimer]
+    ) -> ProductivitySnapshot {
+        ProductivitySnapshot(
+            timers: timers,
+            reminders: reminders
+        )
+    }
+
     public func reconciling(at now: Date) -> ProductivitySnapshot {
         ProductivitySnapshot(
             timers: timers.map { $0.reconciling(at: now) },
