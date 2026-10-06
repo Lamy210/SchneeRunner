@@ -5,6 +5,7 @@ import Foundation
 final class TimerApplicationController {
     private let menuController: StatusMenuController
     private let stateStore: ProductivityStateStore
+    private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: ProductivityNotificationScheduler
     private var coordinator: TimerCoordinator?
 
@@ -22,6 +23,10 @@ final class TimerApplicationController {
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
+        historyStore = ProductivityHistoryStore(
+            baseDirectory: applicationSupportDirectory,
+            fileManager: fileManager
+        )
         notificationScheduler = ProductivityNotificationScheduler()
         configureMenuCallbacks()
     }
@@ -30,7 +35,8 @@ final class TimerApplicationController {
         do {
             let coordinator = try TimerCoordinator(
                 store: stateStore,
-                notificationScheduler: notificationScheduler
+                notificationScheduler: notificationScheduler,
+                historyRecorder: historyStore
             )
             configureCoordinatorCallbacks(coordinator)
             self.coordinator = coordinator
@@ -80,6 +86,9 @@ final class TimerApplicationController {
         }
         coordinator.onPersistenceError = { [weak self] error in
             self?.log("timer persistence error", error: error)
+        }
+        coordinator.onHistoryError = { [weak self] error in
+            self?.log("timer history error", error: error)
         }
     }
 
