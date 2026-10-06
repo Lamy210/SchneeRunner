@@ -3,7 +3,6 @@ import SchneeRunnerCore
 
 enum ReminderApplicationControllerError: Error, Equatable {
     case notStarted
-    case reminderNotFound(UUID)
 }
 
 @MainActor
@@ -12,8 +11,8 @@ final class ReminderApplicationController {
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: any ReminderNotificationScheduling
-    private let editor: ReminderEditorController
-    private let managementWindow: ProductivityManagementWindowController
+    private let editor = ReminderEditorController()
+    private let managementWindow = ProductivityManagementWindowController()
     private let calendar: Calendar
 
     private var coordinator: ReminderCoordinator?
@@ -23,14 +22,10 @@ final class ReminderApplicationController {
         baseDirectory: URL? = nil,
         fileManager: FileManager = .default,
         notificationScheduler: any ReminderNotificationScheduling = ProductivityNotificationScheduler(),
-        editor: ReminderEditorController = ReminderEditorController(),
-        managementWindow: ProductivityManagementWindowController = ProductivityManagementWindowController(),
         calendar: Calendar = .current
     ) {
         self.menuController = menuController
         self.notificationScheduler = notificationScheduler
-        self.editor = editor
-        self.managementWindow = managementWindow
         self.calendar = calendar
 
         let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
@@ -159,10 +154,9 @@ private extension ReminderApplicationController {
             now: now,
             calendar: calendar
         )
-        let history = loadHistory()
         managementWindow.setContent(
             reminders: reminders,
-            history: history
+            history: loadHistory()
         )
     }
 
