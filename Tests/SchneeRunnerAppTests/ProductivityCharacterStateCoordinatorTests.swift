@@ -4,7 +4,7 @@ import SchneeRunnerCore
 import XCTest
 
 @MainActor
-final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
+final class ProductivityCharacterCoordinatorTests: XCTestCase {
     func testRunningCountdownPublishesWalk() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
@@ -108,7 +108,7 @@ final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
     }
 }
 
-private extension ProductivityCharacterStateCoordinatorTests {
+private extension ProductivityCharacterCoordinatorTests {
     struct Fixture {
         let playbackController: CharacterPlaybackController
         let coordinator: ProductivityCharacterStateCoordinator
