@@ -15,7 +15,7 @@ struct ReminderEditRequest: Equatable {
 
 @MainActor
 final class ReminderEditorController {
-    private struct Form {
+    fileprivate struct Form {
         let titleField: NSTextField
         let bodyField: NSTextField
         let schedulePopUp: NSPopUpButton
