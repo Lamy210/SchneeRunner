@@ -78,7 +78,7 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
         try ProductivityCountdownTimer(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             title: "Focus",
-            duration: 1_500,
+            duration: 1500,
             startedAt: start
         )
     }
