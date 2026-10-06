@@ -40,7 +40,10 @@ public struct PomodoroConfigurationStore {
     }
 
     public func save(_ configuration: PomodoroConfiguration) throws {
-        defaults.set(try encoder.encode(configuration), forKey: key)
+        try defaults.set(
+            encoder.encode(configuration),
+            forKey: key
+        )
     }
 
     public func clear() {
