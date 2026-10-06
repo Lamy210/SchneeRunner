@@ -90,4 +90,4 @@ identifier_name:
     - x
     - y
 
-reporter: "github-actions-logging"
+reporter: "xcode"
