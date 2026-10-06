@@ -43,6 +43,16 @@ final class ProductivityCountdownTimerTests: XCTestCase {
         XCTAssertEqual(resumed.remaining(at: resumeTime), 900)
     }
 
+    func testCancelClearsActiveTimingState() throws {
+        let cancelled = try makeTimer().cancelling()
+
+        XCTAssertEqual(cancelled.state, .cancelled)
+        XCTAssertNil(cancelled.deadline)
+        XCTAssertNil(cancelled.pausedRemaining)
+        XCTAssertNil(cancelled.completedAt)
+        XCTAssertEqual(cancelled.remaining(at: start), 0)
+    }
+
     func testReconcileCompletesOverdueTimerExactlyOnce() throws {
         let timer = try makeTimer()
         let overdue = start.addingTimeInterval(1_501)
