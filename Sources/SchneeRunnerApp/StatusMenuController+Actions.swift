@@ -60,6 +60,11 @@ extension StatusMenuController {
     }
 
     @objc
+    func toggleProductivityCharacterReactions() {
+        onToggleProductivityCharacterReactions?()
+    }
+
+    @objc
     func toggleCPUAdaptiveSpeed() {
         onToggleCPUAdaptiveSpeed?()
     }
