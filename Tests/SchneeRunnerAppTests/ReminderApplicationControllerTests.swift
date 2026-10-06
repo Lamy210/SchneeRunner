@@ -70,7 +70,7 @@ final class ReminderApplicationControllerTests: XCTestCase {
             baseDirectory: baseDirectory,
             fileManager: .default,
             notificationScheduler: scheduler,
-            calendar: utcCalendar()
+            calendar: try utcCalendar()
         )
         return ReminderApplicationFixture(
             baseDirectory: baseDirectory,
@@ -94,9 +94,9 @@ final class ReminderApplicationControllerTests: XCTestCase {
         )
     }
 
-    private func utcCalendar() -> Calendar {
+    private func utcCalendar() throws -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
         return calendar
     }
 }
