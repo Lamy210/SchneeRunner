@@ -35,6 +35,7 @@ SHA256_RE = re.compile(r"sha256:[0-9a-f]{64}")
 GIT_SHA_RE = re.compile(r"[0-9a-f]{40}")
 CASE_ID_RE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9._-]{0,127}")
 MAX_METADATA_BYTES = 64 * 1024
+CAPTURE_COPY_CHUNK_BYTES = 64 * 1024
 
 
 def _load_json(path: Path, label: str) -> dict[str, Any]:
@@ -131,7 +132,7 @@ def _reject_symlinked_destination(path: Path) -> None:
         current = parent
 
 
-def _read_capture(repo_root: Path, relative: Any) -> bytes:
+def _validated_capture_path(repo_root: Path, relative: Any) -> Path:
     if not isinstance(relative, str) or not relative:
         raise ValueError("rolling visual current path must be non-empty")
     relative_path = Path(relative)
@@ -148,7 +149,16 @@ def _read_capture(repo_root: Path, relative: Any) -> bytes:
     candidate = repo_root / relative_path
     if not candidate.is_file():
         raise ValueError(f"rolling visual capture is not a regular file: {relative}")
-    return candidate.read_bytes()
+    return candidate
+
+
+def _copy_capture_and_digest(source: Path, destination: Path) -> str:
+    digest = hashlib.sha256()
+    with source.open("rb") as input_file, destination.open("xb") as output_file:
+        while chunk := input_file.read(CAPTURE_COPY_CHUNK_BYTES):
+            output_file.write(chunk)
+            digest.update(chunk)
+    return "sha256:" + digest.hexdigest()
 
 
 def _validate_manifest(payload: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
@@ -201,7 +211,7 @@ def _write_bundle(
     *,
     staging_root: Path,
     profile_payload: dict[str, Any],
-    rolling: list[tuple[str, bytes, str]],
+    rolling: list[tuple[str, Path]],
     repository: str,
     workflow: str,
     run_id: str,
@@ -216,8 +226,14 @@ def _write_bundle(
         json.dumps(profile_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    for case_id, image_data, _digest in rolling:
-        (images_root / f"{case_id}.png").write_bytes(image_data)
+
+    bundle_cases: list[dict[str, str]] = []
+    for case_id, source_path in rolling:
+        digest = _copy_capture_and_digest(
+            source_path,
+            images_root / f"{case_id}.png",
+        )
+        bundle_cases.append({"id": case_id, "digest": digest})
 
     bundle = {
         "schemaVersion": 1,
@@ -228,10 +244,7 @@ def _write_bundle(
         "sourceSHA": source_sha,
         "profileFingerprint": profile_fingerprint,
         "previousBaselineReference": previous_baseline_reference,
-        "cases": [
-            {"id": case_id, "digest": digest}
-            for case_id, _image_data, digest in rolling
-        ],
+        "cases": bundle_cases,
     }
     (staging_root / "bundle-manifest.json").write_text(
         json.dumps(bundle, indent=2, sort_keys=True) + "\n",
@@ -267,13 +280,13 @@ def build_bundle(
         profile_payload, expected_profile=profile_label, source_sha=source_sha
     )
 
-    rolling: list[tuple[str, bytes, str]] = []
+    rolling: list[tuple[str, Path]] = []
     for test_case in cases:
         if test_case["baseline"] != "rolling-main":
             continue
         case_id = test_case["id"]
-        image_data = _read_capture(repo_root, test_case.get("current"))
-        rolling.append((case_id, image_data, _sha256_bytes(image_data)))
+        source_path = _validated_capture_path(repo_root, test_case.get("current"))
+        rolling.append((case_id, source_path))
     rolling.sort(key=lambda item: item[0])
 
     if previous_baseline_reference == "":
