@@ -15,8 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var characterStateCoordinator = CharacterStateCoordinator(
         playbackController: characterPlaybackController
     )
-    private lazy var timerApplicationController = TimerApplicationController(menuController: menuController)
-    private lazy var pomodoroApplicationController = PomodoroApplicationController(menuController: menuController)
+    private lazy var productivityApplicationController = ProductivityApplicationController(menuController: menuController)
 
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
@@ -34,15 +33,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureCPUMonitor()
         restoreLastCharacter()
         refreshRecentCharactersMenu()
-        timerApplicationController.start()
-        pomodoroApplicationController.start()
+        productivityApplicationController.start()
         characterStateCoordinator.start()
         cpuMonitor.start()
     }
 
     func applicationWillTerminate(_: Notification) {
-        timerApplicationController.stop()
-        pomodoroApplicationController.stop()
+        productivityApplicationController.stop()
         characterStateCoordinator.stop()
         cpuMonitor.stop()
         animationController.stop()
