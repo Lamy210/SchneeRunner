@@ -1,5 +1,5 @@
-@testable import SchneeRunnerApp
 import Foundation
+@testable import SchneeRunnerApp
 import SchneeRunnerCore
 import XCTest
 
@@ -8,7 +8,7 @@ final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
     func testRunningCountdownPublishesWalk() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        let now = Date(timeIntervalSince1970: 1_000)
+        let now = Date(timeIntervalSince1970: 1000)
         let timer = try ProductivityCountdownTimer(
             id: UUID(),
             title: "Build",
@@ -24,7 +24,7 @@ final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
     func testFinalMinutePublishesSprint() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        let now = Date(timeIntervalSince1970: 1_000)
+        let now = Date(timeIntervalSince1970: 1000)
         let timer = try ProductivityCountdownTimer(
             id: UUID(),
             title: "Build",
@@ -40,7 +40,7 @@ final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
     func testPomodoroFocusWinsOrdinaryCountdown() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        let now = Date(timeIntervalSince1970: 1_000)
+        let now = Date(timeIntervalSince1970: 1000)
         let timer = try ProductivityCountdownTimer(
             id: UUID(),
             title: "Build",
@@ -62,7 +62,7 @@ final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
     func testTimerCompletionTransientWinsFocusThenExpires() throws {
         let fixture = try makeFixture(transientReactionDuration: 2)
         defer { fixture.cleanup() }
-        let now = Date(timeIntervalSince1970: 1_000)
+        let now = Date(timeIntervalSince1970: 1000)
         let session = try PomodoroSession(
             id: UUID(),
             configuration: PomodoroConfiguration(),
@@ -80,7 +80,7 @@ final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
     func testReminderTransientWinsTimerCompletion() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        let now = Date(timeIntervalSince1970: 1_000)
+        let now = Date(timeIntervalSince1970: 1000)
 
         fixture.coordinator.recordTimerCompletion(at: now)
         fixture.coordinator.recordReminderFired(at: now)
@@ -91,7 +91,7 @@ final class ProductivityCharacterStateCoordinatorTests: XCTestCase {
     func testDisablingReactionsClearsProductivityTriggerAndPersistsPreference() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        let now = Date(timeIntervalSince1970: 1_000)
+        let now = Date(timeIntervalSince1970: 1000)
         let timer = try ProductivityCountdownTimer(
             id: UUID(),
             title: "Build",
