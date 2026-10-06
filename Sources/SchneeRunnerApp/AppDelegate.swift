@@ -15,7 +15,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var characterStateCoordinator = CharacterStateCoordinator(
         playbackController: characterPlaybackController
     )
-    private lazy var productivityController = ProductivityApplicationController(menuController: menuController)
+    private lazy var productivityController = ProductivityApplicationController(
+        menuController: menuController,
+        characterStateCoordinator: characterStateCoordinator
+    )
 
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
