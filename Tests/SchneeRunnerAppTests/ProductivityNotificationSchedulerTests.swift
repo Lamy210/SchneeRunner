@@ -70,6 +70,58 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
         XCTAssertEqual(center.requestAuthorizationCount, 0)
     }
 
+    func testPomodoroIdentifierUsesStableSessionAndPhase() throws {
+        let id = try XCTUnwrap(
+            UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
+        )
+
+        XCTAssertEqual(
+            ProductivityNotificationScheduler.pomodoroIdentifier(
+                for: id,
+                phase: .shortBreak
+            ),
+            "schneerunner.pomodoro.aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.shortBreak"
+        )
+    }
+
+    func testPomodoroReconcileReplacesOwnedPhaseAndPreservesOtherNotifications() async throws {
+        let center = FakeProductivityNotificationCenterClient()
+        center.authorizationState = .authorized
+        let session = try makePomodoro()
+        let staleIdentifier = ProductivityNotificationScheduler.pomodoroIdentifier(
+            for: session.id,
+            phase: .shortBreak
+        )
+        let desiredIdentifier = ProductivityNotificationScheduler.pomodoroIdentifier(
+            for: session.id,
+            phase: .focus
+        )
+        center.pending = [
+            staleIdentifier,
+            "schneerunner.timer.11111111-1111-1111-1111-111111111111",
+            "com.example.foreign"
+        ]
+        let scheduler = ProductivityNotificationScheduler(center: center)
+
+        let result = try await scheduler.reconcilePomodoro(
+            session,
+            now: start
+        )
+
+        XCTAssertEqual(result, .scheduled)
+        XCTAssertEqual(center.removedIdentifiers, [staleIdentifier])
+        XCTAssertEqual(
+            center.addedRequests.map(\.identifier),
+            [desiredIdentifier]
+        )
+        XCTAssertFalse(
+            center.removedIdentifiers.contains(
+                "schneerunner.timer.11111111-1111-1111-1111-111111111111"
+            )
+        )
+        XCTAssertFalse(center.removedIdentifiers.contains("com.example.foreign"))
+    }
+
     private var start: Date {
         Date(timeIntervalSince1970: 1_791_331_200)
     }
@@ -79,6 +131,16 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             title: "Focus",
             duration: 1500,
+            startedAt: start
+        )
+    }
+
+    private func makePomodoro() throws -> PomodoroSession {
+        try PomodoroSession(
+            id: XCTUnwrap(
+                UUID(uuidString: "22222222-2222-2222-2222-222222222222")
+            ),
+            configuration: PomodoroConfiguration(),
             startedAt: start
         )
     }
