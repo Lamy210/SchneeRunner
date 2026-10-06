@@ -1,6 +1,5 @@
 import Foundation
 import SchneeRunnerCore
-import UserNotifications
 
 enum NotificationAuthorizationState: Equatable, Sendable {
     case authorized
@@ -97,6 +96,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
     private static let timerPrefix = "schneerunner.timer."
     private static let reminderPrefix = "schneerunner.reminder."
     private static let snoozePrefix = "schneerunner.snooze."
+    private static let pomodoroPrefix = "schneerunner.pomodoro."
 
     private let center: any ProductivityNotificationCenterClient
 
@@ -121,6 +121,13 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
 
     static func snoozeIdentifier(for id: UUID) -> String {
         snoozePrefix + id.uuidString.lowercased()
+    }
+
+    static func pomodoroIdentifier(
+        for id: UUID,
+        phase: PomodoroPhase
+    ) -> String {
+        "\(pomodoroPrefix)\(id.uuidString.lowercased()).\(phase.rawValue)"
     }
 
     func scheduleTimer(
@@ -230,6 +237,89 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
         return .scheduled
     }
 
+    func schedulePomodoro(
+        _ session: PomodoroSession,
+        now: Date
+    ) async throws -> ProductivityNotificationDeliveryStatus {
+        guard try await notificationsAreEnabled() else {
+            return .disabled
+        }
+
+        guard
+            session.state == .running,
+            let deadline = session.phaseDeadline,
+            deadline > now
+        else {
+            await cancelPomodoro(id: session.id)
+            return .scheduled
+        }
+
+        try await center.add(
+            Self.request(for: session, now: now, deadline: deadline)
+        )
+        return .scheduled
+    }
+
+    func cancelPomodoro(id: UUID) async {
+        let prefix = Self.pomodoroSessionPrefix(for: id)
+        let pendingIdentifiers = await center.pendingIdentifiers()
+        let ownedIdentifiers = Set(
+            pendingIdentifiers.filter { $0.hasPrefix(prefix) }
+        )
+        if !ownedIdentifiers.isEmpty {
+            center.removePending(identifiers: ownedIdentifiers)
+        }
+    }
+
+    func reconcilePomodoro(
+        _ session: PomodoroSession?,
+        now: Date
+    ) async throws -> ProductivityNotificationDeliveryStatus {
+        guard try await notificationsAreEnabled() else {
+            return .disabled
+        }
+
+        let desired = session.flatMap { session -> (PomodoroSession, Date)? in
+            guard
+                session.state == .running,
+                let deadline = session.phaseDeadline,
+                deadline > now
+            else {
+                return nil
+            }
+            return (session, deadline)
+        }
+        let desiredIdentifier = desired.map {
+            Self.pomodoroIdentifier(
+                for: $0.0.id,
+                phase: $0.0.currentPhase
+            )
+        }
+        let pendingIdentifiers = await center.pendingIdentifiers()
+        let obsoleteOwnedIdentifiers = Set(
+            pendingIdentifiers.filter { identifier in
+                identifier.hasPrefix(Self.pomodoroPrefix)
+                    && identifier != desiredIdentifier
+            }
+        )
+
+        if !obsoleteOwnedIdentifiers.isEmpty {
+            center.removePending(identifiers: obsoleteOwnedIdentifiers)
+        }
+
+        if let desired {
+            try await center.add(
+                Self.request(
+                    for: desired.0,
+                    now: now,
+                    deadline: desired.1
+                )
+            )
+        }
+
+        return .scheduled
+    }
+
     private func notificationsAreEnabled() async throws -> Bool {
         switch await center.currentAuthorizationState() {
         case .authorized:
@@ -241,6 +331,8 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
         }
     }
 }
+
+extension ProductivityNotificationScheduler: PomodoroNotificationScheduling {}
 
 private extension ProductivityNotificationScheduler {
     static func isReminderOwned(_ identifier: String) -> Bool {
@@ -336,104 +428,35 @@ private extension ProductivityNotificationScheduler {
             trigger: .timeInterval(snooze.fireDate.timeIntervalSince(now))
         )
     }
-}
 
-@MainActor
-private final class SystemProductivityNotificationClient: ProductivityNotificationCenterClient {
-    private let center: UNUserNotificationCenter
-
-    init(center: UNUserNotificationCenter = .current()) {
-        self.center = center
-    }
-
-    func currentAuthorizationState() async -> NotificationAuthorizationState {
-        await withCheckedContinuation { continuation in
-            center.getNotificationSettings { settings in
-                let state: NotificationAuthorizationState = switch settings.authorizationStatus {
-                case .authorized, .provisional, .ephemeral:
-                    .authorized
-                case .denied:
-                    .denied
-                case .notDetermined:
-                    .notDetermined
-                @unknown default:
-                    .denied
-                }
-                continuation.resume(returning: state)
-            }
-        }
-    }
-
-    func requestAuthorization() async throws -> Bool {
-        try await withCheckedThrowingContinuation { continuation in
-            center.requestAuthorization(
-                options: [.alert, .sound]
-            ) { granted, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: granted)
-                }
-            }
-        }
-    }
-
-    func pendingIdentifiers() async -> Set<String> {
-        await withCheckedContinuation { continuation in
-            center.getPendingNotificationRequests { requests in
-                continuation.resume(
-                    returning: Set(requests.map(\.identifier))
-                )
-            }
-        }
-    }
-
-    func add(_ request: ProductivityNotificationRequest) async throws {
-        let content = UNMutableNotificationContent()
-        content.title = request.title
-        content.body = request.body
-        content.sound = .default
-
-        let notificationRequest = UNNotificationRequest(
-            identifier: request.identifier,
-            content: content,
-            trigger: Self.systemTrigger(for: request.trigger)
-        )
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            center.add(notificationRequest) { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        }
-    }
-
-    func removePending(identifiers: Set<String>) {
-        center.removePendingNotificationRequests(
-            withIdentifiers: Array(identifiers)
+    static func request(
+        for session: PomodoroSession,
+        now: Date,
+        deadline: Date
+    ) -> ProductivityNotificationRequest {
+        ProductivityNotificationRequest(
+            identifier: pomodoroIdentifier(
+                for: session.id,
+                phase: session.currentPhase
+            ),
+            title: "Pomodoro",
+            body: "\(phaseTitle(session.currentPhase)) finished",
+            trigger: .timeInterval(deadline.timeIntervalSince(now))
         )
     }
 
-    private static func systemTrigger(
-        for trigger: ProductivityNotificationTrigger
-    ) -> UNNotificationTrigger {
-        switch trigger {
-        case let .timeInterval(timeInterval):
-            UNTimeIntervalNotificationTrigger(
-                timeInterval: timeInterval,
-                repeats: false
-            )
-        case let .calendar(hour, minute, weekday):
-            UNCalendarNotificationTrigger(
-                dateMatching: DateComponents(
-                    hour: hour,
-                    minute: minute,
-                    weekday: weekday
-                ),
-                repeats: true
-            )
+    static func pomodoroSessionPrefix(for id: UUID) -> String {
+        "\(pomodoroPrefix)\(id.uuidString.lowercased())."
+    }
+
+    static func phaseTitle(_ phase: PomodoroPhase) -> String {
+        switch phase {
+        case .focus:
+            "Focus"
+        case .shortBreak:
+            "Short break"
+        case .longBreak:
+            "Long break"
         }
     }
 }
