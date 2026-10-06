@@ -185,8 +185,7 @@ public struct PomodoroSession: Codable, Equatable, Sendable {
 
         while session.state == .running,
               let deadline = session.phaseDeadline,
-              now >= deadline
-        {
+              now >= deadline {
             session = session.advancingOnePhase(at: deadline)
         }
 
