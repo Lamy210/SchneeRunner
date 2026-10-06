@@ -23,10 +23,12 @@ final class PomodoroApplicationController: NSObject {
         managementWindow: ProductivityManagementWindowController? = nil,
         fileManager: FileManager = .default,
         defaults: UserDefaults = .standard,
-        refreshInterval: TimeInterval = 1
+        refreshInterval: TimeInterval = 1,
+        notificationScheduler: ProductivityNotificationScheduler = .init()
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
+        self.notificationScheduler = notificationScheduler
         self.refreshInterval = refreshInterval
         configurationStore = PomodoroConfigurationStore(defaults: defaults)
         let applicationSupportDirectory = fileManager.urls(
@@ -42,7 +44,6 @@ final class PomodoroApplicationController: NSObject {
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
-        notificationScheduler = ProductivityNotificationScheduler()
         super.init()
         configureMenuCallbacks()
         configureManagementCallbacks()
