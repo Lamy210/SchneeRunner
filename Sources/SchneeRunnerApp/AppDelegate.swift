@@ -17,20 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var characterStateCoordinator = CharacterStateCoordinator(
         playbackController: characterPlaybackController
     )
-    private lazy var productivityStateStore: ProductivityStateStore = {
-        let fileManager = FileManager.default
-        let applicationSupportDirectory = fileManager.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first ?? fileManager.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support", isDirectory: true)
-        return ProductivityStateStore(
-            baseDirectory: applicationSupportDirectory,
-            fileManager: fileManager
-        )
-    }()
+    private lazy var timerApplicationController = TimerApplicationController(
+        menuController: menuController
+    )
 
-    private var timerCoordinator: TimerCoordinator?
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
     private var latestCPUUpdate: CPUMonitor.Update?
@@ -44,16 +34,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureAnimationCallback()
         configurePlaybackCallback()
         configureMenuCallbacks()
-        configureTimerCoordinator()
         configureCPUMonitor()
         restoreLastCharacter()
         refreshRecentCharactersMenu()
+        timerApplicationController.start()
         characterStateCoordinator.start()
         cpuMonitor.start()
     }
 
     func applicationWillTerminate(_: Notification) {
-        timerCoordinator?.stopRefreshing()
+        timerApplicationController.stop()
         characterStateCoordinator.stop()
         cpuMonitor.stop()
         animationController.stop()
@@ -118,7 +108,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.exportCurrentCharacterPack()
         }
         configureRecentCharacterCallbacks()
-        configureTimerMenuCallbacks()
         menuController.onToggleCPUAdaptiveSpeed = { [weak self] in
             self?.toggleCPUAdaptiveSpeed()
         }
@@ -147,63 +136,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func configureRecentCharacterCallbacks() {
         menuController.onLoadRecentCharacter = { [weak self] id in self?.loadRecentCharacter(id: id) }
         menuController.onRefreshRecentCharacters = { [weak self] in self?.refreshRecentCharactersMenu() }
-    }
-
-    private func configureTimerMenuCallbacks() {
-        menuController.onStartTimerPreset = { [weak self] duration in
-            self?.startPresetTimer(duration: duration)
-        }
-        menuController.onStartCustomTimer = { [weak self] in
-            self?.startCustomTimer()
-        }
-        menuController.onPauseTimer = { [weak self] id in
-            self?.pauseTimer(id: id)
-        }
-        menuController.onResumeTimer = { [weak self] id in
-            self?.resumeTimer(id: id)
-        }
-        menuController.onCancelTimer = { [weak self] id in
-            self?.cancelTimer(id: id)
-        }
-    }
-
-    private func configureTimerCoordinator() {
-        do {
-            let coordinator = try TimerCoordinator(
-                store: productivityStateStore,
-                notificationScheduler: ProductivityNotificationScheduler()
-            )
-            coordinator.onChange = { [weak self] timers in
-                self?.menuController.setTimers(timers, now: Date())
-            }
-            coordinator.onNotificationStatus = { status in
-                if status == .disabled {
-                    NSLog("SchneeRunner timer notifications are disabled")
-                }
-            }
-            coordinator.onNotificationError = { error in
-                NSLog("SchneeRunner timer notification error: %@", String(describing: error))
-            }
-            coordinator.onPersistenceError = { error in
-                NSLog("SchneeRunner timer persistence error: %@", String(describing: error))
-            }
-            timerCoordinator = coordinator
-            menuController.setTimers(coordinator.timers, now: Date())
-            coordinator.startRefreshing()
-
-            Task { @MainActor [weak self] in
-                guard let self, let coordinator = timerCoordinator else {
-                    return
-                }
-                do {
-                    try await coordinator.reconcile(now: Date())
-                } catch {
-                    NSLog("SchneeRunner timer recovery error: %@", String(describing: error))
-                }
-            }
-        } catch {
-            NSLog("SchneeRunner timer state load error: %@", String(describing: error))
-        }
     }
 
     private func configureCPUMonitor() {
@@ -250,102 +182,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 isAdaptiveSpeedEnabled: isCPUAdaptiveSpeedEnabled
             )
         )
-    }
-}
-
-private extension AppDelegate {
-    func startPresetTimer(duration: TimeInterval) {
-        let minutes = max(1, Int(duration / 60))
-        startTimer(
-            title: "\(minutes) min Timer",
-            duration: duration
-        )
-    }
-
-    func startCustomTimer() {
-        let alert = NSAlert()
-        alert.messageText = "New Timer"
-        alert.informativeText = "Enter a duration in minutes."
-        alert.addButton(withTitle: "Start")
-        alert.addButton(withTitle: "Cancel")
-
-        let minutesField = NSTextField(string: "25")
-        minutesField.placeholderString = "Minutes"
-        minutesField.frame = NSRect(x: 0, y: 0, width: 240, height: 24)
-        alert.accessoryView = minutesField
-
-        guard
-            alert.runModal() == .alertFirstButtonReturn,
-            let minutes = Double(minutesField.stringValue),
-            minutes.isFinite,
-            minutes > 0
-        else {
-            return
-        }
-
-        startTimer(
-            title: "Timer",
-            duration: minutes * 60
-        )
-    }
-
-    func startTimer(
-        title: String,
-        duration: TimeInterval
-    ) {
-        Task { @MainActor [weak self] in
-            guard let coordinator = self?.timerCoordinator else {
-                return
-            }
-            do {
-                _ = try await coordinator.start(
-                    title: title,
-                    duration: duration,
-                    now: Date()
-                )
-            } catch {
-                NSLog("SchneeRunner timer start error: %@", String(describing: error))
-            }
-        }
-    }
-
-    func pauseTimer(id: UUID) {
-        Task { @MainActor [weak self] in
-            guard let coordinator = self?.timerCoordinator else {
-                return
-            }
-            do {
-                try await coordinator.pause(id: id, now: Date())
-            } catch {
-                NSLog("SchneeRunner timer pause error: %@", String(describing: error))
-            }
-        }
-    }
-
-    func resumeTimer(id: UUID) {
-        Task { @MainActor [weak self] in
-            guard let coordinator = self?.timerCoordinator else {
-                return
-            }
-            do {
-                try await coordinator.resume(id: id, now: Date())
-            } catch {
-                NSLog("SchneeRunner timer resume error: %@", String(describing: error))
-            }
-        }
-    }
-
-    func cancelTimer(id: UUID) {
-        Task { @MainActor [weak self] in
-            guard let coordinator = self?.timerCoordinator else {
-                return
-            }
-            do {
-                try await coordinator.cancel(id: id)
-            } catch {
-                NSLog("SchneeRunner timer cancel error: %@", String(describing: error))
-            }
-        }
     }
 }
 
