@@ -7,6 +7,8 @@ from pathlib import Path
 import sys
 
 
+MAX_RELEASE_METADATA_BYTES = 64 * 1024
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -24,8 +26,18 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        if args.metadata.is_symlink():
+            raise ValueError("release metadata must not be a symlink")
+        if not args.metadata.is_file():
+            raise ValueError("release metadata must be a regular file")
+        file_size = args.metadata.stat().st_size
+        if file_size > MAX_RELEASE_METADATA_BYTES:
+            raise ValueError(
+                "release metadata is too large: "
+                f"{file_size} bytes exceeds {MAX_RELEASE_METADATA_BYTES}"
+            )
         document = json.loads(args.metadata.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
         print(f"failed to read release metadata {args.metadata}: {error}", file=sys.stderr)
         return 1
 
