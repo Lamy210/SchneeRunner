@@ -2,7 +2,7 @@ import Foundation
 import SchneeRunnerCore
 import UserNotifications
 
-enum ProductivityNotificationAuthorizationState: Equatable, Sendable {
+enum NotificationAuthorizationState: Equatable, Sendable {
     case authorized
     case denied
     case notDetermined
@@ -22,7 +22,7 @@ struct ProductivityNotificationRequest: Equatable, Sendable {
 
 @MainActor
 protocol ProductivityNotificationCenterClient: AnyObject {
-    func currentAuthorizationState() async -> ProductivityNotificationAuthorizationState
+    func currentAuthorizationState() async -> NotificationAuthorizationState
     func requestAuthorization() async throws -> Bool
     func pendingIdentifiers() async -> Set<String>
     func add(_ request: ProductivityNotificationRequest) async throws
@@ -51,7 +51,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
     private let center: any ProductivityNotificationCenterClient
 
     convenience init() {
-        self.init(center: SystemProductivityNotificationCenterClient())
+        self.init(center: SystemProductivityNotificationClient())
     }
 
     init(center: any ProductivityNotificationCenterClient) {
@@ -160,17 +160,17 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
 }
 
 @MainActor
-private final class SystemProductivityNotificationCenterClient: ProductivityNotificationCenterClient {
+private final class SystemProductivityNotificationClient: ProductivityNotificationCenterClient {
     private let center: UNUserNotificationCenter
 
     init(center: UNUserNotificationCenter = .current()) {
         self.center = center
     }
 
-    func currentAuthorizationState() async -> ProductivityNotificationAuthorizationState {
+    func currentAuthorizationState() async -> NotificationAuthorizationState {
         await withCheckedContinuation { continuation in
             center.getNotificationSettings { settings in
-                let state: ProductivityNotificationAuthorizationState = switch settings.authorizationStatus {
+                let state: NotificationAuthorizationState = switch settings.authorizationStatus {
                 case .authorized, .provisional, .ephemeral:
                     .authorized
                 case .denied:
