@@ -56,9 +56,7 @@ final class PomodoroConfigStoreTests: XCTestCase {
         name: String
     ) {
         let name = "SchneeRunnerTests.\(UUID().uuidString)"
-        return (
-            try XCTUnwrap(UserDefaults(suiteName: name)),
-            name
-        )
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        return (defaults, name)
     }
 }
