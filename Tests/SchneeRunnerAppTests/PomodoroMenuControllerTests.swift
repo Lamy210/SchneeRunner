@@ -40,8 +40,10 @@ final class PomodoroMenuControllerTests: XCTestCase {
 
         let menu = try XCTUnwrap(controller.rootItem.submenu)
         XCTAssertNotNil(menu.item(withTitle: "Focus · 24:00"))
-        perform(try XCTUnwrap(menu.item(withTitle: "Pause")))
-        perform(try XCTUnwrap(menu.item(withTitle: "Stop")))
+        let pauseItem = try XCTUnwrap(menu.item(withTitle: "Pause"))
+        let stopItem = try XCTUnwrap(menu.item(withTitle: "Stop"))
+        perform(pauseItem)
+        perform(stopItem)
 
         XCTAssertEqual(pauseCount, 1)
         XCTAssertEqual(stopCount, 1)
@@ -62,7 +64,8 @@ final class PomodoroMenuControllerTests: XCTestCase {
 
         let menu = try XCTUnwrap(controller.rootItem.submenu)
         XCTAssertNotNil(menu.item(withTitle: "Focus · Paused 23:00"))
-        perform(try XCTUnwrap(menu.item(withTitle: "Resume")))
+        let resumeItem = try XCTUnwrap(menu.item(withTitle: "Resume"))
+        perform(resumeItem)
 
         XCTAssertEqual(resumeCount, 1)
     }
@@ -82,7 +85,10 @@ final class PomodoroMenuControllerTests: XCTestCase {
 
         let menu = try XCTUnwrap(controller.rootItem.submenu)
         XCTAssertNotNil(menu.item(withTitle: "Short Break · Ready"))
-        perform(try XCTUnwrap(menu.item(withTitle: "Start Break")))
+        let startBreakItem = try XCTUnwrap(
+            menu.item(withTitle: "Start Break")
+        )
+        perform(startBreakItem)
 
         XCTAssertEqual(startPhaseCount, 1)
     }
