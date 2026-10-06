@@ -120,7 +120,7 @@ final class TimerCoordinator: NSObject {
         refreshTimer = CommonRunLoopTimerScheduler.schedule(
             timeInterval: refreshInterval,
             target: self,
-            selector: #selector(refreshTick(_:)),
+            selector: #selector(refreshTimerDidFire(_:)),
             userInfo: nil,
             repeats: true
         )
@@ -132,7 +132,12 @@ final class TimerCoordinator: NSObject {
     }
 
     @objc
-    private func refreshTick(_: Timer) {
+    private func refreshTimerDidFire(_: Timer) {
+        refreshTick()
+    }
+
+    @objc
+    private func refreshTick() {
         publish()
         Task { @MainActor [weak self] in
             guard let self else {
