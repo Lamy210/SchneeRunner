@@ -4,27 +4,24 @@ import SchneeRunnerCore
 
 @MainActor
 final class TimerMenuController: NSObject {
-    let rootItem = NSMenuItem(
-        title: "Timers",
-        action: nil,
-        keyEquivalent: ""
-    )
+    let rootItem = NSMenuItem(title: "Timers", action: nil, keyEquivalent: "")
 
     var onStartPreset: ((TimeInterval) -> Void)?
     var onStartCustomTimer: (() -> Void)?
+    var onManageTimers: (() -> Void)?
     var onPauseTimer: ((UUID) -> Void)?
     var onResumeTimer: ((UUID) -> Void)?
     var onCancelTimer: ((UUID) -> Void)?
 
-    private let menu = NSMenu(title: "Timers")
-    private let newTimerMenu = NSMenu(title: "New Timer")
+    private let menu = NSMenu()
+    private let newTimerMenu = NSMenu()
     private var timers: [ProductivityCountdownTimer] = []
     private var now = Date()
 
     override init() {
         super.init()
         rootItem.submenu = menu
-        buildNewTimerMenu()
+        configureNewTimerMenu()
         rebuildActiveTimers()
     }
 
@@ -36,38 +33,30 @@ final class TimerMenuController: NSObject {
         self.now = now
         rebuildActiveTimers()
     }
+}
 
-    private func buildNewTimerMenu() {
-        let presets: [(title: String, duration: TimeInterval)] = [
-            ("5 min", 5 * 60),
-            ("10 min", 10 * 60),
-            ("15 min", 15 * 60),
-            ("25 min", 25 * 60),
-            ("30 min", 30 * 60),
-            ("60 min", 60 * 60)
-        ]
-
-        for preset in presets {
+private extension TimerMenuController {
+    func configureNewTimerMenu() {
+        for minutes in [5, 10, 15, 25, 30, 60] {
             let item = NSMenuItem(
-                title: preset.title,
+                title: "\(minutes) min",
                 action: #selector(startPreset(_:)),
                 keyEquivalent: ""
             )
             item.target = self
-            item.representedObject = preset.duration
+            item.representedObject = minutes * 60
             newTimerMenu.addItem(item)
         }
-
         let customItem = NSMenuItem(
             title: "Custom…",
-            action: #selector(startCustomTimer),
+            action: #selector(startCustomTimer(_:)),
             keyEquivalent: ""
         )
         customItem.target = self
         newTimerMenu.addItem(customItem)
     }
 
-    private func rebuildActiveTimers() {
+    func rebuildActiveTimers() {
         menu.removeAllItems()
 
         let newTimerItem = NSMenuItem(
@@ -77,12 +66,17 @@ final class TimerMenuController: NSObject {
         )
         newTimerItem.submenu = newTimerMenu
         menu.addItem(newTimerItem)
+
+        let manageItem = NSMenuItem(
+            title: "Manage Timers…",
+            action: #selector(manageTimers(_:)),
+            keyEquivalent: ""
+        )
+        manageItem.target = self
+        menu.addItem(manageItem)
         menu.addItem(.separator())
 
-        let activeTimers = timers.filter {
-            $0.state == .running || $0.state == .paused
-        }
-
+        let activeTimers = timers.filter(\.isActive)
         guard !activeTimers.isEmpty else {
             let emptyItem = NSMenuItem(
                 title: "No active timers",
@@ -99,84 +93,91 @@ final class TimerMenuController: NSObject {
         }
     }
 
-    private func makeTimerItem(
-        _ timer: ProductivityCountdownTimer
-    ) -> NSMenuItem {
+    func makeTimerItem(_ timer: ProductivityCountdownTimer) -> NSMenuItem {
         let item = NSMenuItem(
             title: timerTitle(timer),
             action: nil,
             keyEquivalent: ""
         )
         item.representedObject = timer.id.uuidString
-        item.submenu = makeActionsMenu(timer)
+
+        let actions = NSMenu()
+        switch timer.state {
+        case .running:
+            actions.addItem(
+                actionItem(
+                    title: "Pause",
+                    selector: #selector(pauseTimer(_:)),
+                    timerID: timer.id
+                )
+            )
+        case .paused:
+            actions.addItem(
+                actionItem(
+                    title: "Resume",
+                    selector: #selector(resumeTimer(_:)),
+                    timerID: timer.id
+                )
+            )
+        case .completed, .cancelled:
+            break
+        }
+        actions.addItem(
+            actionItem(
+                title: "Cancel",
+                selector: #selector(cancelTimer(_:)),
+                timerID: timer.id
+            )
+        )
+        item.submenu = actions
         return item
     }
 
-    private func makeActionsMenu(
-        _ timer: ProductivityCountdownTimer
-    ) -> NSMenu {
-        let actions = NSMenu(title: timer.title)
-        let stateActionTitle = timer.state == .running ? "Pause" : "Resume"
-        let stateAction = NSMenuItem(
-            title: stateActionTitle,
-            action: timer.state == .running
-                ? #selector(pauseTimer(_:))
-                : #selector(resumeTimer(_:)),
+    func actionItem(
+        title: String,
+        selector: Selector,
+        timerID: UUID
+    ) -> NSMenuItem {
+        let item = NSMenuItem(
+            title: title,
+            action: selector,
             keyEquivalent: ""
         )
-        stateAction.target = self
-        stateAction.representedObject = timer.id.uuidString
-        actions.addItem(stateAction)
-
-        let cancelItem = NSMenuItem(
-            title: "Cancel",
-            action: #selector(cancelTimer(_:)),
-            keyEquivalent: ""
-        )
-        cancelItem.target = self
-        cancelItem.representedObject = timer.id.uuidString
-        actions.addItem(cancelItem)
-        return actions
+        item.target = self
+        item.representedObject = timerID.uuidString
+        return item
     }
 
-    private func timerTitle(
-        _ timer: ProductivityCountdownTimer
-    ) -> String {
-        let remaining = format(timer.remaining(at: now))
+    func timerTitle(_ timer: ProductivityCountdownTimer) -> String {
+        let remaining = timer.remaining(at: now)
+        let seconds = max(0, Int(remaining.rounded(.down)))
+        let minutes = seconds / 60
+        let remainder = seconds % 60
+        let time = String(format: "%02d:%02d", minutes, remainder)
         switch timer.state {
-        case .running:
-            return "\(timer.title) · \(remaining)"
         case .paused:
-            return "\(timer.title) · Paused \(remaining)"
-        case .completed, .cancelled:
-            return timer.title
+            return "\(timer.title) · Paused \(time)"
+        case .running, .completed, .cancelled:
+            return "\(timer.title) · \(time)"
         }
     }
 
-    private func format(_ interval: TimeInterval) -> String {
-        let totalSeconds = max(0, interval.rounded(.down))
-        let minutes = (totalSeconds / 60).rounded(.down)
-        let seconds = totalSeconds.truncatingRemainder(dividingBy: 60)
-        return String(
-            format: "%02.0f:%02.0f",
-            minutes,
-            seconds
-        )
-    }
-}
-
-private extension TimerMenuController {
     @objc
     func startPreset(_ sender: NSMenuItem) {
-        guard let duration = sender.representedObject as? TimeInterval else {
+        guard let seconds = sender.representedObject as? Int else {
             return
         }
-        onStartPreset?(duration)
+        onStartPreset?(TimeInterval(seconds))
     }
 
     @objc
-    func startCustomTimer() {
+    func startCustomTimer(_: NSMenuItem) {
         onStartCustomTimer?()
+    }
+
+    @objc
+    func manageTimers(_: NSMenuItem) {
+        onManageTimers?()
     }
 
     @objc
