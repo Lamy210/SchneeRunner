@@ -21,6 +21,11 @@ final class StatusMenuController: NSObject {
     var onPauseTimer: ((UUID) -> Void)?
     var onResumeTimer: ((UUID) -> Void)?
     var onCancelTimer: ((UUID) -> Void)?
+    var onStartPomodoro: ((PomodoroConfiguration) -> Void)?
+    var onPausePomodoro: (() -> Void)?
+    var onResumePomodoro: (() -> Void)?
+    var onStartPomodoroPhase: (() -> Void)?
+    var onStopPomodoro: (() -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -40,6 +45,7 @@ final class StatusMenuController: NSObject {
     )
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
     private let timerMenuController = TimerMenuController()
+    private let pomodoroMenuController = PomodoroMenuController()
     private let stateMenuController = CharacterStateMenuController()
     private let desktopCharacterMenuController = DesktopCharacterMenuController()
     private let launchAtLoginMenuController = LaunchAtLoginMenuController()
@@ -52,6 +58,7 @@ final class StatusMenuController: NSObject {
     override init() {
         super.init()
         configureTimerCallbacks()
+        configurePomodoroCallbacks()
         stateMenuController.onSelection = { [weak self] state in
             self?.onCharacterStateOverride?(state)
         }
@@ -86,6 +93,13 @@ final class StatusMenuController: NSObject {
         now: Date
     ) {
         timerMenuController.setTimers(timers, now: now)
+    }
+
+    func setPomodoroSession(
+        _ session: PomodoroSession?,
+        now: Date
+    ) {
+        pomodoroMenuController.setSession(session, now: now)
     }
 
     func setRecentCharacters(_ assets: [StoredCharacterAsset]) {
@@ -135,12 +149,31 @@ final class StatusMenuController: NSObject {
         }
     }
 
+    private func configurePomodoroCallbacks() {
+        pomodoroMenuController.onStart = { [weak self] configuration in
+            self?.onStartPomodoro?(configuration)
+        }
+        pomodoroMenuController.onPause = { [weak self] in
+            self?.onPausePomodoro?()
+        }
+        pomodoroMenuController.onResume = { [weak self] in
+            self?.onResumePomodoro?()
+        }
+        pomodoroMenuController.onStartCurrentPhase = { [weak self] in
+            self?.onStartPomodoroPhase?()
+        }
+        pomodoroMenuController.onStop = { [weak self] in
+            self?.onStopPomodoro?()
+        }
+    }
+
     private func buildMenu() {
         addImportItems()
         addRecentCharactersItem()
         addExportItem()
         menu.addItem(.separator())
         menu.addItem(timerMenuController.rootItem)
+        menu.addItem(pomodoroMenuController.rootItem)
         menu.addItem(.separator())
         addCPUItems()
         menu.addItem(stateMenuController.rootItem)
@@ -395,6 +428,7 @@ private extension StatusMenuController {
 extension StatusMenuController: NSMenuDelegate {
     func menuWillOpen(_: NSMenu) {
         onRefreshRecentCharacters?()
+        pomodoroMenuController.refresh(now: Date())
         launchAtLoginMenuController.refresh()
     }
 }
