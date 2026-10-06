@@ -75,6 +75,35 @@ final class StatusMenuControllerTests: XCTestCase {
         XCTAssertEqual(startCount, 1)
     }
 
+    func testStatusMenuContainsSingleRemindersSubmenu() {
+        let controller = StatusMenuController()
+
+        XCTAssertEqual(
+            controller.menu.items.filter { $0.title == "Reminders" }.count,
+            1
+        )
+        XCTAssertNotNil(
+            controller.menu.item(withTitle: "Reminders")?.submenu
+        )
+    }
+
+    func testReminderCallbacksAreForwarded() throws {
+        let controller = StatusMenuController()
+        var newCount = 0
+        var manageCount = 0
+        controller.onNewReminder = { newCount += 1 }
+        controller.onManageReminders = { manageCount += 1 }
+        let remindersMenu = try XCTUnwrap(
+            controller.menu.item(withTitle: "Reminders")?.submenu
+        )
+
+        try perform(XCTUnwrap(remindersMenu.item(withTitle: "New Reminder…")))
+        try perform(XCTUnwrap(remindersMenu.item(withTitle: "Manage Reminders…")))
+
+        XCTAssertEqual(newCount, 1)
+        XCTAssertEqual(manageCount, 1)
+    }
+
     private func perform(_ item: NSMenuItem) {
         guard
             let action = item.action,

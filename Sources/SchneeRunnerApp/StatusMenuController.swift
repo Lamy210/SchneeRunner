@@ -26,6 +26,8 @@ final class StatusMenuController: NSObject {
     var onResumePomodoro: (() -> Void)?
     var onStartPomodoroPhase: (() -> Void)?
     var onStopPomodoro: (() -> Void)?
+    var onNewReminder: (() -> Void)?
+    var onManageReminders: (() -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -46,6 +48,7 @@ final class StatusMenuController: NSObject {
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
     private let timerMenuController = TimerMenuController()
     private let pomodoroMenuController = PomodoroMenuController()
+    private let reminderMenuController = ReminderMenuController()
     private let stateMenuController = CharacterStateMenuController()
     private let desktopCharacterMenuController = DesktopCharacterMenuController()
     private let launchAtLoginMenuController = LaunchAtLoginMenuController()
@@ -59,6 +62,7 @@ final class StatusMenuController: NSObject {
         super.init()
         configureTimerCallbacks()
         configurePomodoroCallbacks()
+        configureReminderCallbacks()
         stateMenuController.onSelection = { [weak self] state in
             self?.onCharacterStateOverride?(state)
         }
@@ -100,6 +104,18 @@ final class StatusMenuController: NSObject {
         now: Date
     ) {
         pomodoroMenuController.setSession(session, now: now)
+    }
+
+    func setReminders(
+        _ reminders: [ProductivityReminder],
+        now: Date,
+        calendar: Calendar = .current
+    ) {
+        reminderMenuController.setReminders(
+            reminders,
+            now: now,
+            calendar: calendar
+        )
     }
 
     func setRecentCharacters(_ assets: [StoredCharacterAsset]) {
@@ -169,6 +185,15 @@ private extension StatusMenuController {
         }
     }
 
+    func configureReminderCallbacks() {
+        reminderMenuController.onNewReminder = { [weak self] in
+            self?.onNewReminder?()
+        }
+        reminderMenuController.onManageReminders = { [weak self] in
+            self?.onManageReminders?()
+        }
+    }
+
     func buildMenu() {
         addImportItems()
         addRecentCharactersItem()
@@ -176,6 +201,7 @@ private extension StatusMenuController {
         menu.addItem(.separator())
         menu.addItem(timerMenuController.rootItem)
         menu.addItem(pomodoroMenuController.rootItem)
+        menu.addItem(reminderMenuController.rootItem)
         menu.addItem(.separator())
         addCPUItems()
         menu.addItem(stateMenuController.rootItem)
