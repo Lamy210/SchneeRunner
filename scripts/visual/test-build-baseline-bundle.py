@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = ROOT / "scripts/visual/build-baseline-bundle.py"
@@ -123,6 +124,18 @@ class BaselineBundleBuilderTests(unittest.TestCase):
         self.assertFalse((self.output / "images/git-case.png").exists())
         self.assertEqual(
             json.loads((self.output / "profile.json").read_text()), profile_payload()
+        )
+
+    def test_streams_capture_without_path_read_bytes(self):
+        with mock.patch.object(
+            Path,
+            "read_bytes",
+            side_effect=AssertionError("capture must be streamed"),
+        ):
+            self.build()
+
+        self.assertEqual(
+            (self.output / "images/rolling-case.png").read_bytes(), b"rolling-image"
         )
 
     def test_records_provenance(self):
