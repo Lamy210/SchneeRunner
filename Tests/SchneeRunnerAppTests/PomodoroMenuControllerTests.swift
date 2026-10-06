@@ -24,8 +24,8 @@ final class PomodoroMenuControllerTests: XCTestCase {
         controller.setConfiguration(configured)
 
         let menu = try XCTUnwrap(controller.rootItem.submenu)
-        perform(try XCTUnwrap(menu.item(withTitle: "Start Pomodoro")))
-        perform(try XCTUnwrap(menu.item(withTitle: "Settings…")))
+        try perform(XCTUnwrap(menu.item(withTitle: "Start Pomodoro")))
+        try perform(XCTUnwrap(menu.item(withTitle: "Settings…")))
 
         XCTAssertEqual(configuration, configured)
         XCTAssertEqual(settingsCount, 1)
