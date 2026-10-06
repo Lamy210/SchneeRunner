@@ -168,28 +168,45 @@ private final class SystemProductivityNotificationCenterClient: ProductivityNoti
     }
 
     func currentAuthorizationState() async -> ProductivityNotificationAuthorizationState {
-        let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return .authorized
-        case .denied:
-            return .denied
-        case .notDetermined:
-            return .notDetermined
-        @unknown default:
-            return .denied
+        await withCheckedContinuation { continuation in
+            center.getNotificationSettings { settings in
+                let state: ProductivityNotificationAuthorizationState = switch settings.authorizationStatus {
+                case .authorized, .provisional, .ephemeral:
+                    .authorized
+                case .denied:
+                    .denied
+                case .notDetermined:
+                    .notDetermined
+                @unknown default:
+                    .denied
+                }
+                continuation.resume(returning: state)
+            }
         }
     }
 
     func requestAuthorization() async throws -> Bool {
-        try await center.requestAuthorization(
-            options: [.alert, .sound]
-        )
+        try await withCheckedThrowingContinuation { continuation in
+            center.requestAuthorization(
+                options: [.alert, .sound]
+            ) { granted, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
     }
 
     func pendingIdentifiers() async -> Set<String> {
-        let requests = await center.pendingNotificationRequests()
-        return Set(requests.map(\.identifier))
+        await withCheckedContinuation { continuation in
+            center.getPendingNotificationRequests { requests in
+                continuation.resume(
+                    returning: Set(requests.map(\.identifier))
+                )
+            }
+        }
     }
 
     func add(_ request: ProductivityNotificationRequest) async throws {
@@ -198,17 +215,23 @@ private final class SystemProductivityNotificationCenterClient: ProductivityNoti
         content.body = request.body
         content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: request.timeInterval,
-            repeats: false
-        )
-        try await center.add(
-            UNNotificationRequest(
-                identifier: request.identifier,
-                content: content,
-                trigger: trigger
+        let notificationRequest = UNNotificationRequest(
+            identifier: request.identifier,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: request.timeInterval,
+                repeats: false
             )
         )
+        try await withCheckedThrowingContinuation { continuation in
+            center.add(notificationRequest) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
     }
 
     func removePending(identifiers: Set<String>) {
