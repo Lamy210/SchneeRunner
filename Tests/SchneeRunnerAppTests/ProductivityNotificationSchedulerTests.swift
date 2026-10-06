@@ -57,9 +57,10 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
         center.authorizationState = .denied
         center.pending = ["com.example.foreign"]
         let scheduler = ProductivityNotificationScheduler(center: center)
+        let timer = try makeTimer()
 
         let result = try await scheduler.reconcileTimers(
-            [try makeTimer()],
+            [timer],
             now: start
         )
 
