@@ -65,12 +65,12 @@ final class ReminderApplicationControllerTests: XCTestCase {
         try stateStore.save(ProductivitySnapshot(reminders: reminders))
         let menuController = StatusMenuController()
         let scheduler = ReminderApplicationScheduler()
-        let controller = ReminderApplicationController(
+        let controller = try ReminderApplicationController(
             menuController: menuController,
             baseDirectory: baseDirectory,
             fileManager: .default,
             notificationScheduler: scheduler,
-            calendar: try utcCalendar()
+            calendar: utcCalendar()
         )
         return ReminderApplicationFixture(
             baseDirectory: baseDirectory,
