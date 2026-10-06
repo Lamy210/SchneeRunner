@@ -115,6 +115,20 @@ final class PomodoroCoordinator {
         await notificationScheduler.cancelPomodoro(id: session.id)
     }
 
+    func refresh(now: Date) async throws {
+        try synchronizeSnapshot()
+        let previous = session
+        let reconciled = previous?.advancing(at: now)
+
+        if reconciled != previous {
+            try persist(reconciled)
+            publish()
+            await reconcileNotifications(reconciled, now: now)
+        } else {
+            publish()
+        }
+    }
+
     func reconcile(now: Date) async throws {
         try synchronizeSnapshot()
         let previous = session
@@ -125,15 +139,7 @@ final class PomodoroCoordinator {
             publish()
         }
 
-        do {
-            let status = try await notificationScheduler.reconcilePomodoro(
-                reconciled,
-                now: now
-            )
-            onNotificationStatus?(status)
-        } catch {
-            onNotificationError?(error)
-        }
+        await reconcileNotifications(reconciled, now: now)
     }
 }
 
@@ -161,6 +167,21 @@ private extension PomodoroCoordinator {
     ) async {
         do {
             let status = try await notificationScheduler.schedulePomodoro(
+                session,
+                now: now
+            )
+            onNotificationStatus?(status)
+        } catch {
+            onNotificationError?(error)
+        }
+    }
+
+    func reconcileNotifications(
+        _ session: PomodoroSession?,
+        now: Date
+    ) async {
+        do {
+            let status = try await notificationScheduler.reconcilePomodoro(
                 session,
                 now: now
             )
