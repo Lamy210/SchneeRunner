@@ -10,6 +10,7 @@ public enum ProductivityTimerState: String, Codable, Equatable, Sendable {
 public enum ProductivityCountdownTimerError: Error, Equatable, Sendable {
     case invalidDuration
     case invalidStateTransition
+    case invalidStoredState
 }
 
 public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
@@ -41,6 +42,37 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
             pausedRemaining: nil,
             state: .running,
             completedAt: nil
+        )
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(UUID.self, forKey: .id)
+        let title = try container.decode(String.self, forKey: .title)
+        let originalDuration = try container.decode(TimeInterval.self, forKey: .originalDuration)
+        let startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt)
+        let deadline = try container.decodeIfPresent(Date.self, forKey: .deadline)
+        let pausedRemaining = try container.decodeIfPresent(TimeInterval.self, forKey: .pausedRemaining)
+        let state = try container.decode(ProductivityTimerState.self, forKey: .state)
+        let completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+
+        try Self.validateStoredState(
+            originalDuration: originalDuration,
+            deadline: deadline,
+            pausedRemaining: pausedRemaining,
+            state: state,
+            completedAt: completedAt
+        )
+
+        self.init(
+            id: id,
+            title: title,
+            originalDuration: originalDuration,
+            startedAt: startedAt,
+            deadline: deadline,
+            pausedRemaining: pausedRemaining,
+            state: state,
+            completedAt: completedAt
         )
     }
 
@@ -140,6 +172,40 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
             state: .completed,
             completedAt: deadline
         )
+    }
+
+    private static func validateStoredState(
+        originalDuration: TimeInterval,
+        deadline: Date?,
+        pausedRemaining: TimeInterval?,
+        state: ProductivityTimerState,
+        completedAt: Date?
+    ) throws {
+        guard originalDuration.isFinite, originalDuration > 0 else {
+            throw ProductivityCountdownTimerError.invalidStoredState
+        }
+
+        let isValid = switch state {
+        case .running:
+            deadline != nil && pausedRemaining == nil && completedAt == nil
+        case .paused:
+            deadline == nil && isValidPausedRemaining(pausedRemaining) && completedAt == nil
+        case .completed:
+            deadline == nil && pausedRemaining == nil && completedAt != nil
+        case .cancelled:
+            deadline == nil && pausedRemaining == nil && completedAt == nil
+        }
+
+        guard isValid else {
+            throw ProductivityCountdownTimerError.invalidStoredState
+        }
+    }
+
+    private static func isValidPausedRemaining(_ value: TimeInterval?) -> Bool {
+        guard let value else {
+            return false
+        }
+        return value.isFinite && value > 0
     }
 
     private init(
