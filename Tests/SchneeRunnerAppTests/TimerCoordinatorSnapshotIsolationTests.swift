@@ -33,6 +33,43 @@ final class TimerCoordinatorSnapshotIsolationTests: XCTestCase {
         XCTAssertEqual(persisted.reminders, [fixture.reminder])
     }
 
+    func testStartingTimerPreservesSlicesSavedAfterCoordinatorInitialization() async throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+        let updatedAt = fixture.now.addingTimeInterval(60)
+        let latestReminder = try ProductivityReminder(
+            id: UUID(),
+            title: "Latest Reminder",
+            body: "Preserve me",
+            enabled: true,
+            schedule: .daily(hour: 10, minute: 30),
+            createdAt: fixture.now,
+            updatedAt: updatedAt
+        )
+        let latestPomodoro = try PomodoroSession(
+            id: UUID(),
+            configuration: PomodoroConfiguration(),
+            startedAt: updatedAt
+        )
+        try fixture.store.save(
+            ProductivitySnapshot(
+                reminders: [latestReminder],
+                pomodoro: latestPomodoro
+            )
+        )
+
+        _ = try await fixture.coordinator.start(
+            title: "Timer",
+            duration: 300,
+            now: updatedAt
+        )
+
+        let persisted = try fixture.store.load()
+        XCTAssertEqual(persisted.reminders, [latestReminder])
+        XCTAssertEqual(persisted.pomodoro, latestPomodoro)
+        XCTAssertEqual(persisted.timers.count, 1)
+    }
+
     private func makeFixture() throws -> SnapshotIsolationFixture {
         let baseDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
