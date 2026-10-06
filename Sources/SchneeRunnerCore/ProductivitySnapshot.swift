@@ -10,14 +10,17 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
     public let schemaVersion: Int
     public let timers: [ProductivityCountdownTimer]
     public let reminders: [ProductivityReminder]
+    public let pomodoro: PomodoroSession?
 
     public init(
         timers: [ProductivityCountdownTimer] = [],
-        reminders: [ProductivityReminder] = []
+        reminders: [ProductivityReminder] = [],
+        pomodoro: PomodoroSession? = nil
     ) {
         schemaVersion = Self.currentSchemaVersion
         self.timers = timers
         self.reminders = reminders
+        self.pomodoro = pomodoro
     }
 
     public init(from decoder: Decoder) throws {
@@ -33,12 +36,37 @@ public struct ProductivitySnapshot: Codable, Equatable, Sendable {
             [ProductivityReminder].self,
             forKey: .reminders
         ) ?? []
+        pomodoro = try container.decodeIfPresent(
+            PomodoroSession.self,
+            forKey: .pomodoro
+        )
+    }
+
+    public func replacingTimers(
+        _ timers: [ProductivityCountdownTimer]
+    ) -> ProductivitySnapshot {
+        ProductivitySnapshot(
+            timers: timers,
+            reminders: reminders,
+            pomodoro: pomodoro
+        )
+    }
+
+    public func replacingPomodoro(
+        _ pomodoro: PomodoroSession?
+    ) -> ProductivitySnapshot {
+        ProductivitySnapshot(
+            timers: timers,
+            reminders: reminders,
+            pomodoro: pomodoro
+        )
     }
 
     public func reconciling(at now: Date) -> ProductivitySnapshot {
         ProductivitySnapshot(
             timers: timers.map { $0.reconciling(at: now) },
-            reminders: reminders
+            reminders: reminders,
+            pomodoro: pomodoro?.advancing(at: now)
         )
     }
 }
