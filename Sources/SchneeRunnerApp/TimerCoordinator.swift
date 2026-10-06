@@ -54,6 +54,7 @@ final class TimerCoordinator: NSObject {
         duration: TimeInterval,
         now: Date
     ) async throws -> UUID {
+        try synchronizeSnapshot()
         let timer = try ProductivityCountdownTimer(
             id: UUID(),
             title: title,
@@ -70,6 +71,7 @@ final class TimerCoordinator: NSObject {
         id: UUID,
         now: Date
     ) async throws {
+        try synchronizeSnapshot()
         let timer = try timer(id: id)
         let paused = try timer.pausing(at: now)
         try persist(replacing: paused)
@@ -81,6 +83,7 @@ final class TimerCoordinator: NSObject {
         id: UUID,
         now: Date
     ) async throws {
+        try synchronizeSnapshot()
         let timer = try timer(id: id)
         let resumed = try timer.resuming(at: now)
         try persist(replacing: resumed)
@@ -89,6 +92,7 @@ final class TimerCoordinator: NSObject {
     }
 
     func cancel(id: UUID) async throws {
+        try synchronizeSnapshot()
         let timer = try timer(id: id)
         let cancelled = timer.cancelling()
         if cancelled != timer {
@@ -155,8 +159,11 @@ final class TimerCoordinator: NSObject {
     private func reconcileState(
         now: Date
     ) async throws -> ProductivitySnapshot {
+        try synchronizeSnapshot()
         let previous = snapshot
-        let reconciled = previous.reconciling(at: now)
+        let reconciled = previous.replacingTimers(
+            previous.timers.map { $0.reconciling(at: now) }
+        )
 
         if reconciled != previous {
             try store.save(reconciled)
@@ -172,6 +179,10 @@ final class TimerCoordinator: NSObject {
         }
 
         return reconciled
+    }
+
+    private func synchronizeSnapshot() throws {
+        snapshot = try store.load()
     }
 
     private func timer(id: UUID) throws -> ProductivityCountdownTimer {
@@ -193,7 +204,7 @@ final class TimerCoordinator: NSObject {
     }
 
     private func persist(_ timers: [ProductivityCountdownTimer]) throws {
-        let updated = ProductivitySnapshot(timers: timers)
+        let updated = snapshot.replacingTimers(timers)
         try store.save(updated)
         snapshot = updated
     }
