@@ -118,6 +118,19 @@ def _reject_symlink_components(repo_root: Path, relative_path: Path) -> None:
             raise ValueError(f"rolling visual capture path contains symlink: {relative_path}")
 
 
+def _reject_symlinked_destination(path: Path) -> None:
+    current = path
+    while True:
+        if current.is_symlink():
+            raise ValueError(f"output path contains symlink: {path}")
+        if current.exists():
+            return
+        parent = current.parent
+        if parent == current:
+            return
+        current = parent
+
+
 def _read_capture(repo_root: Path, relative: Any) -> bytes:
     if not isinstance(relative, str) or not relative:
         raise ValueError("rolling visual current path must be non-empty")
@@ -240,8 +253,7 @@ def build_bundle(
     previous_baseline_reference: str | None,
 ) -> None:
     repo_root = repo_root.resolve()
-    if output_root.is_symlink():
-        raise ValueError("output directory must not be a symlink")
+    _reject_symlinked_destination(output_root)
     output_root = output_root.resolve()
 
     if output_root.exists():
