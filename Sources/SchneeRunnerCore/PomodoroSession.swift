@@ -181,36 +181,16 @@ public struct PomodoroSession: Codable, Equatable, Sendable {
     }
 
     public func advancing(at now: Date) -> PomodoroSession {
-        guard state == .running,
-              let phaseDeadline,
-              now >= phaseDeadline
-        else {
-            return self
+        var session = self
+
+        while session.state == .running,
+              let deadline = session.phaseDeadline,
+              now >= deadline
+        {
+            session = session.advancingOnePhase(at: deadline)
         }
 
-        let nextFocusCount = currentPhase == .focus
-            ? completedFocusCount + 1
-            : completedFocusCount
-        let nextPhase = nextPhase(completedFocusCount: nextFocusCount)
-        let nextState: PomodoroSessionState = configuration.autoStartNextPhase
-            ? .running
-            : .waiting
-        let nextDuration = configuration.duration(for: nextPhase)
-
-        return PomodoroSession(
-            fields: Fields(
-                id: id,
-                configuration: configuration,
-                currentPhase: nextPhase,
-                completedFocusCount: nextFocusCount,
-                phaseStartedAt: nextState == .running ? now : nil,
-                phaseDeadline: nextState == .running
-                    ? now.addingTimeInterval(nextDuration)
-                    : nil,
-                pausedRemaining: nil,
-                state: nextState
-            )
-        )
+        return session
     }
 
     public init(from decoder: Decoder) throws {
@@ -278,6 +258,32 @@ private extension PomodoroSession {
                 phaseDeadline: deadline,
                 pausedRemaining: pausedRemaining,
                 state: state
+            )
+        )
+    }
+
+    func advancingOnePhase(at transitionTime: Date) -> PomodoroSession {
+        let nextFocusCount = currentPhase == .focus
+            ? completedFocusCount + 1
+            : completedFocusCount
+        let nextPhase = nextPhase(completedFocusCount: nextFocusCount)
+        let nextState: PomodoroSessionState = configuration.autoStartNextPhase
+            ? .running
+            : .waiting
+        let nextDuration = configuration.duration(for: nextPhase)
+
+        return PomodoroSession(
+            fields: Fields(
+                id: id,
+                configuration: configuration,
+                currentPhase: nextPhase,
+                completedFocusCount: nextFocusCount,
+                phaseStartedAt: nextState == .running ? transitionTime : nil,
+                phaseDeadline: nextState == .running
+                    ? transitionTime.addingTimeInterval(nextDuration)
+                    : nil,
+                pausedRemaining: nil,
+                state: nextState
             )
         )
     }
