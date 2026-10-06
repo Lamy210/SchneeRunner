@@ -15,7 +15,6 @@ final class ProductivityManagementWindowController: NSObject, NSWindowDelegate {
     private var reminders: [ProductivityReminder] = []
     private var history = ProductivityHistory()
     private var panel: NSPanel?
-    private var contentStack: NSStackView?
 
     func setContent(
         reminders: [ProductivityReminder],
@@ -61,7 +60,6 @@ final class ProductivityManagementWindowController: NSObject, NSWindowDelegate {
 
     func windowWillClose(_: Notification) {
         panel = nil
-        contentStack = nil
     }
 }
 
@@ -99,7 +97,6 @@ private extension ProductivityManagementWindowController {
         stack.alignment = .leading
         stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
-        contentStack = stack
 
         addReminderSection(to: stack)
         stack.addArrangedSubview(separator())
