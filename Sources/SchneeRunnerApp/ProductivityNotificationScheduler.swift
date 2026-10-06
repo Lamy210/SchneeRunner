@@ -93,8 +93,7 @@ protocol ReminderNotificationScheduling: AnyObject {
 }
 
 @MainActor
-final class ProductivityNotificationScheduler: ProductivityNotificationScheduling,
-    ReminderNotificationScheduling {
+final class ProductivityNotificationScheduler: ProductivityNotificationScheduling, ReminderNotificationScheduling {
     private static let timerPrefix = "schneerunner.timer."
     private static let reminderPrefix = "schneerunner.reminder."
     private static let snoozePrefix = "schneerunner.snooze."
