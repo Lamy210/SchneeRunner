@@ -9,6 +9,9 @@ from pathlib import Path
 import sys
 
 
+MAX_METADATA_BYTES = 64 * 1024
+
+
 class InputError(ValueError):
     pass
 
@@ -46,7 +49,17 @@ def requires_rolling_baseline(document: object) -> bool:
 
 
 def load_manifest(path: Path) -> object:
+    if path.is_symlink():
+        raise InputError("visual manifest must not be a symlink")
     try:
+        if not path.is_file():
+            raise InputError("visual manifest must be a regular file")
+        file_size = path.stat().st_size
+        if file_size > MAX_METADATA_BYTES:
+            raise InputError(
+                "visual manifest is too large: "
+                f"{file_size} bytes exceeds {MAX_METADATA_BYTES}"
+            )
         return json.loads(
             path.read_text(encoding="utf-8"),
             object_pairs_hook=_reject_duplicate_keys,
