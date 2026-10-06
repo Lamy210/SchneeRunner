@@ -27,6 +27,9 @@ final class ProductivityCharacterStateCoordinator {
         _ timers: [ProductivityCountdownTimer],
         now: Date = Date()
     ) {
+        if hasNewCompletion(in: timers), reactionStore.isEnabled {
+            timerCompletionAt = now
+        }
         self.timers = timers
         publishState(at: now)
     }
@@ -74,6 +77,23 @@ final class ProductivityCharacterStateCoordinator {
 }
 
 private extension ProductivityCharacterStateCoordinator {
+    func hasNewCompletion(
+        in updatedTimers: [ProductivityCountdownTimer]
+    ) -> Bool {
+        let previousByID = Dictionary(
+            uniqueKeysWithValues: timers.map { ($0.id, $0.state) }
+        )
+        return updatedTimers.contains { timer in
+            guard timer.state == .completed else {
+                return false
+            }
+            guard let previousState = previousByID[timer.id] else {
+                return false
+            }
+            return previousState != .completed
+        }
+    }
+
     func publishState(at now: Date) {
         guard reactionStore.isEnabled else {
             characterStateCoordinator.setProductivityState(nil)
