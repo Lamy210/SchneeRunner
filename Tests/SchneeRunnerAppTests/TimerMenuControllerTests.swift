@@ -42,6 +42,17 @@ final class TimerMenuControllerTests: XCTestCase {
         XCTAssertEqual(customCount, 1)
     }
 
+    func testManageTimersActionDispatchesCallback() throws {
+        let controller = TimerMenuController()
+        var manageCount = 0
+        controller.onManageTimers = { manageCount += 1 }
+
+        let menu = try XCTUnwrap(controller.rootItem.submenu)
+        try perform(XCTUnwrap(menu.item(withTitle: "Manage Timers…")))
+
+        XCTAssertEqual(manageCount, 1)
+    }
+
     func testRunningTimerRowShowsRemainingTimeAndDispatchesPauseAndCancel() throws {
         let controller = TimerMenuController()
         let timer = try makeTimer(title: "Focus", duration: 1500)

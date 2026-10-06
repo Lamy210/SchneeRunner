@@ -1,9 +1,11 @@
 import AppKit
 import Foundation
+import SchneeRunnerCore
 
 @MainActor
 final class TimerApplicationController {
     private let menuController: StatusMenuController
+    private let managementWindow: ProductivityManagementWindowController?
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: ProductivityNotificationScheduler
@@ -11,9 +13,11 @@ final class TimerApplicationController {
 
     init(
         menuController: StatusMenuController,
+        managementWindow: ProductivityManagementWindowController? = nil,
         fileManager: FileManager = .default
     ) {
         self.menuController = menuController
+        self.managementWindow = managementWindow
         let applicationSupportDirectory = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -29,6 +33,7 @@ final class TimerApplicationController {
         )
         notificationScheduler = ProductivityNotificationScheduler()
         configureMenuCallbacks()
+        configureManagementCallbacks()
     }
 
     func start() {
@@ -40,7 +45,7 @@ final class TimerApplicationController {
             )
             configureCoordinatorCallbacks(coordinator)
             self.coordinator = coordinator
-            menuController.setTimers(coordinator.timers, now: Date())
+            updateViews(timers: coordinator.timers, now: Date())
             coordinator.startRefreshing()
             reconcileOnLaunch(coordinator)
         } catch {
@@ -59,6 +64,9 @@ final class TimerApplicationController {
         menuController.onStartCustomTimer = { [weak self] in
             self?.startCustomTimer()
         }
+        menuController.onManageTimers = { [weak self] in
+            self?.showManagementWindow()
+        }
         menuController.onPauseTimer = { [weak self] id in
             self?.pauseTimer(id: id)
         }
@@ -70,11 +78,23 @@ final class TimerApplicationController {
         }
     }
 
+    private func configureManagementCallbacks() {
+        managementWindow?.onPauseTimer = { [weak self] id in
+            self?.pauseTimer(id: id)
+        }
+        managementWindow?.onResumeTimer = { [weak self] id in
+            self?.resumeTimer(id: id)
+        }
+        managementWindow?.onCancelTimer = { [weak self] id in
+            self?.cancelTimer(id: id)
+        }
+    }
+
     private func configureCoordinatorCallbacks(
         _ coordinator: TimerCoordinator
     ) {
         coordinator.onChange = { [weak self] timers in
-            self?.menuController.setTimers(timers, now: Date())
+            self?.updateViews(timers: timers, now: Date())
         }
         coordinator.onNotificationStatus = { status in
             if status == .disabled {
@@ -104,6 +124,35 @@ final class TimerApplicationController {
             } catch {
                 log("timer recovery error", error: error)
             }
+        }
+    }
+
+    private func updateViews(
+        timers: [ProductivityCountdownTimer],
+        now: Date
+    ) {
+        menuController.setTimers(timers, now: now)
+        managementWindow?.setTimers(timers)
+    }
+
+    private func showManagementWindow() {
+        guard
+            let coordinator,
+            let managementWindow
+        else {
+            return
+        }
+        updateViews(timers: coordinator.timers, now: Date())
+        managementWindow.setHistory(loadHistory())
+        managementWindow.show()
+    }
+
+    private func loadHistory() -> ProductivityHistory {
+        do {
+            return try historyStore.load()
+        } catch {
+            log("productivity history load error", error: error)
+            return ProductivityHistory()
         }
     }
 

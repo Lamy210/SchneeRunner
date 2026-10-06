@@ -1,18 +1,24 @@
 @MainActor
 final class ProductivityApplicationController {
+    private let managementWindow: ProductivityManagementWindowController
     private let timerController: TimerApplicationController
     private let pomodoroController: PomodoroApplicationController
     private let reminderController: ReminderApplicationController
 
     init(menuController: StatusMenuController) {
+        let managementWindow = ProductivityManagementWindowController()
+        self.managementWindow = managementWindow
         timerController = TimerApplicationController(
-            menuController: menuController
+            menuController: menuController,
+            managementWindow: managementWindow
         )
         pomodoroController = PomodoroApplicationController(
-            menuController: menuController
+            menuController: menuController,
+            managementWindow: managementWindow
         )
         reminderController = ReminderApplicationController(
-            menuController: menuController
+            menuController: menuController,
+            managementWindow: managementWindow
         )
     }
 

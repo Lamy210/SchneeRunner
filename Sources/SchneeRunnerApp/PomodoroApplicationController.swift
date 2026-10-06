@@ -4,20 +4,28 @@ import SchneeRunnerCore
 @MainActor
 final class PomodoroApplicationController: NSObject {
     private let menuController: StatusMenuController
+    private let managementWindow: ProductivityManagementWindowController?
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
+    private let configurationStore: PomodoroConfigurationStore
+    private let settingsController = PomodoroSettingsController()
     private let notificationScheduler: ProductivityNotificationScheduler
     private let refreshInterval: TimeInterval
     private var coordinator: PomodoroCoordinator?
     private var refreshTimer: Timer?
+    private var configuration: PomodoroConfiguration?
 
     init(
         menuController: StatusMenuController,
+        managementWindow: ProductivityManagementWindowController? = nil,
         fileManager: FileManager = .default,
+        defaults: UserDefaults = .standard,
         refreshInterval: TimeInterval = 1
     ) {
         self.menuController = menuController
+        self.managementWindow = managementWindow
         self.refreshInterval = refreshInterval
+        configurationStore = PomodoroConfigurationStore(defaults: defaults)
         let applicationSupportDirectory = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -34,9 +42,13 @@ final class PomodoroApplicationController: NSObject {
         notificationScheduler = ProductivityNotificationScheduler()
         super.init()
         configureMenuCallbacks()
+        configureManagementCallbacks()
     }
 
     func start() {
+        let configuration = loadConfiguration()
+        setConfiguration(configuration)
+
         do {
             let coordinator = try PomodoroCoordinator(
                 store: stateStore,
@@ -76,6 +88,15 @@ final class PomodoroApplicationController: NSObject {
         }
         menuController.onStopPomodoro = { [weak self] in
             self?.stopSession()
+        }
+        menuController.onPomodoroSettings = { [weak self] in
+            self?.presentSettings()
+        }
+    }
+
+    private func configureManagementCallbacks() {
+        managementWindow?.onEditPomodoroSettings = { [weak self] configuration in
+            self?.presentSettings(configuration: configuration)
         }
     }
 
@@ -141,6 +162,46 @@ final class PomodoroApplicationController: NSObject {
             } catch {
                 log("Pomodoro refresh error", error: error)
             }
+        }
+    }
+
+    private func loadConfiguration() -> PomodoroConfiguration {
+        do {
+            return try configurationStore.load()
+        } catch {
+            log("Pomodoro configuration load error", error: error)
+            return approvedDefaults()
+        }
+    }
+
+    private func approvedDefaults() -> PomodoroConfiguration {
+        do {
+            return try PomodoroConfiguration()
+        } catch {
+            preconditionFailure("Approved Pomodoro defaults must remain valid")
+        }
+    }
+
+    private func setConfiguration(_ configuration: PomodoroConfiguration) {
+        self.configuration = configuration
+        menuController.setPomodoroConfiguration(configuration)
+        managementWindow?.setPomodoroConfiguration(configuration)
+    }
+
+    private func presentSettings() {
+        presentSettings(configuration: configuration ?? loadConfiguration())
+    }
+
+    private func presentSettings(configuration: PomodoroConfiguration) {
+        guard let updated = settingsController.present(configuration: configuration) else {
+            return
+        }
+
+        do {
+            try configurationStore.save(updated)
+            setConfiguration(updated)
+        } catch {
+            log("Pomodoro configuration save error", error: error)
         }
     }
 

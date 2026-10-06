@@ -8,21 +8,27 @@ import XCTest
 final class PomodoroMenuControllerTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_791_331_200)
 
-    func testIdleMenuOffersStartWithDefaultConfiguration() throws {
+    func testIdleMenuUsesConfiguredDefaultsAndOffersSettings() throws {
         let controller = PomodoroMenuController()
+        let configured = try PomodoroConfiguration(
+            focusDuration: 50 * 60,
+            shortBreakDuration: 10 * 60,
+            longBreakDuration: 30 * 60,
+            focusPhasesBeforeLongBreak: 3,
+            autoStartNextPhase: true
+        )
         var configuration: PomodoroConfiguration?
+        var settingsCount = 0
         controller.onStart = { configuration = $0 }
+        controller.onSettings = { settingsCount += 1 }
+        controller.setConfiguration(configured)
 
         let menu = try XCTUnwrap(controller.rootItem.submenu)
-        let startItem = try XCTUnwrap(menu.item(withTitle: "Start Pomodoro"))
-        perform(startItem)
+        try perform(XCTUnwrap(menu.item(withTitle: "Start Pomodoro")))
+        try perform(XCTUnwrap(menu.item(withTitle: "Settings…")))
 
-        let selected = try XCTUnwrap(configuration)
-        XCTAssertEqual(selected.focusDuration, 25 * 60)
-        XCTAssertEqual(selected.shortBreakDuration, 5 * 60)
-        XCTAssertEqual(selected.longBreakDuration, 15 * 60)
-        XCTAssertEqual(selected.focusPhasesBeforeLongBreak, 4)
-        XCTAssertFalse(selected.autoStartNextPhase)
+        XCTAssertEqual(configuration, configured)
+        XCTAssertEqual(settingsCount, 1)
     }
 
     func testRunningFocusShowsRemainingTimeAndDispatchesPauseAndStop() throws {
