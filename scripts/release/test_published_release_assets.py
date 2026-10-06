@@ -154,6 +154,36 @@ class PublishedReleaseAssetsTests(unittest.TestCase):
         self.assertIsNone(source_sha)
         self.assertTrue(any("non-symlink" in error for error in errors))
 
+    def test_rejects_oversized_published_checksum(self) -> None:
+        _, dmg, checksum, provenance = self.fixture()
+        checksum.write_text(
+            checksum.read_text(encoding="utf-8") + " " * (4 * 1024),
+            encoding="utf-8",
+        )
+
+        errors, digest, source_sha = self.verify(dmg, checksum, provenance)
+
+        self.assertIsNone(digest)
+        self.assertIsNone(source_sha)
+        self.assertTrue(
+            any("checksum" in error and "too large" in error for error in errors)
+        )
+
+    def test_rejects_oversized_published_provenance(self) -> None:
+        _, dmg, checksum, provenance = self.fixture()
+        provenance.write_text(
+            provenance.read_text(encoding="utf-8") + " " * (64 * 1024),
+            encoding="utf-8",
+        )
+
+        errors, digest, source_sha = self.verify(dmg, checksum, provenance)
+
+        self.assertIsNone(digest)
+        self.assertIsNone(source_sha)
+        self.assertTrue(
+            any("provenance" in error and "too large" in error for error in errors)
+        )
+
     def test_cli_prints_digest_and_exports_verified_source_sha(self) -> None:
         temporary_directory, dmg, checksum, provenance = self.fixture()
         source_sha_output = Path(temporary_directory.name) / "source-sha.txt"
