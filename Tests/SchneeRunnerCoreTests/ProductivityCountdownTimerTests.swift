@@ -6,19 +6,20 @@ final class ProductivityCountdownTimerTests: XCTestCase {
     private let start = Date(timeIntervalSince1970: 1_791_331_200)
 
     func testRunningTimerDerivesRemainingFromDeadline() throws {
+        let id = try timerID()
         let timer = try ProductivityCountdownTimer(
-            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            id: id,
             title: "Focus",
-            duration: 1_500,
+            duration: 1500,
             startedAt: start
         )
 
         XCTAssertEqual(timer.state, .running)
-        XCTAssertEqual(timer.originalDuration, 1_500)
+        XCTAssertEqual(timer.originalDuration, 1500)
         XCTAssertEqual(timer.startedAt, start)
-        XCTAssertEqual(timer.deadline, start.addingTimeInterval(1_500))
-        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(300)), 1_200)
-        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(1_501)), 0)
+        XCTAssertEqual(timer.deadline, start.addingTimeInterval(1500))
+        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(300)), 1200)
+        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(1501)), 0)
     }
 
     func testPauseStoresRemainingAndClearsDeadline() throws {
@@ -34,7 +35,7 @@ final class ProductivityCountdownTimerTests: XCTestCase {
     func testResumeCreatesFreshDeadlineFromPausedRemaining() throws {
         let timer = try makeTimer()
         let paused = try timer.pausing(at: start.addingTimeInterval(600))
-        let resumeTime = start.addingTimeInterval(1_200)
+        let resumeTime = start.addingTimeInterval(1200)
         let resumed = try paused.resuming(at: resumeTime)
 
         XCTAssertEqual(resumed.state, .running)
@@ -44,7 +45,8 @@ final class ProductivityCountdownTimerTests: XCTestCase {
     }
 
     func testCancelClearsActiveTimingState() throws {
-        let cancelled = try makeTimer().cancelling()
+        let timer = try makeTimer()
+        let cancelled = timer.cancelling()
 
         XCTAssertEqual(cancelled.state, .cancelled)
         XCTAssertNil(cancelled.deadline)
@@ -55,13 +57,13 @@ final class ProductivityCountdownTimerTests: XCTestCase {
 
     func testReconcileCompletesOverdueTimerExactlyOnce() throws {
         let timer = try makeTimer()
-        let overdue = start.addingTimeInterval(1_501)
+        let overdue = start.addingTimeInterval(1501)
 
         let completed = timer.reconciling(at: overdue)
         let reconciledAgain = completed.reconciling(at: overdue.addingTimeInterval(100))
 
         XCTAssertEqual(completed.state, .completed)
-        XCTAssertEqual(completed.completedAt, start.addingTimeInterval(1_500))
+        XCTAssertEqual(completed.completedAt, start.addingTimeInterval(1500))
         XCTAssertNil(completed.deadline)
         XCTAssertEqual(completed.remaining(at: overdue), 0)
         XCTAssertEqual(reconciledAgain, completed)
@@ -86,17 +88,24 @@ final class ProductivityCountdownTimerTests: XCTestCase {
     func testClockJumpUsesDeadlineRatherThanTickCount() throws {
         let timer = try makeTimer()
 
-        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(1_490)), 10)
-        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(60)), 1_440)
-        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(1_200)), 300)
+        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(1490)), 10)
+        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(60)), 1440)
+        XCTAssertEqual(timer.remaining(at: start.addingTimeInterval(1200)), 300)
     }
 
     private func makeTimer() throws -> ProductivityCountdownTimer {
-        try ProductivityCountdownTimer(
-            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+        let id = try timerID()
+        return try ProductivityCountdownTimer(
+            id: id,
             title: "Focus",
-            duration: 1_500,
+            duration: 1500,
             startedAt: start
+        )
+    }
+
+    private func timerID() throws -> UUID {
+        try XCTUnwrap(
+            UUID(uuidString: "11111111-1111-1111-1111-111111111111")
         )
     }
 }
