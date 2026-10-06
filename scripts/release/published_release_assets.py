@@ -14,6 +14,17 @@ from scripts.release.release_checksum import parse_release_checksum
 
 
 TAG_RE = re.compile(r"^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$")
+MAX_CHECKSUM_BYTES = 4 * 1024
+MAX_PROVENANCE_BYTES = 64 * 1024
+
+
+def _read_bounded_text(path: Path, *, label: str, maximum_bytes: int) -> str:
+    file_size = path.stat().st_size
+    if file_size > maximum_bytes:
+        raise ValueError(
+            f"{label} is too large: {file_size} bytes exceeds {maximum_bytes}"
+        )
+    return path.read_text(encoding="utf-8")
 
 
 def verify_published_release_assets(
@@ -59,7 +70,11 @@ def verify_published_release_assets(
         return errors, None, None
 
     try:
-        checksum_payload = checksum_path.read_text(encoding="utf-8")
+        checksum_payload = _read_bounded_text(
+            checksum_path,
+            label="published release checksum",
+            maximum_bytes=MAX_CHECKSUM_BYTES,
+        )
         checksum_digest = parse_release_checksum(
             checksum_payload,
             expected_filename=dmg_path.name,
@@ -69,8 +84,14 @@ def verify_published_release_assets(
         checksum_digest = None
 
     try:
-        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        provenance = json.loads(
+            _read_bounded_text(
+                provenance_path,
+                label="published release provenance",
+                maximum_bytes=MAX_PROVENANCE_BYTES,
+            )
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
         errors.append(f"invalid published release provenance: {error}")
         provenance = None
 
