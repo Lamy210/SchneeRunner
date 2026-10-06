@@ -18,6 +18,7 @@ final class StatusMenuController: NSObject {
     var onRefreshRecentCharacters: (() -> Void)?
     var onStartTimerPreset: ((TimeInterval) -> Void)?
     var onStartCustomTimer: (() -> Void)?
+    var onManageTimers: (() -> Void)?
     var onPauseTimer: ((UUID) -> Void)?
     var onResumeTimer: ((UUID) -> Void)?
     var onCancelTimer: ((UUID) -> Void)?
@@ -26,6 +27,7 @@ final class StatusMenuController: NSObject {
     var onResumePomodoro: (() -> Void)?
     var onStartPomodoroPhase: (() -> Void)?
     var onStopPomodoro: (() -> Void)?
+    var onPomodoroSettings: (() -> Void)?
     var onNewReminder: (() -> Void)?
     var onManageReminders: (() -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
@@ -99,6 +101,10 @@ final class StatusMenuController: NSObject {
         timerMenuController.setTimers(timers, now: now)
     }
 
+    func setPomodoroConfiguration(_ configuration: PomodoroConfiguration) {
+        pomodoroMenuController.setConfiguration(configuration)
+    }
+
     func setPomodoroSession(
         _ session: PomodoroSession?,
         now: Date
@@ -156,6 +162,9 @@ private extension StatusMenuController {
         timerMenuController.onStartCustomTimer = { [weak self] in
             self?.onStartCustomTimer?()
         }
+        timerMenuController.onManageTimers = { [weak self] in
+            self?.onManageTimers?()
+        }
         timerMenuController.onPauseTimer = { [weak self] id in
             self?.onPauseTimer?(id)
         }
@@ -182,6 +191,9 @@ private extension StatusMenuController {
         }
         pomodoroMenuController.onStop = { [weak self] in
             self?.onStopPomodoro?()
+        }
+        pomodoroMenuController.onSettings = { [weak self] in
+            self?.onPomodoroSettings?()
         }
     }
 
