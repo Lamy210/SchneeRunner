@@ -14,7 +14,8 @@ final class ProductivityApplicationController {
         menuController: StatusMenuController,
         characterStateCoordinator: CharacterStateCoordinator,
         reactionStore: ProductivityCharacterReactionStore = .init(),
-        notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor = .init()
+        notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor = .init(),
+        notificationScheduler: ProductivityNotificationScheduler? = nil
     ) {
         self.menuController = menuController
         self.notificationDeliveryMonitor = notificationDeliveryMonitor
@@ -25,17 +26,21 @@ final class ProductivityApplicationController {
             reactionStore: reactionStore
         )
         self.reactionCoordinator = reactionCoordinator
+        let notificationScheduler = notificationScheduler ?? ProductivityNotificationScheduler()
 
         timerController = TimerApplicationController(
             menuController: menuController,
-            managementWindow: managementWindow
+            managementWindow: managementWindow,
+            notificationScheduler: notificationScheduler
         )
         pomodoroController = PomodoroApplicationController(
             menuController: menuController,
-            managementWindow: managementWindow
+            managementWindow: managementWindow,
+            notificationScheduler: notificationScheduler
         )
         reminderController = ReminderApplicationController(
             menuController: menuController,
+            notificationScheduler: notificationScheduler,
             managementWindow: managementWindow
         )
 
