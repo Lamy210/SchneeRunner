@@ -11,7 +11,7 @@ final class TimerCoordinatorTests: XCTestCase {
 
         _ = try await fixture.coordinator.start(
             title: "Focus",
-            duration: 1_500,
+            duration: 1500,
             now: fixture.start
         )
         _ = try await fixture.coordinator.start(
@@ -30,7 +30,7 @@ final class TimerCoordinatorTests: XCTestCase {
         defer { fixture.cleanup() }
         let id = try await fixture.coordinator.start(
             title: "Focus",
-            duration: 1_500,
+            duration: 1500,
             now: fixture.start
         )
 
@@ -42,7 +42,7 @@ final class TimerCoordinatorTests: XCTestCase {
             try fixture.store.load().timers.first { $0.id == id }
         )
         XCTAssertEqual(persisted.state, .paused)
-        XCTAssertEqual(persisted.pausedRemaining, 1_200)
+        XCTAssertEqual(persisted.pausedRemaining, 1200)
         XCTAssertNil(persisted.deadline)
         XCTAssertTrue(fixture.scheduler.cancelledTimerIDs.contains(id))
 
@@ -56,7 +56,7 @@ final class TimerCoordinatorTests: XCTestCase {
         XCTAssertEqual(persisted.state, .running)
         XCTAssertEqual(
             persisted.deadline,
-            fixture.start.addingTimeInterval(1_800)
+            fixture.start.addingTimeInterval(1800)
         )
     }
 
