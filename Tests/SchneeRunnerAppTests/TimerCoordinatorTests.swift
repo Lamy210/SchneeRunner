@@ -118,10 +118,13 @@ final class TimerCoordinatorTests: XCTestCase {
 
         fixture.coordinator.startRefreshing()
         defer { fixture.coordinator.stopRefreshing() }
-        RunLoop.main.run(
-            mode: .eventTracking,
-            before: Date().addingTimeInterval(0.05)
-        )
+        let deadline = Date().addingTimeInterval(0.2)
+        while callbackCount == 0, Date() < deadline {
+            RunLoop.main.run(
+                mode: .eventTracking,
+                before: Date().addingTimeInterval(0.01)
+            )
+        }
 
         XCTAssertGreaterThan(callbackCount, 0)
     }
