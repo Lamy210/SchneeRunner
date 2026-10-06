@@ -36,9 +36,9 @@ final class ProductivityNotificationDeliveryMonitor: NSObject, UNUserNotificatio
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         let identifier = notification.request.identifier
+        completionHandler([.banner, .sound])
         Task { @MainActor [weak self] in
             self?.handleDeliveredNotification(identifier: identifier)
-            completionHandler([.banner, .sound])
         }
     }
 }
