@@ -17,10 +17,12 @@ final class TimerApplicationController {
     init(
         menuController: StatusMenuController,
         managementWindow: ProductivityManagementWindowController? = nil,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        notificationScheduler: ProductivityNotificationScheduler = .init()
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
+        self.notificationScheduler = notificationScheduler
         let applicationSupportDirectory = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -34,7 +36,6 @@ final class TimerApplicationController {
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
-        notificationScheduler = ProductivityNotificationScheduler()
         configureMenuCallbacks()
         configureManagementCallbacks()
     }
