@@ -193,7 +193,7 @@ final class TimerCoordinator: NSObject {
     }
 
     private func persist(_ timers: [ProductivityCountdownTimer]) throws {
-        let updated = ProductivitySnapshot(timers: timers)
+        let updated = snapshot.replacingTimers(timers)
         try store.save(updated)
         snapshot = updated
     }
