@@ -76,18 +76,19 @@ final class PomodoroSessionTests: XCTestCase {
         XCTAssertNil(advanced.phaseDeadline)
     }
 
-    func testAutoStartOnStartsNextPhaseAtReconciliationTime() throws {
+    func testAutoStartOnPreservesPreviousPhaseBoundaryWhenLate() throws {
         let session = try makeSession(autoStartNextPhase: true)
-        let reconciliationTime = try XCTUnwrap(session.phaseDeadline).addingTimeInterval(120)
+        let focusDeadline = try XCTUnwrap(session.phaseDeadline)
+        let reconciliationTime = focusDeadline.addingTimeInterval(120)
 
         let advanced = session.advancing(at: reconciliationTime)
 
         XCTAssertEqual(advanced.state, .running)
         XCTAssertEqual(advanced.currentPhase, .shortBreak)
-        XCTAssertEqual(advanced.phaseStartedAt, reconciliationTime)
+        XCTAssertEqual(advanced.phaseStartedAt, focusDeadline)
         XCTAssertEqual(
             advanced.phaseDeadline,
-            reconciliationTime.addingTimeInterval(5 * 60)
+            focusDeadline.addingTimeInterval(5 * 60)
         )
     }
 
@@ -150,7 +151,7 @@ final class PomodoroSessionTests: XCTestCase {
             autoStartNextPhase: autoStartNextPhase
         )
         return try PomodoroSession(
-            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            id: UUID(),
             configuration: configuration,
             startedAt: start
         )
