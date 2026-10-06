@@ -58,6 +58,19 @@ final class ProductivityManagementTests: XCTestCase {
         XCTAssertEqual(cancelled, timer.id)
     }
 
+    func testHugeFiniteTimerDurationCanBeRendered() throws {
+        let controller = ProductivityManagementWindowController()
+        let timer = try ProductivityCountdownTimer(
+            id: UUID(),
+            title: "Long",
+            duration: 1e20,
+            startedAt: now
+        )
+
+        controller.setTimers([timer])
+        controller.show()
+    }
+
     func testPomodoroSettingsDispatchCallback() throws {
         let controller = ProductivityManagementWindowController()
         let configuration = try PomodoroConfiguration()

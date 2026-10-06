@@ -228,8 +228,11 @@ private extension ProductivityManagementWindowController {
 
     func timerStatus(_ timer: ProductivityCountdownTimer) -> String {
         let state = timer.state == .paused ? "Paused" : "Running"
-        let seconds = max(0, Int(timer.remaining(at: Date()).rounded(.down)))
-        return "\(timer.title) · \(state) · \(seconds / 60):\(String(format: "%02d", seconds % 60))"
+        let seconds = max(0, timer.remaining(at: Date()).rounded(.down))
+        let minutes = floor(seconds / 60)
+        let remainder = seconds.truncatingRemainder(dividingBy: 60)
+        let time = String(format: "%.0f:%02.0f", minutes, remainder)
+        return "\(timer.title) · \(state) · \(time)"
     }
 
     func addReminderSection(to stack: NSStackView) {
