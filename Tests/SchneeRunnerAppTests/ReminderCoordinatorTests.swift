@@ -209,7 +209,7 @@ final class ReminderCoordinatorTests: XCTestCase {
 }
 
 @MainActor
-private final class ReminderNotificationSchedulerSpy: ProductivityReminderNotificationScheduling {
+private final class ReminderNotificationSchedulerSpy: ReminderNotificationScheduling {
     private(set) var reconcileCount = 0
     private(set) var lastReminders: [ProductivityReminder] = []
     private(set) var lastSnoozes: [ReminderSnooze] = []
