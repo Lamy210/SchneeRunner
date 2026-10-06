@@ -130,8 +130,10 @@ final class StatusMenuController: NSObject {
     func setCharacterPackExportEnabled(_ isEnabled: Bool) {
         exportCharacterPackItem.isEnabled = isEnabled
     }
+}
 
-    private func configureTimerCallbacks() {
+private extension StatusMenuController {
+    func configureTimerCallbacks() {
         timerMenuController.onStartPreset = { [weak self] duration in
             self?.onStartTimerPreset?(duration)
         }
@@ -149,7 +151,7 @@ final class StatusMenuController: NSObject {
         }
     }
 
-    private func configurePomodoroCallbacks() {
+    func configurePomodoroCallbacks() {
         pomodoroMenuController.onStart = { [weak self] configuration in
             self?.onStartPomodoro?(configuration)
         }
@@ -167,7 +169,7 @@ final class StatusMenuController: NSObject {
         }
     }
 
-    private func buildMenu() {
+    func buildMenu() {
         addImportItems()
         addRecentCharactersItem()
         addExportItem()
@@ -184,7 +186,7 @@ final class StatusMenuController: NSObject {
         addQuitItem()
     }
 
-    private func addImportItems() {
+    func addImportItems() {
         let singleImageItem = NSMenuItem(
             title: "Load Single Image…",
             action: #selector(loadSingleImage),
@@ -250,14 +252,14 @@ final class StatusMenuController: NSObject {
         menu.addItem(buildPackItem)
     }
 
-    private func addExportItem() {
+    func addExportItem() {
         exportCharacterPackItem.target = self
         exportCharacterPackItem.action = #selector(exportCharacterPack)
         exportCharacterPackItem.isEnabled = false
         menu.addItem(exportCharacterPackItem)
     }
 
-    private func addRecentCharactersItem() {
+    func addRecentCharactersItem() {
         let item = NSMenuItem(
             title: "Recent Characters",
             action: nil,
@@ -267,7 +269,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(item)
     }
 
-    private func addCPUItems() {
+    func addCPUItems() {
         cpuUsageItem.isEnabled = false
         menu.addItem(cpuUsageItem)
 
@@ -277,7 +279,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(adaptiveSpeedItem)
     }
 
-    private func addManualSpeedItem() {
+    func addManualSpeedItem() {
         let speedMenu = NSMenu(title: "Playback Speed")
         let speeds = [
             (framesPerSecond: 6, title: "0.5×"),
@@ -307,7 +309,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(rootItem)
     }
 
-    private func addQuitItem() {
+    func addQuitItem() {
         let item = NSMenuItem(
             title: "Quit SchneeRunner",
             action: #selector(quitApplication),
@@ -317,7 +319,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(item)
     }
 
-    private func recentCharacterTitle(
+    func recentCharacterTitle(
         for asset: StoredCharacterAsset
     ) -> String {
         let mode = switch asset.kind {
@@ -340,7 +342,7 @@ final class StatusMenuController: NSObject {
         return "\(asset.displayName) · \(mode)"
     }
 
-    private func addDisabledRecentItem(title: String) {
+    func addDisabledRecentItem(title: String) {
         let item = NSMenuItem(
             title: title,
             action: nil,
@@ -348,80 +350,6 @@ final class StatusMenuController: NSObject {
         )
         item.isEnabled = false
         recentCharactersMenu.addItem(item)
-    }
-}
-
-private extension StatusMenuController {
-    @objc
-    func loadSingleImage() {
-        onLoadSingleImage?()
-    }
-
-    @objc
-    func loadSpriteSheet() {
-        onLoadSpriteSheet?()
-    }
-
-    @objc
-    func loadPNGSequence() {
-        onLoadPNGSequence?()
-    }
-
-    @objc
-    func loadGIF() {
-        onLoadGIF?()
-    }
-
-    @objc
-    func loadAPNG() {
-        onLoadAPNG?()
-    }
-
-    @objc
-    func loadWebP() {
-        onLoadWebP?()
-    }
-
-    @objc
-    func loadCharacterPack() {
-        onLoadCharacterPack?()
-    }
-
-    @objc
-    func buildCharacterPack() {
-        onBuildCharacterPack?()
-    }
-
-    @objc
-    func exportCharacterPack() {
-        onExportCharacterPack?()
-    }
-
-    @objc
-    func loadRecentCharacter(_ sender: NSMenuItem) {
-        guard
-            let rawID = sender.representedObject as? String,
-            let id = UUID(uuidString: rawID)
-        else {
-            return
-        }
-
-        onLoadRecentCharacter?(id)
-    }
-
-    @objc
-    func toggleCPUAdaptiveSpeed() {
-        onToggleCPUAdaptiveSpeed?()
-    }
-
-    @objc
-    func changeAnimationSpeed(_ sender: NSMenuItem) {
-        onManualSpeed?(Double(sender.tag))
-    }
-
-    @objc
-    func quitApplication() {
-        onQuit?()
     }
 }
 
