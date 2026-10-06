@@ -15,9 +15,11 @@ final class PomodoroMenuController: NSObject {
     var onResume: (() -> Void)?
     var onStartCurrentPhase: (() -> Void)?
     var onStop: (() -> Void)?
+    var onSettings: (() -> Void)?
 
     private let menu = NSMenu(title: "Pomodoro")
     private var session: PomodoroSession?
+    private var configuration: PomodoroConfiguration? = try? PomodoroConfiguration()
     private var now = Date()
 
     override init() {
@@ -35,6 +37,11 @@ final class PomodoroMenuController: NSObject {
         rebuild()
     }
 
+    func setConfiguration(_ configuration: PomodoroConfiguration) {
+        self.configuration = configuration
+        rebuild()
+    }
+
     func refresh(now: Date) {
         self.now = now
         rebuild()
@@ -45,6 +52,7 @@ final class PomodoroMenuController: NSObject {
 
         guard let session else {
             addStartItem()
+            addSettingsItem()
             return
         }
 
@@ -81,12 +89,21 @@ final class PomodoroMenuController: NSObject {
             title: "Stop",
             action: #selector(stop)
         )
+        addSettingsItem()
     }
 
     private func addStartItem() {
         addActionItem(
             title: "Start Pomodoro",
             action: #selector(startDefault)
+        )
+    }
+
+    private func addSettingsItem() {
+        menu.addItem(.separator())
+        addActionItem(
+            title: "Settings…",
+            action: #selector(openSettings)
         )
     }
 
@@ -142,7 +159,7 @@ final class PomodoroMenuController: NSObject {
 private extension PomodoroMenuController {
     @objc
     func startDefault() {
-        guard let configuration = try? PomodoroConfiguration() else {
+        guard let configuration else {
             return
         }
         onStart?(configuration)
@@ -166,5 +183,10 @@ private extension PomodoroMenuController {
     @objc
     func stop() {
         onStop?()
+    }
+
+    @objc
+    func openSettings() {
+        onSettings?()
     }
 }
