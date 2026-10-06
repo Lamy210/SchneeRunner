@@ -5,6 +5,7 @@ public enum ProductivityHistoryKind: String, Codable, Equatable, Sendable {
     case pomodoroFocusCompleted
     case pomodoroBreakCompleted
     case reminderDelivered
+    case reminderAcknowledged
 }
 
 public struct ProductivityHistoryEntry: Codable, Equatable, Sendable {
