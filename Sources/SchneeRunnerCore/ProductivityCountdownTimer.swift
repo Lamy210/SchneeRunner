@@ -134,7 +134,7 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
     }
 
     public func reconciling(at now: Date) -> ProductivityCountdownTimer {
-        guard state == .running, remaining(at: now) == 0 else {
+        guard state == .running, remaining(at: now) == 0, let deadline else {
             return self
         }
 
@@ -147,7 +147,7 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
                 deadline: nil,
                 pausedRemaining: nil,
                 state: .completed,
-                completedAt: now
+                completedAt: deadline
             )
         )
     }
