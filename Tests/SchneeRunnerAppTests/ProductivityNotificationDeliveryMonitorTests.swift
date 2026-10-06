@@ -61,11 +61,15 @@ final class ProductivityDeliveryMonitorTests: XCTestCase {
             playbackController: playbackController
         )
         let monitor = ProductivityNotificationDeliveryMonitor()
+        let notificationScheduler = ProductivityNotificationScheduler(
+            center: FakeProductivityNotificationCenterClient()
+        )
         let controller = ProductivityApplicationController(
             menuController: StatusMenuController(),
             characterStateCoordinator: characterStateCoordinator,
             reactionStore: reactionStore,
-            notificationDeliveryMonitor: monitor
+            notificationDeliveryMonitor: monitor,
+            notificationScheduler: notificationScheduler
         )
 
         monitor.handleDeliveredNotification(
@@ -75,4 +79,23 @@ final class ProductivityDeliveryMonitorTests: XCTestCase {
         XCTAssertEqual(playbackController.requestedState, .idle)
         _ = controller
     }
+}
+
+@MainActor
+private final class FakeProductivityNotificationCenterClient: ProductivityNotificationCenterClient {
+    func currentAuthorizationState() async -> NotificationAuthorizationState {
+        .denied
+    }
+
+    func requestAuthorization() async throws -> Bool {
+        false
+    }
+
+    func pendingIdentifiers() async -> Set<String> {
+        []
+    }
+
+    func add(_: ProductivityNotificationRequest) async throws {}
+
+    func removePending(identifiers _: Set<String>) {}
 }
