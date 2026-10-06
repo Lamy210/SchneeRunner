@@ -39,9 +39,7 @@ final class ProductivityStateStoreTests: XCTestCase {
             at: fixture.stateURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        let unsupported = try XCTUnwrap(
-            "{\"schemaVersion\":999,\"timers\":[]}".data(using: .utf8)
-        )
+        let unsupported = Data("{\"schemaVersion\":999,\"timers\":[]}".utf8)
         try unsupported.write(to: fixture.stateURL)
 
         XCTAssertThrowsError(try fixture.store.load()) { error in
