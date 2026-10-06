@@ -100,7 +100,7 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
 
         let remaining = deadline.timeIntervalSince(now)
         guard remaining > 0 else {
-            throw ProductivityCountdownTimerError.invalidStateTransition
+            return reconciling(at: now)
         }
 
         return ProductivityCountdownTimer(
