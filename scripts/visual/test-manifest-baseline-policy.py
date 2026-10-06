@@ -54,6 +54,32 @@ class VisualBaselinePolicyTests(unittest.TestCase):
                 with self.assertRaises(policy.InputError):
                     policy.requires_rolling_baseline(document)
 
+    def test_load_manifest_rejects_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            target = root / "manifest-target.json"
+            manifest = root / "manifest.json"
+            target.write_text(
+                json.dumps({"cases": [{"baseline": "git"}]}),
+                encoding="utf-8",
+            )
+            manifest.symlink_to(target)
+
+            with self.assertRaisesRegex(policy.InputError, "symlink"):
+                policy.load_manifest(manifest)
+
+    def test_load_manifest_rejects_oversized_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            manifest = Path(temporary) / "manifest.json"
+            manifest.write_text(
+                json.dumps({"cases": [{"baseline": "git"}]})
+                + " " * (64 * 1024),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(policy.InputError, "too large"):
+                policy.load_manifest(manifest)
+
     def test_cli_emits_lowercase_github_output(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
