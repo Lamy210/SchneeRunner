@@ -83,7 +83,12 @@ final class PomodoroCoordinator {
         let paused = try session.pausing(at: now)
         try persist(paused)
         publish()
-        await notificationScheduler.cancelPomodoro(id: session.id)
+
+        if paused.state == .running {
+            await schedule(paused, now: now)
+        } else {
+            await notificationScheduler.cancelPomodoro(id: session.id)
+        }
     }
 
     func resume(now: Date) async throws {
