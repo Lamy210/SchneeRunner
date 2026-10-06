@@ -4,7 +4,7 @@ import SchneeRunnerCore
 import XCTest
 
 @MainActor
-final class TimerCoordinatorReminderPreservationTests: XCTestCase {
+final class TimerReminderPreservationTests: XCTestCase {
     func testStartingTimerPreservesExistingReminders() async throws {
         let baseDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -33,7 +33,7 @@ final class TimerCoordinatorReminderPreservationTests: XCTestCase {
         let coordinator = TimerCoordinator(
             snapshot: ProductivitySnapshot(reminders: [reminder]),
             store: store,
-            notificationScheduler: ReminderPreservationNotificationScheduler()
+            notificationScheduler: ReminderTestScheduler()
         )
 
         _ = try await coordinator.start(
@@ -50,7 +50,7 @@ final class TimerCoordinatorReminderPreservationTests: XCTestCase {
 }
 
 @MainActor
-private final class ReminderPreservationNotificationScheduler: ProductivityNotificationScheduling {
+private final class ReminderTestScheduler: ProductivityNotificationScheduling {
     func scheduleTimer(
         _: ProductivityCountdownTimer,
         now _: Date
