@@ -51,6 +51,23 @@ final class PomodoroConfigStoreTests: XCTestCase {
         }
     }
 
+    func testWrongStoredTypeFailsClosed() throws {
+        let fixture = try makeDefaults()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.name) }
+        fixture.defaults.set(
+            "not-data",
+            forKey: PomodoroConfigurationStore.defaultKey
+        )
+        let store = PomodoroConfigurationStore(defaults: fixture.defaults)
+
+        XCTAssertThrowsError(try store.load()) { error in
+            XCTAssertEqual(
+                error as? PomodoroConfigurationStoreError,
+                .invalidStoredConfiguration
+            )
+        }
+    }
+
     private func makeDefaults() throws -> (
         defaults: UserDefaults,
         name: String
