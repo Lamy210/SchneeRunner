@@ -36,7 +36,7 @@ final class TimerMenuControllerTests: XCTestCase {
 
         let twentyFive = try XCTUnwrap(newTimerMenu.item(withTitle: "25 min"))
         perform(twentyFive)
-        perform(try XCTUnwrap(newTimerMenu.item(withTitle: "Custom…")))
+        try perform(XCTUnwrap(newTimerMenu.item(withTitle: "Custom…")))
 
         XCTAssertEqual(selectedDuration, 25 * 60)
         XCTAssertEqual(customCount, 1)
@@ -44,7 +44,7 @@ final class TimerMenuControllerTests: XCTestCase {
 
     func testRunningTimerRowShowsRemainingTimeAndDispatchesPauseAndCancel() throws {
         let controller = TimerMenuController()
-        let timer = try makeTimer(title: "Focus", duration: 1_500)
+        let timer = try makeTimer(title: "Focus", duration: 1500)
         var pausedID: UUID?
         var cancelledID: UUID?
         controller.onPauseTimer = { pausedID = $0 }
@@ -58,8 +58,8 @@ final class TimerMenuControllerTests: XCTestCase {
         let timerItem = try activeTimerItem(in: controller, id: timer.id)
         XCTAssertEqual(timerItem.title, "Focus · 24:00")
         let actions = try XCTUnwrap(timerItem.submenu)
-        perform(try XCTUnwrap(actions.item(withTitle: "Pause")))
-        perform(try XCTUnwrap(actions.item(withTitle: "Cancel")))
+        try perform(XCTUnwrap(actions.item(withTitle: "Pause")))
+        try perform(XCTUnwrap(actions.item(withTitle: "Cancel")))
 
         XCTAssertEqual(pausedID, timer.id)
         XCTAssertEqual(cancelledID, timer.id)
@@ -77,7 +77,7 @@ final class TimerMenuControllerTests: XCTestCase {
         let timerItem = try activeTimerItem(in: controller, id: timer.id)
         XCTAssertEqual(timerItem.title, "Break · Paused 08:00")
         let actions = try XCTUnwrap(timerItem.submenu)
-        perform(try XCTUnwrap(actions.item(withTitle: "Resume")))
+        try perform(XCTUnwrap(actions.item(withTitle: "Resume")))
 
         XCTAssertEqual(resumedID, timer.id)
     }
