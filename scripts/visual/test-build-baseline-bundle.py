@@ -151,6 +151,17 @@ class BaselineBundleBuilderTests(unittest.TestCase):
         self.assertTrue(self.output.is_symlink())
         self.assertFalse(redirected.exists())
 
+    def test_rejects_symlinked_output_parent(self):
+        redirected_parent = self.repo / "redirected"
+        redirected_parent.mkdir()
+        self.output.parent.symlink_to(redirected_parent, target_is_directory=True)
+
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            self.build()
+
+        self.assertTrue(self.output.parent.is_symlink())
+        self.assertFalse((redirected_parent / "visual-baseline").exists())
+
     def test_rejects_symlinked_manifest_input(self):
         target = self.repo / "outside-manifest.json"
         target.write_text(self.manifest.read_text(encoding="utf-8"), encoding="utf-8")
