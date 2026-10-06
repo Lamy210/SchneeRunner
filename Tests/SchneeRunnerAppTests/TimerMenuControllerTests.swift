@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 @testable import SchneeRunnerApp
 import SchneeRunnerCore
@@ -130,10 +131,13 @@ final class TimerMenuControllerTests: XCTestCase {
     }
 
     private func perform(_ item: NSMenuItem) {
-        guard let action = item.action else {
-            XCTFail("Menu item has no action")
+        guard
+            let action = item.action,
+            let target = item.target as? NSObject
+        else {
+            XCTFail("Menu item has no target/action")
             return
         }
-        _ = item.target?.perform(action, with: item)
+        _ = target.perform(action, with: item)
     }
 }
