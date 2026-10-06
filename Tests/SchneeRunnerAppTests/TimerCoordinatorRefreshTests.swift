@@ -29,17 +29,21 @@ final class TimerCoordinatorRefreshTests: XCTestCase {
         coordinator.onChange = { _ in
             changeCount += 1
         }
-
-        coordinator.startRefreshing()
-        defer { coordinator.stopRefreshing() }
-        RunLoop.main.run(
-            mode: .eventTracking,
-            before: Date().addingTimeInterval(0.05)
+        let reconcileExpectation = expectation(
+            description: "display refresh must not reconcile notifications"
         )
-        await Task.yield()
-        await Task.yield()
+        reconcileExpectation.isInverted = true
+        scheduler.onReconcile = {
+            reconcileExpectation.fulfill()
+        }
 
-        XCTAssertGreaterThan(changeCount, 0)
+        _ = coordinator.perform(NSSelectorFromString("refreshTick"))
+        await fulfillment(
+            of: [reconcileExpectation],
+            timeout: 0.05
+        )
+
+        XCTAssertEqual(changeCount, 1)
         XCTAssertEqual(scheduler.reconcileCount, 0)
     }
 }
@@ -47,6 +51,7 @@ final class TimerCoordinatorRefreshTests: XCTestCase {
 @MainActor
 private final class RefreshCountingNotificationScheduler: ProductivityNotificationScheduling {
     private(set) var reconcileCount = 0
+    var onReconcile: (() -> Void)?
 
     func scheduleTimer(
         _: ProductivityCountdownTimer,
@@ -62,6 +67,7 @@ private final class RefreshCountingNotificationScheduler: ProductivityNotificati
         now _: Date
     ) async throws -> ProductivityNotificationDeliveryStatus {
         reconcileCount += 1
+        onReconcile?()
         return .scheduled
     }
 }
