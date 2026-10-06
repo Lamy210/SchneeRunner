@@ -83,7 +83,7 @@ protocol ProductivityNotificationScheduling: AnyObject {
 }
 
 @MainActor
-protocol ProductivityReminderNotificationScheduling: AnyObject {
+protocol ReminderNotificationScheduling: AnyObject {
     func reconcileReminders(
         _ reminders: [ProductivityReminder],
         snoozes: [ReminderSnooze],
@@ -94,7 +94,7 @@ protocol ProductivityReminderNotificationScheduling: AnyObject {
 
 @MainActor
 final class ProductivityNotificationScheduler: ProductivityNotificationScheduling,
-    ProductivityReminderNotificationScheduling {
+    ReminderNotificationScheduling {
     private static let timerPrefix = "schneerunner.timer."
     private static let reminderPrefix = "schneerunner.reminder."
     private static let snoozePrefix = "schneerunner.snooze."
