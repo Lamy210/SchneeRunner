@@ -181,7 +181,7 @@ final class TimerCoordinator: NSObject {
     ) throws {
         var updated = timers
         guard let index = updated.firstIndex(where: { $0.id == timer.id }) else {
-            throw TimerCoordinatorError.timerNotFound(id)
+            throw TimerCoordinatorError.timerNotFound(timer.id)
         }
         updated[index] = timer
         try persist(updated)
