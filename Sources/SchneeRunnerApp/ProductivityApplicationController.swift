@@ -8,13 +8,16 @@ final class ProductivityApplicationController {
     private let pomodoroController: PomodoroApplicationController
     private let reminderController: ReminderApplicationController
     private let reactionCoordinator: ProductivityCharacterStateCoordinator
+    private let notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor
 
     init(
         menuController: StatusMenuController,
         characterStateCoordinator: CharacterStateCoordinator,
-        reactionStore: ProductivityCharacterReactionStore = .init()
+        reactionStore: ProductivityCharacterReactionStore = .init(),
+        notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor = .init()
     ) {
         self.menuController = menuController
+        self.notificationDeliveryMonitor = notificationDeliveryMonitor
         let managementWindow = ProductivityManagementWindowController()
         self.managementWindow = managementWindow
         let reactionCoordinator = ProductivityCharacterStateCoordinator(
@@ -42,6 +45,9 @@ final class ProductivityApplicationController {
         pomodoroController.onSessionChanged = { [weak reactionCoordinator] session, now in
             reactionCoordinator?.updatePomodoro(session, now: now)
         }
+        notificationDeliveryMonitor.onReminderFired = { [weak reactionCoordinator] in
+            reactionCoordinator?.recordReminderFired()
+        }
         menuController.onToggleProductivityCharacterReactions = { [weak self] in
             self?.toggleCharacterReactions()
         }
@@ -51,19 +57,17 @@ final class ProductivityApplicationController {
     }
 
     func start() {
+        notificationDeliveryMonitor.start()
         timerController.start()
         pomodoroController.start()
         reminderController.start()
     }
 
     func stop() {
+        notificationDeliveryMonitor.stop()
         timerController.stop()
         pomodoroController.stop()
         reminderController.stop()
-    }
-
-    func recordReminderFired() {
-        reactionCoordinator.recordReminderFired()
     }
 
     private func toggleCharacterReactions() {
