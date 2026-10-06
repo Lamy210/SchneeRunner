@@ -151,11 +151,10 @@ private extension TimerMenuController {
     }
 
     func timerTitle(_ timer: ProductivityCountdownTimer) -> String {
-        let remaining = timer.remaining(at: now)
-        let seconds = max(0, Int(remaining.rounded(.down)))
-        let minutes = seconds / 60
-        let remainder = seconds % 60
-        let time = String(format: "%02d:%02d", minutes, remainder)
+        let seconds = max(0, timer.remaining(at: now).rounded(.down))
+        let minutes = floor(seconds / 60)
+        let remainder = seconds.truncatingRemainder(dividingBy: 60)
+        let time = String(format: "%02.0f:%02.0f", minutes, remainder)
         switch timer.state {
         case .paused:
             return "\(timer.title) · Paused \(time)"
