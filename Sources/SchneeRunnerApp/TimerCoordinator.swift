@@ -120,7 +120,7 @@ final class TimerCoordinator: NSObject {
         refreshTimer = CommonRunLoopTimerScheduler.schedule(
             timeInterval: refreshInterval,
             target: self,
-            selector: #selector(refreshTick),
+            selector: #selector(refreshTick(_:)),
             userInfo: nil,
             repeats: true
         )
@@ -132,7 +132,7 @@ final class TimerCoordinator: NSObject {
     }
 
     @objc
-    private func refreshTick() {
+    private func refreshTick(_: Timer) {
         publish()
         Task { @MainActor [weak self] in
             guard let self else {
@@ -181,7 +181,7 @@ final class TimerCoordinator: NSObject {
     ) throws {
         var updated = timers
         guard let index = updated.firstIndex(where: { $0.id == timer.id }) else {
-            throw TimerCoordinatorError.timerNotFound(timer.id)
+            throw TimerCoordinatorError.timerNotFound(id)
         }
         updated[index] = timer
         try persist(updated)
