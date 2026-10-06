@@ -137,11 +137,11 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
     private func notificationsAreEnabled() async throws -> Bool {
         switch await center.currentAuthorizationState() {
         case .authorized:
-            return true
+            true
         case .denied:
-            return false
+            false
         case .notDetermined:
-            return try await center.requestAuthorization()
+            try await center.requestAuthorization()
         }
     }
 
