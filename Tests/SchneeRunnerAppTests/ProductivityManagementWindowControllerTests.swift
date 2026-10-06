@@ -4,7 +4,7 @@ import SchneeRunnerCore
 import XCTest
 
 @MainActor
-final class ProductivityManagementWindowControllerTests: XCTestCase {
+final class ProductivityManagementTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_791_331_200)
 
     func testContentTracksReminderAndHistoryCounts() throws {
