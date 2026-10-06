@@ -59,6 +59,27 @@ final class ProductivityCharacterCoordinatorTests: XCTestCase {
         XCTAssertEqual(fixture.playbackController.requestedState, .dash)
     }
 
+    func testTimerCompletionTransitionPublishesTransientSprint() throws {
+        let fixture = try makeFixture(transientReactionDuration: 2)
+        defer { fixture.cleanup() }
+        let now = Date(timeIntervalSince1970: 1000)
+        let timer = try ProductivityCountdownTimer(
+            id: UUID(),
+            title: "Build",
+            duration: 5 * 60,
+            startedAt: now
+        )
+        fixture.coordinator.updateTimers([timer], now: now)
+        let completedAt = now.addingTimeInterval(301)
+        let completed = timer.reconciling(at: completedAt)
+
+        fixture.coordinator.updateTimers([completed], now: completedAt)
+        XCTAssertEqual(fixture.playbackController.requestedState, .sprint)
+
+        fixture.coordinator.refresh(now: completedAt.addingTimeInterval(3))
+        XCTAssertEqual(fixture.playbackController.requestedState, .run)
+    }
+
     func testTimerCompletionTransientWinsFocusThenExpires() throws {
         let fixture = try makeFixture(transientReactionDuration: 2)
         defer { fixture.cleanup() }
