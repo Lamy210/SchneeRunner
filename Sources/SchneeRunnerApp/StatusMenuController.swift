@@ -16,6 +16,11 @@ final class StatusMenuController: NSObject {
     var onExportCharacterPack: (() -> Void)?
     var onLoadRecentCharacter: ((UUID) -> Void)?
     var onRefreshRecentCharacters: (() -> Void)?
+    var onStartTimerPreset: ((TimeInterval) -> Void)?
+    var onStartCustomTimer: (() -> Void)?
+    var onPauseTimer: ((UUID) -> Void)?
+    var onResumeTimer: ((UUID) -> Void)?
+    var onCancelTimer: ((UUID) -> Void)?
     var onToggleCPUAdaptiveSpeed: (() -> Void)?
     var onCharacterStateOverride: ((CharacterState?) -> Void)?
     var onManualSpeed: ((Double) -> Void)?
@@ -34,6 +39,7 @@ final class StatusMenuController: NSObject {
         keyEquivalent: ""
     )
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
+    private let timerMenuController = TimerMenuController()
     private let stateMenuController = CharacterStateMenuController()
     private let desktopCharacterMenuController = DesktopCharacterMenuController()
     private let launchAtLoginMenuController = LaunchAtLoginMenuController()
@@ -42,8 +48,10 @@ final class StatusMenuController: NSObject {
         action: nil,
         keyEquivalent: ""
     )
+
     override init() {
         super.init()
+        configureTimerCallbacks()
         stateMenuController.onSelection = { [weak self] state in
             self?.onCharacterStateOverride?(state)
         }
@@ -71,6 +79,13 @@ final class StatusMenuController: NSObject {
 
     func setCharacterStateOverride(_ state: CharacterState?) {
         stateMenuController.setSelection(state)
+    }
+
+    func setTimers(
+        _ timers: [ProductivityCountdownTimer],
+        now: Date
+    ) {
+        timerMenuController.setTimers(timers, now: now)
     }
 
     func setRecentCharacters(_ assets: [StoredCharacterAsset]) {
@@ -102,10 +117,30 @@ final class StatusMenuController: NSObject {
         exportCharacterPackItem.isEnabled = isEnabled
     }
 
+    private func configureTimerCallbacks() {
+        timerMenuController.onStartPreset = { [weak self] duration in
+            self?.onStartTimerPreset?(duration)
+        }
+        timerMenuController.onStartCustomTimer = { [weak self] in
+            self?.onStartCustomTimer?()
+        }
+        timerMenuController.onPauseTimer = { [weak self] id in
+            self?.onPauseTimer?(id)
+        }
+        timerMenuController.onResumeTimer = { [weak self] id in
+            self?.onResumeTimer?(id)
+        }
+        timerMenuController.onCancelTimer = { [weak self] id in
+            self?.onCancelTimer?(id)
+        }
+    }
+
     private func buildMenu() {
         addImportItems()
         addRecentCharactersItem()
         addExportItem()
+        menu.addItem(.separator())
+        menu.addItem(timerMenuController.rootItem)
         menu.addItem(.separator())
         addCPUItems()
         menu.addItem(stateMenuController.rootItem)
