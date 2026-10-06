@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class TimerCoordinatorRefreshTests: XCTestCase {
-    func testDisplayRefreshDoesNotResynchronizeNotificationsWithoutStateChanges() throws {
+    func testDisplayRefreshDoesNotResynchronizeNotificationsWithoutStateChanges() async throws {
         let baseDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(
@@ -36,6 +36,8 @@ final class TimerCoordinatorRefreshTests: XCTestCase {
             mode: .eventTracking,
             before: Date().addingTimeInterval(0.05)
         )
+        await Task.yield()
+        await Task.yield()
 
         XCTAssertGreaterThan(changeCount, 0)
         XCTAssertEqual(scheduler.reconcileCount, 0)
