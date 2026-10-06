@@ -154,11 +154,13 @@ final class TimerMenuController: NSObject {
     }
 
     private func format(_ interval: TimeInterval) -> String {
-        let seconds = max(0, Int(interval.rounded(.down)))
+        let totalSeconds = max(0, interval.rounded(.down))
+        let minutes = (totalSeconds / 60).rounded(.down)
+        let seconds = totalSeconds.truncatingRemainder(dividingBy: 60)
         return String(
-            format: "%02d:%02d",
-            seconds / 60,
-            seconds % 60
+            format: "%02.0f:%02.0f",
+            minutes,
+            seconds
         )
     }
 }
