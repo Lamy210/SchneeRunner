@@ -14,7 +14,7 @@ final class ReminderCoordinator {
     private(set) var snapshot: ProductivitySnapshot
 
     private let store: ProductivityStateStore
-    private let notificationScheduler: any ProductivityReminderNotificationScheduling
+    private let notificationScheduler: any ReminderNotificationScheduling
     private let calendar: Calendar
 
     var reminders: [ProductivityReminder] {
@@ -28,7 +28,7 @@ final class ReminderCoordinator {
     init(
         snapshot: ProductivitySnapshot,
         store: ProductivityStateStore,
-        notificationScheduler: any ProductivityReminderNotificationScheduling,
+        notificationScheduler: any ReminderNotificationScheduling,
         calendar: Calendar = .current
     ) {
         self.snapshot = snapshot
@@ -39,7 +39,7 @@ final class ReminderCoordinator {
 
     convenience init(
         store: ProductivityStateStore,
-        notificationScheduler: any ProductivityReminderNotificationScheduling,
+        notificationScheduler: any ReminderNotificationScheduling,
         calendar: Calendar = .current
     ) throws {
         try self.init(
