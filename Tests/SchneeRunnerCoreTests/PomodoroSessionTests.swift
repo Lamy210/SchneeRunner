@@ -103,6 +103,37 @@ final class PomodoroSessionTests: XCTestCase {
         XCTAssertEqual(advancedAgain.completedFocusCount, 1)
     }
 
+    func testAutoStartCatchesUpAcrossMultipleElapsedPhases() throws {
+        let configuration = try PomodoroConfiguration(
+            focusDuration: 10,
+            shortBreakDuration: 5,
+            longBreakDuration: 15,
+            focusPhasesBeforeLongBreak: 2,
+            autoStartNextPhase: true
+        )
+        let session = try PomodoroSession(
+            id: UUID(),
+            configuration: configuration,
+            startedAt: start
+        )
+
+        let reconciled = session.advancing(
+            at: start.addingTimeInterval(31)
+        )
+
+        XCTAssertEqual(reconciled.currentPhase, .longBreak)
+        XCTAssertEqual(reconciled.completedFocusCount, 2)
+        XCTAssertEqual(reconciled.state, .running)
+        XCTAssertEqual(
+            reconciled.phaseStartedAt,
+            start.addingTimeInterval(25)
+        )
+        XCTAssertEqual(
+            reconciled.phaseDeadline,
+            start.addingTimeInterval(40)
+        )
+    }
+
     func testRejectsInvalidConfiguration() {
         XCTAssertThrowsError(
             try PomodoroConfiguration(focusDuration: 0)
