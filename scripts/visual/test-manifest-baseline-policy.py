@@ -68,6 +68,14 @@ class VisualBaselinePolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(policy.InputError, "symlink"):
                 policy.load_manifest(manifest)
 
+    def test_load_manifest_rejects_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            manifest = Path(temporary) / "manifest.json"
+            manifest.mkdir()
+
+            with self.assertRaisesRegex(policy.InputError, "regular file"):
+                policy.load_manifest(manifest)
+
     def test_load_manifest_rejects_oversized_file(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             manifest = Path(temporary) / "manifest.json"
