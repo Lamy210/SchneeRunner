@@ -35,14 +35,16 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
         }
 
         self.init(
-            id: id,
-            title: title,
-            originalDuration: duration,
-            startedAt: startedAt,
-            deadline: startedAt.addingTimeInterval(duration),
-            pausedRemaining: nil,
-            state: .running,
-            completedAt: nil
+            fields: Fields(
+                id: id,
+                title: title,
+                originalDuration: duration,
+                startedAt: startedAt,
+                deadline: startedAt.addingTimeInterval(duration),
+                pausedRemaining: nil,
+                state: .running,
+                completedAt: nil
+            )
         )
     }
 
@@ -74,14 +76,16 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
         }
 
         return ProductivityCountdownTimer(
-            id: id,
-            title: title,
-            originalDuration: originalDuration,
-            startedAt: startedAt,
-            deadline: nil,
-            pausedRemaining: remaining,
-            state: .paused,
-            completedAt: nil
+            fields: Fields(
+                id: id,
+                title: title,
+                originalDuration: originalDuration,
+                startedAt: startedAt,
+                deadline: nil,
+                pausedRemaining: remaining,
+                state: .paused,
+                completedAt: nil
+            )
         )
     }
 
@@ -97,14 +101,16 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
         }
 
         return ProductivityCountdownTimer(
-            id: id,
-            title: title,
-            originalDuration: originalDuration,
-            startedAt: now,
-            deadline: now.addingTimeInterval(pausedRemaining),
-            pausedRemaining: nil,
-            state: .running,
-            completedAt: nil
+            fields: Fields(
+                id: id,
+                title: title,
+                originalDuration: originalDuration,
+                startedAt: now,
+                deadline: now.addingTimeInterval(pausedRemaining),
+                pausedRemaining: nil,
+                state: .running,
+                completedAt: nil
+            )
         )
     }
 
@@ -114,14 +120,16 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
         }
 
         return ProductivityCountdownTimer(
-            id: id,
-            title: title,
-            originalDuration: originalDuration,
-            startedAt: startedAt,
-            deadline: nil,
-            pausedRemaining: nil,
-            state: .cancelled,
-            completedAt: nil
+            fields: Fields(
+                id: id,
+                title: title,
+                originalDuration: originalDuration,
+                startedAt: startedAt,
+                deadline: nil,
+                pausedRemaining: nil,
+                state: .cancelled,
+                completedAt: nil
+            )
         )
     }
 
@@ -131,98 +139,98 @@ public struct ProductivityCountdownTimer: Codable, Equatable, Sendable {
         }
 
         return ProductivityCountdownTimer(
-            id: id,
-            title: title,
-            originalDuration: originalDuration,
-            startedAt: startedAt,
-            deadline: nil,
-            pausedRemaining: nil,
-            state: .completed,
-            completedAt: now
+            fields: Fields(
+                id: id,
+                title: title,
+                originalDuration: originalDuration,
+                startedAt: startedAt,
+                deadline: nil,
+                pausedRemaining: nil,
+                state: .completed,
+                completedAt: now
+            )
         )
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let id = try container.decode(UUID.self, forKey: .id)
-        let title = try container.decode(String.self, forKey: .title)
-        let originalDuration = try container.decode(TimeInterval.self, forKey: .originalDuration)
-        let startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt)
-        let deadline = try container.decodeIfPresent(Date.self, forKey: .deadline)
-        let pausedRemaining = try container.decodeIfPresent(TimeInterval.self, forKey: .pausedRemaining)
-        let state = try container.decode(ProductivityTimerState.self, forKey: .state)
-        let completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        let fields = Fields(
+            id: try container.decode(UUID.self, forKey: .id),
+            title: try container.decode(String.self, forKey: .title),
+            originalDuration: try container.decode(
+                TimeInterval.self,
+                forKey: .originalDuration
+            ),
+            startedAt: try container.decodeIfPresent(Date.self, forKey: .startedAt),
+            deadline: try container.decodeIfPresent(Date.self, forKey: .deadline),
+            pausedRemaining: try container.decodeIfPresent(
+                TimeInterval.self,
+                forKey: .pausedRemaining
+            ),
+            state: try container.decode(ProductivityTimerState.self, forKey: .state),
+            completedAt: try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        )
 
-        guard Self.isValid(
-            originalDuration: originalDuration,
-            startedAt: startedAt,
-            deadline: deadline,
-            pausedRemaining: pausedRemaining,
-            state: state,
-            completedAt: completedAt
-        ) else {
+        guard Self.isValid(fields) else {
             throw ProductivityCountdownTimerError.invalidPersistedState
         }
 
-        self.init(
-            id: id,
-            title: title,
-            originalDuration: originalDuration,
-            startedAt: startedAt,
-            deadline: deadline,
-            pausedRemaining: pausedRemaining,
-            state: state,
-            completedAt: completedAt
-        )
+        self.init(fields: fields)
+    }
+}
+
+private extension ProductivityCountdownTimer {
+    struct Fields {
+        let id: UUID
+        let title: String
+        let originalDuration: TimeInterval
+        let startedAt: Date?
+        let deadline: Date?
+        let pausedRemaining: TimeInterval?
+        let state: ProductivityTimerState
+        let completedAt: Date?
     }
 
-    private init(
-        id: UUID,
-        title: String,
-        originalDuration: TimeInterval,
-        startedAt: Date?,
-        deadline: Date?,
-        pausedRemaining: TimeInterval?,
-        state: ProductivityTimerState,
-        completedAt: Date?
-    ) {
-        self.id = id
-        self.title = title
-        self.originalDuration = originalDuration
-        self.startedAt = startedAt
-        self.deadline = deadline
-        self.pausedRemaining = pausedRemaining
-        self.state = state
-        self.completedAt = completedAt
+    init(fields: Fields) {
+        id = fields.id
+        title = fields.title
+        originalDuration = fields.originalDuration
+        startedAt = fields.startedAt
+        deadline = fields.deadline
+        pausedRemaining = fields.pausedRemaining
+        state = fields.state
+        completedAt = fields.completedAt
     }
 
-    private static func isValid(
-        originalDuration: TimeInterval,
-        startedAt: Date?,
-        deadline: Date?,
-        pausedRemaining: TimeInterval?,
-        state: ProductivityTimerState,
-        completedAt: Date?
-    ) -> Bool {
-        guard originalDuration.isFinite, originalDuration > 0 else {
+    static func isValid(_ fields: Fields) -> Bool {
+        guard fields.originalDuration.isFinite, fields.originalDuration > 0 else {
             return false
         }
 
-        switch state {
+        switch fields.state {
         case .running:
-            guard let startedAt, let deadline else {
+            guard let startedAt = fields.startedAt, let deadline = fields.deadline else {
                 return false
             }
-            return deadline > startedAt && pausedRemaining == nil && completedAt == nil
+            return deadline > startedAt && fields.pausedRemaining == nil && fields.completedAt == nil
         case .paused:
-            guard startedAt != nil, let pausedRemaining else {
+            guard fields.startedAt != nil, let pausedRemaining = fields.pausedRemaining else {
                 return false
             }
-            return pausedRemaining.isFinite && pausedRemaining > 0 && deadline == nil && completedAt == nil
+            return pausedRemaining.isFinite
+                && pausedRemaining > 0
+                && fields.deadline == nil
+                && fields.completedAt == nil
         case .completed:
-            return startedAt != nil && deadline == nil && pausedRemaining == nil && completedAt != nil
+            return fields.startedAt != nil
+                && fields.deadline == nil
+                && fields.pausedRemaining == nil
+                && fields.completedAt != nil
         case .cancelled:
-            return startedAt != nil && deadline == nil && pausedRemaining == nil && completedAt == nil
+            return fields.startedAt != nil
+                && fields.deadline == nil
+                && fields.pausedRemaining == nil
+                && fields.completedAt == nil
         }
     }
 }
