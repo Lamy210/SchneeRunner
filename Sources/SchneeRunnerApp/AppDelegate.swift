@@ -11,12 +11,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let packBuilderPresenter = CharacterPackBuilderPresenter()
     private let menuController = StatusMenuController()
 
-    private lazy var characterPlaybackController = CharacterPlaybackController(
-        animationController: animationController
-    )
+    private lazy var characterPlaybackController = CharacterPlaybackController(animationController: animationController)
     private lazy var characterStateCoordinator = CharacterStateCoordinator(
         playbackController: characterPlaybackController
     )
+    private lazy var timerApplicationController = TimerApplicationController(menuController: menuController)
 
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
@@ -34,11 +33,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureCPUMonitor()
         restoreLastCharacter()
         refreshRecentCharactersMenu()
+        timerApplicationController.start()
         characterStateCoordinator.start()
         cpuMonitor.start()
     }
 
     func applicationWillTerminate(_: Notification) {
+        timerApplicationController.stop()
         characterStateCoordinator.stop()
         cpuMonitor.stop()
         animationController.stop()

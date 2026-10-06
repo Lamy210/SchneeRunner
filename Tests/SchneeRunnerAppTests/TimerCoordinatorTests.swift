@@ -60,6 +60,34 @@ final class TimerCoordinatorTests: XCTestCase {
         )
     }
 
+    func testPauseAfterDeadlineCompletesTimerInsteadOfThrowing() async throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+        let id = try await fixture.coordinator.start(
+            title: "Short",
+            duration: 10,
+            now: fixture.start
+        )
+
+        try await fixture.coordinator.pause(
+            id: id,
+            now: fixture.start.addingTimeInterval(11)
+        )
+
+        let persisted = try XCTUnwrap(
+            try fixture.store.load().timers.first { $0.id == id }
+        )
+        XCTAssertEqual(persisted.state, .completed)
+        XCTAssertEqual(
+            persisted.completedAt,
+            fixture.start.addingTimeInterval(10)
+        )
+        XCTAssertEqual(
+            fixture.scheduler.cancelledTimerIDs.filter { $0 == id }.count,
+            1
+        )
+    }
+
     func testReconcileCompletesOverdueTimerOnce() async throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
@@ -118,10 +146,13 @@ final class TimerCoordinatorTests: XCTestCase {
 
         fixture.coordinator.startRefreshing()
         defer { fixture.coordinator.stopRefreshing() }
-        RunLoop.main.run(
-            mode: .eventTracking,
-            before: Date().addingTimeInterval(0.05)
-        )
+        let deadline = Date().addingTimeInterval(0.2)
+        while callbackCount == 0, Date() < deadline {
+            RunLoop.main.run(
+                mode: .eventTracking,
+                before: Date().addingTimeInterval(0.01)
+            )
+        }
 
         XCTAssertGreaterThan(callbackCount, 0)
     }

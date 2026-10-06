@@ -99,21 +99,7 @@ final class TimerCoordinator: NSObject {
     }
 
     func reconcile(now: Date) async throws {
-        let previous = snapshot
-        let reconciled = previous.reconciling(at: now)
-
-        if reconciled != previous {
-            try store.save(reconciled)
-            snapshot = reconciled
-            publish()
-
-            for id in newlyCompletedTimerIDs(
-                before: previous,
-                after: reconciled
-            ) {
-                await notificationScheduler.cancelTimer(id: id)
-            }
-        }
+        let reconciled = try await reconcileState(now: now)
 
         do {
             let status = try await notificationScheduler.reconcileTimers(
@@ -134,7 +120,7 @@ final class TimerCoordinator: NSObject {
         refreshTimer = CommonRunLoopTimerScheduler.schedule(
             timeInterval: refreshInterval,
             target: self,
-            selector: #selector(refreshTick),
+            selector: #selector(refreshTimerDidFire(_:)),
             userInfo: nil,
             repeats: true
         )
@@ -146,6 +132,11 @@ final class TimerCoordinator: NSObject {
     }
 
     @objc
+    private func refreshTimerDidFire(_: Timer) {
+        refreshTick()
+    }
+
+    @objc
     private func refreshTick() {
         publish()
         Task { @MainActor [weak self] in
@@ -153,11 +144,34 @@ final class TimerCoordinator: NSObject {
                 return
             }
             do {
-                try await reconcile(now: Date())
+                _ = try await reconcileState(now: Date())
             } catch {
                 onPersistenceError?(error)
             }
         }
+    }
+
+    @discardableResult
+    private func reconcileState(
+        now: Date
+    ) async throws -> ProductivitySnapshot {
+        let previous = snapshot
+        let reconciled = previous.reconciling(at: now)
+
+        if reconciled != previous {
+            try store.save(reconciled)
+            snapshot = reconciled
+            publish()
+
+            for id in newlyCompletedTimerIDs(
+                before: previous,
+                after: reconciled
+            ) {
+                await notificationScheduler.cancelTimer(id: id)
+            }
+        }
+
+        return reconciled
     }
 
     private func timer(id: UUID) throws -> ProductivityCountdownTimer {

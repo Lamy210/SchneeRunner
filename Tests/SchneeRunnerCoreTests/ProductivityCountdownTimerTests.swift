@@ -32,6 +32,21 @@ final class ProductivityCountdownTimerTests: XCTestCase {
         XCTAssertEqual(paused.remaining(at: start.addingTimeInterval(900)), 900)
     }
 
+    func testPauseAfterDeadlineCompletesTimer() throws {
+        let timer = try makeTimer()
+        let completed = try timer.pausing(
+            at: start.addingTimeInterval(1501)
+        )
+
+        XCTAssertEqual(completed.state, .completed)
+        XCTAssertEqual(
+            completed.completedAt,
+            start.addingTimeInterval(1500)
+        )
+        XCTAssertNil(completed.deadline)
+        XCTAssertNil(completed.pausedRemaining)
+    }
+
     func testResumeCreatesFreshDeadlineFromPausedRemaining() throws {
         let timer = try makeTimer()
         let paused = try timer.pausing(at: start.addingTimeInterval(600))
