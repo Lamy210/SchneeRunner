@@ -1,0 +1,187 @@
+name: Bootstrap v0.1.0 Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: bootstrap-v0.1.0-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: v0.1.0
+  RELEASE_VERSION: 0.1.0
+  DMG_NAME: SchneeRunner-0.1.0.dmg
+
+jobs:
+  preflight:
+    name: Check bootstrap release state
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      release_required: ${{ steps.remote_state.outputs.release_required }}
+
+    steps:
+      - name: Validate trusted main context
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY: Lamy210/SchneeRunner
+          EXPECTED_REF: refs/heads/main
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPOSITORY}" || "${GITHUB_REF}" != "${EXPECTED_REF}" ]]; then
+            echo "Bootstrap release must run from trusted main in ${EXPECTED_REPOSITORY}." >&2
+            exit 1
+          fi
+          live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "main moved after this bootstrap run started; refusing stale publication." >&2
+            exit 1
+          fi
+
+      - name: Checkout trusted bootstrap control code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Inspect immutable bootstrap release state
+        id: remote_state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: bash scripts/release/publish-bootstrap-release.sh preflight
+
+  release:
+    name: Build and publish v0.1.0
+    needs: preflight
+    if: ${{ needs.preflight.outputs.release_required == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Revalidate trusted main context
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY: Lamy210/SchneeRunner
+          EXPECTED_REF: refs/heads/main
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPOSITORY}" || "${GITHUB_REF}" != "${EXPECTED_REF}" ]]; then
+            echo "Bootstrap release must run from trusted main in ${EXPECTED_REPOSITORY}." >&2
+            exit 1
+          fi
+          live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "main moved before bootstrap publication; refusing stale publication." >&2
+            exit 1
+          fi
+
+      - name: Checkout trusted release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build and test unsigned application
+        shell: bash
+        run: bash scripts/ci/build-release-artifact.sh
+
+      - name: Package unsigned application
+        shell: bash
+        env:
+          APP_PATH: build/SchneeRunner.app
+          OUTPUT_ARCHIVE: bootstrap-release-input/unsigned-macos-app.tar.gz
+        run: |
+          set -euo pipefail
+          mkdir -p bootstrap-release-input
+          bash scripts/release/package-app-artifact.sh
+
+      - name: Extract packaged application for distribution
+        shell: bash
+        env:
+          ARCHIVE_PATH: bootstrap-release-input/unsigned-macos-app.tar.gz
+          OUTPUT_DIR: release-input
+          APP_BASENAME: SchneeRunner.app
+        run: bash scripts/release/extract-app-artifact.sh
+
+      - name: Create DMG
+        shell: bash
+        env:
+          APP_PATH: release-input/SchneeRunner.app
+          APP_NAME: SchneeRunner
+          OUTPUT_DMG: release-output/${{ env.DMG_NAME }}
+        run: bash scripts/release/create-dmg.sh
+
+      - name: Verify unsigned distribution
+        shell: bash
+        env:
+          APP_PATH: release-input/SchneeRunner.app
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+          RELEASE_SIGNED: false
+        run: bash scripts/release/verify-release.sh
+
+      - name: Write bootstrap release provenance
+        shell: bash
+        env:
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release/write-bootstrap-release-provenance.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --source-sha "${GITHUB_SHA}" \
+            --tag "${RELEASE_TAG}" \
+            --version "${RELEASE_VERSION}" \
+            --workflow-run-id "${GITHUB_RUN_ID}" \
+            --workflow-run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --dmg-path "${DMG_PATH}" \
+            --output release-output/release-provenance.json
+
+      - name: Verify bootstrap release provenance
+        shell: bash
+        env:
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release/verify-bootstrap-release-provenance.py \
+            --metadata release-output/release-provenance.json \
+            --repository "${GITHUB_REPOSITORY}" \
+            --source-sha "${GITHUB_SHA}" \
+            --tag "${RELEASE_TAG}" \
+            --version "${RELEASE_VERSION}" \
+            --dmg-path "${DMG_PATH}"
+
+      - name: Rebind main immediately before publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "main moved during bootstrap build; refusing to tag an older source commit." >&2
+            exit 1
+          fi
+
+      - name: Create immutable tag and GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
+          SOURCE_SHA: ${{ github.sha }}
+          DMG_PATH: ${{ github.workspace }}/release-output/${{ env.DMG_NAME }}
+          RELEASE_PROVENANCE_PATH: ${{ github.workspace }}/release-output/release-provenance.json
+        run: bash scripts/release/publish-bootstrap-release.sh publish

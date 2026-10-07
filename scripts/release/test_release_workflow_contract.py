@@ -4,6 +4,15 @@ from pathlib import Path
 import re
 import unittest
 
+from scripts.release.test_bootstrap_release_provenance import (
+    BootstrapReleaseProvenanceTests,
+)
+from scripts.release.test_bootstrap_release_publisher import (
+    BootstrapReleasePublisherTests,
+)
+from scripts.release.test_bootstrap_v0_1_0_release_contract import (
+    BootstrapV010ReleaseContractTests,
+)
 from scripts.release.test_unsigned_release_workflow_contract import (
     UnsignedReleaseWorkflowContractTests,
 )

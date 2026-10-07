@@ -4,6 +4,10 @@ from pathlib import Path
 import re
 import unittest
 
+from scripts.release.test_bootstrap_v0_1_0_release_contract import (
+    BootstrapV010ReleaseContractTests,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"

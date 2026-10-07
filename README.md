@@ -4,6 +4,18 @@ SchneeRunner is a native macOS menu bar character runner. It is designed to let 
 
 The project does **not** bundle third-party character artwork. Imported images stay on the user's Mac.
 
+## Download
+
+[**Download latest release**](https://github.com/Lamy210/SchneeRunner/releases/latest)
+
+Requirements: **macOS 14 or later**.
+
+1. Download the DMG from the latest GitHub Release.
+2. Open the DMG and move **SchneeRunner.app** to **Applications**.
+3. Launch SchneeRunner from Applications.
+
+The current macOS release is intentionally **unsigned** and **not notarized**. macOS may block the first launch because there is no Developer ID signature. If that happens, use Finder's **Open** action for SchneeRunner and confirm the macOS prompt. This release does not claim Developer ID signing or Gatekeeper notarization.
+
 ## Status
 
 Early proof of concept.
