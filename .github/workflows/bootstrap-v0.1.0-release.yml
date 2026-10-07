@@ -164,6 +164,18 @@ jobs:
             --version "${RELEASE_VERSION}" \
             --dmg-path "${DMG_PATH}"
 
+      - name: Rebind main immediately before publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "main moved during bootstrap build; refusing to tag an older source commit." >&2
+            exit 1
+          fi
+
       - name: Create immutable tag and GitHub Release
         shell: bash
         env:
