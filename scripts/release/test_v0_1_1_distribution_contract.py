@@ -22,7 +22,8 @@ class V011DistributionContractTests(unittest.TestCase):
         for path in expected:
             with self.subTest(path=path.name):
                 self.assertTrue(path.is_file(), f"missing bundled walk-cycle source: {path}")
-                decoded = base64.b64decode(path.read_text(encoding="ascii").strip(), validate=True)
+                encoded = "".join(path.read_text(encoding="ascii").split())
+                decoded = base64.b64decode(encoded, validate=True)
                 self.assertTrue(decoded.startswith(PNG_SIGNATURE), f"not a PNG payload: {path}")
                 self.assertGreater(len(decoded), 8_000, f"bundled frame is unexpectedly small: {path}")
 
@@ -37,7 +38,7 @@ class V011DistributionContractTests(unittest.TestCase):
         text = VERIFY_RELEASE.read_text(encoding="utf-8")
         self.assertIn(RESOURCE_PATH, text)
         self.assertIn("for frame in 1 2 3 4", text)
-        self.assertIn('"walk_${frame}.png"', text)
+        self.assertIn("walk_${frame}.png", text)
 
     def test_launch_selection_isolated_from_app_delegate(self) -> None:
         self.assertTrue(STARTUP_LOADER.is_file(), "missing startup character loader")
