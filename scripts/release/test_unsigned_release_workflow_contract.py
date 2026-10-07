@@ -85,16 +85,19 @@ class SignedReleaseWorkflowContractTests(unittest.TestCase):
         self.assertIn('xcrun stapler validate "${DMG_PATH}"', text)
         self.assertIn('hdiutil verify "${DMG_PATH}"', text)
 
-    def test_release_build_bundles_all_default_character_frames(self) -> None:
-        text = BUILD_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn('Contents/Resources/DefaultCharacter', text)
+    def test_release_build_and_mounted_dmg_contain_default_character_frames(self) -> None:
+        build_text = BUILD_SCRIPT.read_text(encoding="utf-8")
+        verify_text = VERIFY_RELEASE.read_text(encoding="utf-8")
+        self.assertIn('Contents/Resources/DefaultCharacter', build_text)
+        self.assertIn('Contents/Resources/DefaultCharacter', verify_text)
         for name in FRAME_NAMES:
             with self.subTest(frame=name):
                 self.assertTrue(
                     (DEFAULT_CHARACTER / name).is_file(),
                     f"missing bundled default character frame: {name}",
                 )
-                self.assertIn(name, text)
+                self.assertIn(name, build_text)
+                self.assertIn(name, verify_text)
 
 
 # Compatibility import retained while the historical test module name remains in place.
