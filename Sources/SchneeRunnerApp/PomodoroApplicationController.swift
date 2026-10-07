@@ -117,7 +117,8 @@ final class PomodoroApplicationController: NSObject {
                 notifyReaction: !isReconcilingOnLaunch
             )
         }
-        coordinator.onNotificationStatus = { status in
+        coordinator.onNotificationStatus = { [weak self] status in
+            self?.menuController.setProductivityNotificationStatus(status)
             if status == .disabled {
                 NSLog("SchneeRunner Pomodoro notifications are disabled")
             }
