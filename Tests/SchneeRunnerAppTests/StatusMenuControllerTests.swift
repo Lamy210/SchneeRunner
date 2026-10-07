@@ -130,6 +130,22 @@ final class StatusMenuControllerTests: XCTestCase {
         XCTAssertEqual(manageCount, 1)
     }
 
+    func testProductivityNotificationStatusShowsOnlyWhenDisabled() throws {
+        let controller = StatusMenuController()
+        let item = try XCTUnwrap(
+            controller.menu.item(withTitle: "Productivity Notifications: Disabled")
+        )
+
+        XCTAssertTrue(item.isHidden)
+        XCTAssertFalse(item.isEnabled)
+
+        controller.setProductivityNotificationStatus(.disabled)
+        XCTAssertFalse(item.isHidden)
+
+        controller.setProductivityNotificationStatus(.scheduled)
+        XCTAssertTrue(item.isHidden)
+    }
+
     func testProductivityReactionToggleDefaultsOnAndForwardsCallback() throws {
         let controller = StatusMenuController()
         var toggleCount = 0
