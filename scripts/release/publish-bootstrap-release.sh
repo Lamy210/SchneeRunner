@@ -200,8 +200,16 @@ if [[ "${ACTION}" == "preflight" ]]; then
     write_release_required true
     exit 0
   fi
-  if [[ -z "${initial_tag_sha}" || "${initial_release_exists}" != true ]]; then
-    echo "Bootstrap release is in a partial remote state; refusing to overwrite it." >&2
+  if [[ -n "${initial_tag_sha}" && "${initial_release_exists}" == false ]]; then
+    if [[ "${initial_tag_sha}" != "${SOURCE_SHA}" ]]; then
+      echo "Existing bootstrap tag points to a different source SHA; refusing recovery." >&2
+      exit 1
+    fi
+    write_release_required true
+    exit 0
+  fi
+  if [[ -z "${initial_tag_sha}" && "${initial_release_exists}" == true ]]; then
+    echo "Bootstrap release exists without its required tag; refusing recovery." >&2
     exit 1
   fi
   verify_remote_release "${initial_tag_sha}"
@@ -222,8 +230,12 @@ if [[ "$(basename "${DMG_PATH}")" != "${DMG_NAME}" || "${RELEASE_PROVENANCE_PATH
   echo "Bootstrap publish paths do not match the canonical asset layout." >&2
   exit 1
 fi
-if [[ -n "${initial_tag_sha}" || "${initial_release_exists}" == true ]]; then
-  echo "Bootstrap publish requires both tag and release to be absent at publication start." >&2
+if [[ "${initial_release_exists}" == true ]]; then
+  echo "Bootstrap publish refuses to replace an existing GitHub Release." >&2
+  exit 1
+fi
+if [[ -n "${initial_tag_sha}" && "${initial_tag_sha}" != "${SOURCE_SHA}" ]]; then
+  echo "Existing bootstrap tag points to a different source SHA; refusing publication." >&2
   exit 1
 fi
 
@@ -242,13 +254,15 @@ if [[ "${checksum_digest}" != "${dmg_digest}" ]]; then
   exit 1
 fi
 
-if ! gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
-  -f "ref=refs/tags/${RELEASE_TAG}" \
-  -f "sha=${SOURCE_SHA}" >/dev/null; then
-  raced_tag_sha="$(resolve_tag_sha)"
-  if [[ "${raced_tag_sha}" != "${SOURCE_SHA}" ]]; then
-    echo "Failed to create immutable bootstrap tag at the expected source SHA." >&2
-    exit 1
+if [[ -z "${initial_tag_sha}" ]]; then
+  if ! gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+    -f "ref=refs/tags/${RELEASE_TAG}" \
+    -f "sha=${SOURCE_SHA}" >/dev/null; then
+    raced_tag_sha="$(resolve_tag_sha)"
+    if [[ "${raced_tag_sha}" != "${SOURCE_SHA}" ]]; then
+      echo "Failed to create immutable bootstrap tag at the expected source SHA." >&2
+      exit 1
+    fi
   fi
 fi
 
