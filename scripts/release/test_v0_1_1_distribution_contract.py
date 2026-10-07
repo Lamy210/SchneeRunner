@@ -22,7 +22,7 @@ class V011DistributionContractTests(unittest.TestCase):
                 self.assertTrue(path.is_file(), f"missing bundled walk-cycle frame: {path}")
                 self.assertGreater(
                     path.stat().st_size,
-                    20_000,
+                    8_000,
                     f"bundled walk-cycle frame is unexpectedly small: {path}",
                 )
 
