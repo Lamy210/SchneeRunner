@@ -16,6 +16,7 @@ final class ReminderApplicationController {
     private let calendar: Calendar
 
     private var coordinator: ReminderCoordinator?
+    private var launchReconciliationTask: Task<Void, Never>?
 
     init(
         menuController: StatusMenuController,
@@ -64,7 +65,10 @@ final class ReminderApplicationController {
         }
     }
 
-    func stop() {}
+    func stop() {
+        launchReconciliationTask?.cancel()
+        launchReconciliationTask = nil
+    }
 
     @discardableResult
     func createReminder(
@@ -125,6 +129,9 @@ private extension ReminderApplicationController {
             }
         }
         coordinator.onNotificationError = { [weak self] error in
+            guard !(error is CancellationError) else {
+                return
+            }
             self?.log("reminder notification error", error: error)
         }
         coordinator.onHistoryError = { [weak self] error in
@@ -136,14 +143,20 @@ private extension ReminderApplicationController {
         _ coordinator: ReminderCoordinator,
         now: Date
     ) {
-        Task { @MainActor [weak self, weak coordinator] in
+        launchReconciliationTask?.cancel()
+        launchReconciliationTask = Task { @MainActor [weak self, weak coordinator] in
             guard let self, let coordinator else {
                 return
             }
             do {
                 try await coordinator.reconcile(now: now)
+            } catch is CancellationError {
+                return
             } catch {
                 log("reminder recovery error", error: error)
+            }
+            guard !Task.isCancelled else {
+                return
             }
         }
     }
