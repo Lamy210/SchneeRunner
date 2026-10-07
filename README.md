@@ -38,6 +38,10 @@ The current vertical slice supports:
 - canonical export of the currently loaded stored Character Pack
 - Core Character Pack builder for assembling canonical packs from local clips
 - in-app Character Pack builder with per-state clip selection
+- restart-safe concurrent countdown timers with preset and custom durations
+- configurable Pomodoro focus / short-break / long-break sessions
+- one-shot, daily, and weekday reminders with snooze and local notifications
+- bounded local productivity history and optional character reactions
 - system-managed Launch at Login
 - local-only operation with no network access
 
@@ -86,6 +90,18 @@ Threshold transitions include a small hysteresis margin.
 
 The state and playback rate are separate values. CPU state updates are registered as low-priority metric triggers. Local events use the middle event priority, and the **Character State** submenu uses the highest manual priority. Returning the menu to **Automatic** removes only the manual override and immediately resolves the next available trigger. Existing single-animation assets are registered as a default **run** animation, so state changes fall back to that clip without restarting it. Character packs can provide exact animations for idle, walk, run, dash, and sprint without changing the trigger policy or renderer.
 
+## Productivity timers, Pomodoro, and reminders
+
+SchneeRunner includes local productivity tools in the status menu and a dedicated management window. Multiple countdown timers can run concurrently, Pomodoro sessions support configurable focus / short-break / long-break durations and auto-start behavior, and reminders support one-shot, daily, and selected-weekday schedules with snooze actions.
+
+Running countdowns and Pomodoro phases are **deadline-authoritative**. Their persisted deadline is the source of truth; the in-process one-second refresh loop only updates presentation. Restart, sleep, delayed run-loop delivery, and wall-clock changes therefore recompute state from the persisted deadline instead of accumulated ticks. Startup reconciliation is idempotent so an overdue timer or Pomodoro phase is completed or advanced once before regular refresh loops begin.
+
+Productivity state is stored locally under `Application Support/SchneeRunner/Productivity/`. `state.json` contains the versioned timer, Pomodoro, reminder, and snooze snapshot. `history.json` stores bounded productivity history and retains the newest 500 entries. Character-reaction enablement is a separate `UserDefaults` preference and defaults to enabled.
+
+Local notifications are reconciled by stable identifiers owned by SchneeRunner. Timer requests use `schneerunner.timer.`, Pomodoro requests use `schneerunner.pomodoro.`, reminder requests use `schneerunner.reminder.`, and snooze requests use `schneerunner.snooze.`. Reconciliation removes or replaces only requests under those owned prefixes; unrelated pending notifications are preserved. If notification permission is denied, timer/Pomodoro/reminder domain state continues to work and the UI reports the disabled notification path rather than treating notification delivery as the source of truth.
+
+When **Productivity Character Reactions** is enabled, productivity activity is aggregated into one `.event`-priority `productivity` trigger. Its internal precedence is reminder fired > timer completed > final minute > Pomodoro focus > active countdown > break. Reminder/completion reactions are short-lived and schedule their own expiry, so they clear even when no timer or Pomodoro refresh loop is running. Manual character-state overrides remain stronger than productivity updates. Disabling the toggle immediately removes the productivity trigger without changing timer, Pomodoro, or reminder state.
+
 ## Desktop character renderer
 
 The **Desktop Character** submenu can show the currently resolved animation in an optional transparent desktop window. The window is off by default, floats above normal windows, joins all Spaces, and can be repositioned by dragging the character. Its edges are resizable from 64 to 512 points while preserving a square presentation area.
@@ -122,7 +138,7 @@ swift run schneerunnerctl clear --channel build-a
 
 The channel defaults to `default` for backward compatibility. Channel names are 1–64 bytes and accept letters, numbers, `.`, `_`, and `-`. Older v1 payloads without a channel still decode into the default channel.
 
-Each channel owns an independent trigger and TTL timer. Expiring or clearing one channel therefore exposes the next active trigger instead of deleting unrelated local automation. Multiple local channels and build lifecycle events share the explicit event priority; the existing recency rule selects the most recently updated active trigger. The current priority order is **manual > local event/build event > system memory pressure > battery warning > CPU metric**.
+Each channel owns an independent trigger and TTL timer. Expiring or clearing one channel therefore exposes the next active trigger instead of deleting unrelated local automation. Multiple local channels and build lifecycle events share the explicit event priority; the existing recency rule selects the most recently updated active trigger. The current priority order is **manual > local event/build event/productivity > system memory pressure > battery warning > CPU metric**. Sources that share event priority resolve by the trigger engine's existing most-recent-update rule.
 
 The control path uses macOS Distributed Notifications and does not open a network port. It is intended for same-user local automation such as build scripts and development hooks; it is not an authenticated security boundary. Malformed payloads are ignored.
 
@@ -130,7 +146,7 @@ The control path uses macOS Distributed Notifications and does not open a networ
 
 SchneeRunner monitors macOS system memory-pressure transitions locally. Normal pressure does not install a trigger. A warning requests the **dash** state, while critical pressure requests **sprint**. Returning to normal removes the memory-pressure trigger and immediately exposes the next active source.
 
-The priority order is **manual > local event/build event > system memory pressure > battery warning > CPU metric**. This keeps an explicit user override strongest, lets local automation override system pressure when needed, and prevents the one-second CPU sampler from immediately replacing a pressure alert.
+The priority order is **manual > local event/build event/productivity > system memory pressure > battery warning > CPU metric**. This keeps an explicit user override strongest, lets explicit event-driven behavior override system pressure when needed, and prevents the one-second CPU sampler from immediately replacing a pressure alert.
 
 ## Battery warning trigger
 
@@ -172,7 +188,7 @@ Choose **Load Character Pack…** to import a directory ending in `.schneerunner
 
 Character Pack v1 accepts single-image PNG, 4x2 sprite sheet, PNG Sequence, GIF, APNG, and WebP clips. Only manifest-referenced assets are copied into SchneeRunner's local library; paths using `..`, absolute paths, backslashes, or symlinks are rejected. Imported packs are rewritten into a canonical owned layout and fully reloaded before the staged copy becomes visible. A pack is capped at 240 decoded frames and 32 million decoded pixels across all state clips.
 
-When the current stored character is a Character Pack, **Export Current Character Pack…** writes a fresh canonical `.schneerunner` directory. Export reuses only manifest-referenced clips, reloads the staged result before commit, and refuses to overwrite an existing destination.
+When the current stored character is a Character Pack, **Export Current Character Pack…** writes a fresh canonical `.schneerunner` directory. Export reuses only manifest-referenced clips, reloads the staged result before commit, and refuses to replace an existing destination.
 
 Choose **Build Character Pack…** to set a pack name and default state, attach optional idle / walk / run / dash / sprint clips, and write a canonical `.schneerunner` package. PNG Sequence clips select a source directory; single-image and sprite-sheet clips select PNG files, GIF clips select GIF files, APNG clips select animated PNG files, and WebP clips select animated WebP files. Building a pack does not change the currently running character.
 
@@ -232,9 +248,9 @@ SchneeRunnerApp
 SchneeRunnerCore
 ```
 
-`SchneeRunnerCore` owns deterministic sprite-sheet geometry, procedural single-image frame generation, CPU utilization calculation, smoothing, and animation-speed policy.
+`SchneeRunnerCore` owns deterministic sprite-sheet geometry, procedural single-image frame generation, character-state policy, productivity timer/Pomodoro/reminder domain rules, versioned productivity snapshots/history, CPU utilization calculation, smoothing, and animation-speed policy.
 
-`SchneeRunnerApp` owns AppKit lifecycle, the status item, file selection, Mach CPU sampling, timers, and user-facing state.
+`SchneeRunnerApp` owns AppKit lifecycle, the status item, file selection, Mach CPU sampling, run-loop refresh timers, local productivity persistence, `UserNotifications` integration, and user-facing state.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -242,7 +258,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 The current desktop-renderer vertical slice now includes persistent placement and visibility, placement reset, autonomous horizontal movement, direction-aware presentation, independent movement-speed presets, runtime display recovery, and optional click-through interaction.
 
-The engine should keep character assets, animation clips, triggers, metrics, and renderers independent so future render targets do not require rewriting the core model.
+The engine should keep character assets, animation clips, triggers, metrics, productivity state, and renderers independent so future render targets or productivity surfaces do not require rewriting the core model.
 
 ## Development
 
