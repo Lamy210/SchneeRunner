@@ -63,9 +63,15 @@ on:
         description: Final DMG filename, for example MyApp-1.2.3.dmg.
         required: true
         type: string
+      sign_release:
+        description: Sign and notarize the application and DMG before publication.
+        required: false
+        default: true
+        type: boolean
       signing_identity:
-        description: Full Developer ID Application signing identity.
-        required: true
+        description: Full Developer ID Application signing identity when sign_release is true.
+        required: false
+        default: ""
         type: string
       entitlements_path:
         description: Optional entitlements file path from the trusted publisher/default-branch checkout.
@@ -73,7 +79,7 @@ on:
         default: ""
         type: string
       publish_github_release:
-        description: Publish an immutable GitHub Release after notarization and verification.
+        description: Publish an immutable GitHub Release after release verification.
         required: false
         default: true
         type: boolean
@@ -234,6 +240,7 @@ jobs:
             --dmg-name "${DMG_NAME}"
 
       - name: Import Developer ID certificate
+        if: ${{ inputs.sign_release }}
         id: certificate
         shell: bash
         env:
@@ -242,6 +249,7 @@ jobs:
         run: bash scripts/release/import-certificate.sh
 
       - name: Sign application
+        if: ${{ inputs.sign_release }}
         shell: bash
         env:
           APP_PATH: release-input/${{ inputs.app_path }}
@@ -259,6 +267,7 @@ jobs:
         run: bash scripts/release/create-dmg.sh
 
       - name: Sign DMG
+        if: ${{ inputs.sign_release }}
         shell: bash
         env:
           DMG_PATH: release-output/${{ inputs.dmg_name }}
@@ -273,6 +282,7 @@ jobs:
           codesign --verify --verbose=2 "${DMG_PATH}"
 
       - name: Notarize and staple
+        if: ${{ inputs.sign_release }}
         shell: bash
         env:
           DMG_PATH: release-output/${{ inputs.dmg_name }}
@@ -286,6 +296,7 @@ jobs:
         env:
           APP_PATH: release-input/${{ inputs.app_path }}
           DMG_PATH: release-output/${{ inputs.dmg_name }}
+          RELEASE_SIGNED: ${{ inputs.sign_release }}
         run: bash scripts/release/verify-release.sh
 
       - name: Write final release attestation
@@ -344,7 +355,7 @@ jobs:
             >>"${GITHUB_OUTPUT}"
 
       - name: Delete temporary signing keychain
-        if: ${{ always() }}
+        if: ${{ always() && inputs.sign_release }}
         shell: bash
         env:
           KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
@@ -472,4 +483,3 @@ jobs:
           DMG_PATH: release-output/${{ inputs.dmg_name }}
           RELEASE_PROVENANCE_PATH: release-output/release-provenance.json
         run: bash scripts/release/publish-github-release.sh
-
