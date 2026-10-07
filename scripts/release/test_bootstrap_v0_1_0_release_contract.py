@@ -68,6 +68,17 @@ class BootstrapV010ReleaseContractTests(unittest.TestCase):
         self.assertIn("contents: write", text)
         self.assertIn("needs.preflight.outputs.release_required == 'true'", text)
 
+    def test_bootstrap_passes_canonical_absolute_asset_paths_to_publisher(self) -> None:
+        text = self.workflow_text()
+        self.assertIn(
+            "DMG_PATH: ${{ github.workspace }}/release-output/${{ env.DMG_NAME }}",
+            text,
+        )
+        self.assertIn(
+            "RELEASE_PROVENANCE_PATH: ${{ github.workspace }}/release-output/release-provenance.json",
+            text,
+        )
+
     def test_bootstrap_support_files_exist(self) -> None:
         self.assertTrue(PROVENANCE_WRITER.is_file(), f"missing provenance writer: {PROVENANCE_WRITER}")
         self.assertTrue(PROVENANCE_VERIFIER.is_file(), f"missing provenance verifier: {PROVENANCE_VERIFIER}")
