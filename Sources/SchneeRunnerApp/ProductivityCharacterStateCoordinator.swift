@@ -143,7 +143,7 @@ private extension ProductivityCharacterStateCoordinator {
         var hasActiveCountdown = false
         var hasFinalMinute = false
 
-        for timer in timers where timer.state == .running || timer.state == .paused {
+        for timer in timers where timer.state == .running {
             let remaining = timer.remaining(at: now)
             guard remaining > 0 else {
                 continue
