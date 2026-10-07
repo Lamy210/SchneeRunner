@@ -3,11 +3,9 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 
 
@@ -128,13 +126,14 @@ class BootstrapReleasePublisherTests(unittest.TestCase):
         self.local.mkdir()
         self.dmg = self.local / DMG_NAME
         self.dmg.write_bytes(b"bootstrap-dmg\n")
-        subprocess.run(
-            ["shasum", "-a", "256", self.dmg.name],
-            cwd=self.local,
-            check=True,
-            text=True,
-            stdout=(self.local / f"{DMG_NAME}.sha256").open("w", encoding="utf-8"),
-        )
+        with (self.local / f"{DMG_NAME}.sha256").open("w", encoding="utf-8") as checksum_output:
+            subprocess.run(
+                ["shasum", "-a", "256", self.dmg.name],
+                cwd=self.local,
+                check=True,
+                text=True,
+                stdout=checksum_output,
+            )
         result = subprocess.run(
             [
                 sys.executable,
