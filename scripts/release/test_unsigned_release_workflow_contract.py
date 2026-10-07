@@ -97,5 +97,9 @@ class SignedReleaseWorkflowContractTests(unittest.TestCase):
                 self.assertIn(name, text)
 
 
+# Compatibility import retained while the historical test module name remains in place.
+UnsignedReleaseWorkflowContractTests = SignedReleaseWorkflowContractTests
+
+
 if __name__ == "__main__":
     unittest.main()
