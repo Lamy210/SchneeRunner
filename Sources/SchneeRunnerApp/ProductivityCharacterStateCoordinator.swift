@@ -2,7 +2,7 @@ import Foundation
 import SchneeRunnerCore
 
 @MainActor
-final class ProductivityCharacterStateCoordinator {
+final class ProductivityCharacterStateCoordinator: NSObject {
     private let characterStateCoordinator: CharacterStateCoordinator
     private let reactionStore: ProductivityCharacterReactionStore
     private let statePolicy = ProductivityCharacterStatePolicy()
@@ -12,6 +12,7 @@ final class ProductivityCharacterStateCoordinator {
     private var pomodoroSession: PomodoroSession?
     private var timerCompletionAt: Date?
     private var reminderFiredAt: Date?
+    private var transientRefreshTimer: Timer?
 
     init(
         characterStateCoordinator: CharacterStateCoordinator,
@@ -21,6 +22,7 @@ final class ProductivityCharacterStateCoordinator {
         self.characterStateCoordinator = characterStateCoordinator
         self.reactionStore = reactionStore
         self.transientReactionDuration = max(0, transientReactionDuration)
+        super.init()
     }
 
     var isEnabled: Bool {
@@ -33,6 +35,7 @@ final class ProductivityCharacterStateCoordinator {
     ) {
         if hasNewCompletion(in: timers), reactionStore.isEnabled {
             timerCompletionAt = now
+            scheduleTransientRefresh(at: now)
         }
         self.timers = timers
         publishState(at: now)
@@ -52,6 +55,7 @@ final class ProductivityCharacterStateCoordinator {
         }
         timerCompletionAt = now
         publishState(at: now)
+        scheduleTransientRefresh(at: now)
     }
 
     func recordReminderFired(at now: Date = Date()) {
@@ -60,6 +64,7 @@ final class ProductivityCharacterStateCoordinator {
         }
         reminderFiredAt = now
         publishState(at: now)
+        scheduleTransientRefresh(at: now)
     }
 
     func setReactionsEnabled(
@@ -70,6 +75,7 @@ final class ProductivityCharacterStateCoordinator {
         if !isEnabled {
             timerCompletionAt = nil
             reminderFiredAt = nil
+            cancelTransientRefresh()
         }
         publishState(at: now)
     }
@@ -77,6 +83,11 @@ final class ProductivityCharacterStateCoordinator {
     func refresh(now: Date = Date()) {
         discardExpiredTransientSignals(at: now)
         publishState(at: now)
+        scheduleTransientRefresh(at: now)
+    }
+
+    func stop() {
+        cancelTransientRefresh()
     }
 }
 
@@ -186,5 +197,33 @@ private extension ProductivityCharacterStateCoordinator {
         if !isTransientActive(reminderFiredAt, at: now) {
             reminderFiredAt = nil
         }
+    }
+
+    func scheduleTransientRefresh(at now: Date) {
+        cancelTransientRefresh()
+        let expiryDates = [timerCompletionAt, reminderFiredAt]
+            .compactMap { $0?.addingTimeInterval(transientReactionDuration) }
+            .filter { $0 > now }
+        guard let nextExpiry = expiryDates.min() else {
+            return
+        }
+        transientRefreshTimer = CommonRunLoopTimerScheduler.schedule(
+            timeInterval: max(0.001, nextExpiry.timeIntervalSince(now)),
+            target: self,
+            selector: #selector(transientRefreshTimerDidFire(_:)),
+            userInfo: nil,
+            repeats: false
+        )
+    }
+
+    func cancelTransientRefresh() {
+        transientRefreshTimer?.invalidate()
+        transientRefreshTimer = nil
+    }
+
+    @objc
+    func transientRefreshTimerDidFire(_: Timer) {
+        transientRefreshTimer = nil
+        refresh()
     }
 }
