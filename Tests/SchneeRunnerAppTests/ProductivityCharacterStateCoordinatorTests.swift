@@ -156,6 +156,7 @@ private extension ProductivityCharacterCoordinatorTests {
         let suiteName: String
 
         func cleanup() {
+            coordinator.stop()
             defaults.removePersistentDomain(forName: suiteName)
         }
     }
