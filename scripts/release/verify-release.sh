@@ -4,6 +4,15 @@ set -euo pipefail
 : "${APP_PATH:?APP_PATH is required}"
 : "${DMG_PATH:?DMG_PATH is required}"
 
+RELEASE_SIGNED="${RELEASE_SIGNED:-true}"
+case "${RELEASE_SIGNED}" in
+  true | false) ;;
+  *)
+    echo "RELEASE_SIGNED must be true or false." >&2
+    exit 1
+    ;;
+esac
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ ! -d "${APP_PATH}" ]]; then
@@ -35,20 +44,24 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Validate both the signed application and the actual outer distribution file.
-codesign --verify --deep --strict --verbose=2 "${APP_PATH}"
-spctl --assess --type execute --verbose=4 "${APP_PATH}"
-codesign --verify --verbose=2 "${DMG_PATH}"
-xcrun stapler validate "${DMG_PATH}"
-hdiutil verify "${DMG_PATH}"
-spctl --assess \
-  --type open \
-  --context context:primary-signature \
-  --verbose=4 \
-  "${DMG_PATH}"
+# Gatekeeper, code-signing, and stapling checks only apply to signed releases.
+if [[ "${RELEASE_SIGNED}" == "true" ]]; then
+  codesign --verify --deep --strict --verbose=2 "${APP_PATH}"
+  spctl --assess --type execute --verbose=4 "${APP_PATH}"
+  codesign --verify --verbose=2 "${DMG_PATH}"
+  xcrun stapler validate "${DMG_PATH}"
+  spctl --assess \
+    --type open \
+    --context context:primary-signature \
+    --verbose=4 \
+    "${DMG_PATH}"
+fi
 
-# Mount the exact DMG that will be published and verify its payload is present,
-# executable, and still has a valid code signature after packaging.
+# Structural verification is required for both signed and unsigned distributions.
+hdiutil verify "${DMG_PATH}"
+
+# Mount the exact DMG that will be published and verify its payload is present
+# and executable after packaging.
 hdiutil attach \
   -readonly \
   -nobrowse \
@@ -65,7 +78,9 @@ fi
 APP_PATH="${mounted_app}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
-codesign --verify --deep --strict --verbose=2 "${mounted_app}"
+if [[ "${RELEASE_SIGNED}" == "true" ]]; then
+  codesign --verify --deep --strict --verbose=2 "${mounted_app}"
+fi
 
 CHECKSUM_PATH="${DMG_PATH}.sha256"
 (

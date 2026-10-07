@@ -4,6 +4,10 @@ from pathlib import Path
 import re
 import unittest
 
+from scripts.release.test_unsigned_release_workflow_contract import (
+    UnsignedReleaseWorkflowContractTests,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BUILD_WORKFLOW = REPO_ROOT / "examples/app-release-build.yml"
