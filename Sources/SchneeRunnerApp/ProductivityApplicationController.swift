@@ -70,6 +70,7 @@ final class ProductivityApplicationController {
 
     func stop() {
         notificationDeliveryMonitor.stop()
+        reactionCoordinator.stop()
         timerController.stop()
         pomodoroController.stop()
         reminderController.stop()
