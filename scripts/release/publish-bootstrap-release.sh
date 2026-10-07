@@ -112,7 +112,7 @@ validate_release_metadata() {
   gh release view "${RELEASE_TAG}" \
     --repo "${GITHUB_REPOSITORY}" \
     --json assets,isDraft,isPrerelease,tagName >"${metadata_path}"
-  python3 "${SCRIPT_DIR}/validate-release-state.py" \
+  python3 "${SCRIPT_DIR}/verify-release-state.py" \
     --metadata "${metadata_path}" \
     --tag "${RELEASE_TAG}" \
     --asset "${DMG_NAME}" \
