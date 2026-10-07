@@ -7,6 +7,9 @@ import unittest
 from scripts.release.test_bootstrap_release_provenance import (
     BootstrapReleaseProvenanceTests,
 )
+from scripts.release.test_bootstrap_release_publisher import (
+    BootstrapReleasePublisherTests,
+)
 from scripts.release.test_bootstrap_v0_1_0_release_contract import (
     BootstrapV010ReleaseContractTests,
 )
