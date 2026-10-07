@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var productivityController = ProductivityApplicationController(
         menuController: menuController, characterStateCoordinator: characterStateCoordinator
     )
+    private lazy var startupCharacterLoader = StartupCharacterLoader(
+        characterLibrary: characterLibrary
+    )
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
     private var latestCPUUpdate: CPUMonitor.Update?
@@ -32,9 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configurePlaybackCallback()
         configureMenuCallbacks()
         configureCPUMonitor()
-        if !restoreLastCharacter() {
-            loadBundledDefaultCharacterIfNeeded()
-        }
+        restoreInitialCharacter()
         refreshRecentCharactersMenu()
         productivityController.start()
         characterStateCoordinator.start()
@@ -420,44 +421,18 @@ private extension AppDelegate {
         }
     }
 
-    @discardableResult
-    func restoreLastCharacter() -> Bool {
-        do {
-            guard let asset = try characterLibrary.lastSelectedAsset() else {
-                return false
-            }
-
-            let library = try characterLibrary.library(for: asset)
-            play(library)
-            setCurrentAsset(asset)
-            return true
-        } catch {
-            if let asset = try? characterLibrary.lastSelectedAsset() {
-                unavailableRecentCharacterIDs.insert(asset.id)
-            }
-            characterLibrary.clearLastSelection()
-            return false
+    func restoreInitialCharacter() {
+        let result = startupCharacterLoader.load(
+            resourceRoot: Bundle.main.resourceURL
+        )
+        if let unavailableAssetID = result.unavailableAssetID {
+            unavailableRecentCharacterIDs.insert(unavailableAssetID)
         }
-    }
-
-    func loadBundledDefaultCharacterIfNeeded() {
-        guard let resourceRoot = Bundle.main.resourceURL else {
-            NSLog("SchneeRunner: bundled character resource root is unavailable")
+        guard let library = result.library else {
             return
         }
-
-        let frameURLs = BuiltInCharacterResources.yukihanaLamyWalkCycle(
-            resourceRoot: resourceRoot
-        )
-
-        do {
-            let frames = try characterLibrary.frames(
-                fromPNGSequence: frameURLs
-            )
-            try play(frames: frames)
-        } catch {
-            NSLog("SchneeRunner: failed to load bundled default character: \(error)")
-        }
+        play(library)
+        setCurrentAsset(result.asset)
     }
 }
 
