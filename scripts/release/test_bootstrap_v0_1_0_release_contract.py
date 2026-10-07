@@ -79,6 +79,16 @@ class BootstrapV010ReleaseContractTests(unittest.TestCase):
             text,
         )
 
+    def test_bootstrap_rebinds_live_main_immediately_before_publication(self) -> None:
+        text = self.workflow_text()
+        rebind = text.find("      - name: Rebind main immediately before publication\n")
+        publish = text.find("      - name: Create immutable tag and GitHub Release\n")
+        self.assertGreaterEqual(rebind, 0, "bootstrap must rebind live main before publication")
+        self.assertGreater(publish, rebind, "live main must be rebound after build and before tag creation")
+        block = text[rebind:publish]
+        self.assertIn('live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main"', block)
+        self.assertIn('if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then', block)
+
     def test_bootstrap_support_files_exist(self) -> None:
         self.assertTrue(PROVENANCE_WRITER.is_file(), f"missing provenance writer: {PROVENANCE_WRITER}")
         self.assertTrue(PROVENANCE_VERIFIER.is_file(), f"missing provenance verifier: {PROVENANCE_VERIFIER}")
