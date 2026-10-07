@@ -118,7 +118,8 @@ private extension ReminderApplicationController {
         coordinator.onChange = { [weak self] reminders, _ in
             self?.updateViews(reminders: reminders, now: Date())
         }
-        coordinator.onNotificationStatus = { status in
+        coordinator.onNotificationStatus = { [weak self] status in
+            self?.menuController.setProductivityNotificationStatus(status)
             if status == .disabled {
                 NSLog("SchneeRunner reminder notifications are disabled")
             }
