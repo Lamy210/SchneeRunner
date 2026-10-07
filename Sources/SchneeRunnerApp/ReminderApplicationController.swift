@@ -145,7 +145,11 @@ private extension ReminderApplicationController {
     ) {
         launchReconciliationTask?.cancel()
         launchReconciliationTask = Task { @MainActor [weak self, weak coordinator] in
-            guard let self, let coordinator else {
+            guard
+                !Task.isCancelled,
+                let self,
+                let coordinator
+            else {
                 return
             }
             do {
@@ -154,9 +158,6 @@ private extension ReminderApplicationController {
                 return
             } catch {
                 log("reminder recovery error", error: error)
-            }
-            guard !Task.isCancelled else {
-                return
             }
         }
     }
