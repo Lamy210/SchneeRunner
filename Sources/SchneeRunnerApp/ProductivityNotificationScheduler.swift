@@ -99,6 +99,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
     private static let pomodoroPrefix = "schneerunner.pomodoro."
 
     private let center: any ProductivityNotificationCenterClient
+    private var authorizationRequestTask: Task<Bool, Error>?
 
     convenience init() {
         self.init(center: SystemProductivityNotificationClient())
@@ -327,7 +328,27 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
         case .denied:
             false
         case .notDetermined:
+            try await requestAuthorizationOnce()
+        }
+    }
+
+    private func requestAuthorizationOnce() async throws -> Bool {
+        if let authorizationRequestTask {
+            return try await authorizationRequestTask.value
+        }
+
+        let task = Task { @MainActor [center] in
             try await center.requestAuthorization()
+        }
+        authorizationRequestTask = task
+
+        do {
+            let result = try await task.value
+            authorizationRequestTask = nil
+            return result
+        } catch {
+            authorizationRequestTask = nil
+            throw error
         }
     }
 }
