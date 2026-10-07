@@ -208,9 +208,9 @@ class BootstrapReleasePublisherTests(unittest.TestCase):
         self.assertEqual(self.output.read_text(), "release_required=true\n")
         self.assertEqual(self.read_state(), {"tag_sha": None, "release_exists": False})
 
-    def test_preflight_fails_closed_for_partial_remote_state(self) -> None:
+    def test_preflight_fails_closed_for_unrecoverable_partial_remote_state(self) -> None:
         for state in (
-            {"tag_sha": SOURCE_SHA, "release_exists": False},
+            {"tag_sha": NEXT_SHA, "release_exists": False},
             {"tag_sha": None, "release_exists": True},
         ):
             with self.subTest(state=state):
@@ -219,6 +219,20 @@ class BootstrapReleasePublisherTests(unittest.TestCase):
                 result = self.run_publisher("preflight")
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.output.read_text(), "")
+
+    def test_matching_tag_without_release_is_recoverable_and_publish_reuses_tag(self) -> None:
+        self.state.write_text(json.dumps({"tag_sha": SOURCE_SHA, "release_exists": False}))
+        preflight = self.run_publisher("preflight")
+        self.assertEqual(preflight.returncode, 0, preflight.stderr)
+        self.assertEqual(self.output.read_text(), "release_required=true\n")
+
+        publish = self.run_publisher("publish")
+        self.assertEqual(publish.returncode, 0, publish.stderr)
+        self.assertEqual(self.read_state(), {"tag_sha": SOURCE_SHA, "release_exists": True})
+        self.assertEqual(
+            {path.name for path in self.remote.iterdir()},
+            {DMG_NAME, f"{DMG_NAME}.sha256", "release-provenance.json"},
+        )
 
     def test_publish_creates_exact_tag_and_three_assets_then_future_preflight_is_noop(self) -> None:
         result = self.run_publisher("publish")
