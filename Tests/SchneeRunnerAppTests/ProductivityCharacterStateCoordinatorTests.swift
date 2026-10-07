@@ -109,6 +109,24 @@ final class ProductivityCharacterCoordinatorTests: XCTestCase {
         XCTAssertEqual(fixture.playbackController.requestedState, .idle)
     }
 
+    func testReminderTransientExpiresWithoutExternalRefresh() throws {
+        let fixture = try makeFixture(transientReactionDuration: 0.02)
+        defer { fixture.cleanup() }
+
+        fixture.coordinator.recordReminderFired()
+        XCTAssertEqual(fixture.playbackController.requestedState, .idle)
+
+        let deadline = Date().addingTimeInterval(0.25)
+        while fixture.playbackController.requestedState == .idle, Date() < deadline {
+            RunLoop.main.run(
+                mode: .eventTracking,
+                before: Date().addingTimeInterval(0.01)
+            )
+        }
+
+        XCTAssertEqual(fixture.playbackController.requestedState, .run)
+    }
+
     func testDisablingReactionsClearsProductivityTriggerAndPersistsPreference() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
