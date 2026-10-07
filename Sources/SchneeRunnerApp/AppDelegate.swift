@@ -32,7 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configurePlaybackCallback()
         configureMenuCallbacks()
         configureCPUMonitor()
-        restoreLastCharacter()
+        if !restoreLastCharacter() {
+            loadBundledDefaultCharacterIfNeeded()
+        }
         refreshRecentCharactersMenu()
         productivityController.start()
         characterStateCoordinator.start()
@@ -418,20 +420,43 @@ private extension AppDelegate {
         }
     }
 
-    func restoreLastCharacter() {
+    @discardableResult
+    func restoreLastCharacter() -> Bool {
         do {
             guard let asset = try characterLibrary.lastSelectedAsset() else {
-                return
+                return false
             }
 
             let library = try characterLibrary.library(for: asset)
             play(library)
             setCurrentAsset(asset)
+            return true
         } catch {
             if let asset = try? characterLibrary.lastSelectedAsset() {
                 unavailableRecentCharacterIDs.insert(asset.id)
             }
             characterLibrary.clearLastSelection()
+            return false
+        }
+    }
+
+    func loadBundledDefaultCharacterIfNeeded() {
+        guard let resourceRoot = Bundle.main.resourceURL else {
+            NSLog("SchneeRunner: bundled character resource root is unavailable")
+            return
+        }
+
+        let frameURLs = BuiltInCharacterResources.yukihanaLamyWalkCycle(
+            resourceRoot: resourceRoot
+        )
+
+        do {
+            let frames = try characterLibrary.frames(
+                fromPNGSequence: frameURLs
+            )
+            try play(frames: frames)
+        } catch {
+            NSLog("SchneeRunner: failed to load bundled default character: \(error)")
         }
     }
 }
