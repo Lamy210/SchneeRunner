@@ -34,20 +34,25 @@ install -m 0755 "${binary_path}" "${OUTPUT_APP}/Contents/MacOS/${APP_NAME}"
 
 mkdir -p "${BUILT_IN_CHARACTER_DESTINATION}"
 for frame in 1 2 3 4; do
-  source_frame="${BUILT_IN_CHARACTER_SOURCE}/walk_${frame}.png"
+  source_frame="${BUILT_IN_CHARACTER_SOURCE}/walk_${frame}.png.b64"
   destination_frame="${BUILT_IN_CHARACTER_DESTINATION}/walk_${frame}.png"
 
   if [[ ! -f "${source_frame}" || -L "${source_frame}" ]]; then
-    echo "Bundled character frame must be a regular non-symlink file: ${source_frame}" >&2
+    echo "Bundled character source must be a regular non-symlink file: ${source_frame}" >&2
     exit 1
   fi
 
-  if ! sips -g pixelWidth -g pixelHeight "${source_frame}" >/dev/null 2>&1; then
-    echo "Bundled character frame is not a readable image: ${source_frame}" >&2
+  base64 -D <"${source_frame}" >"${destination_frame}"
+  chmod 0644 "${destination_frame}"
+
+  if [[ ! -s "${destination_frame}" ]]; then
+    echo "Decoded bundled character frame is empty: ${destination_frame}" >&2
     exit 1
   fi
-
-  install -m 0644 "${source_frame}" "${destination_frame}"
+  if ! sips -g pixelWidth -g pixelHeight "${destination_frame}" >/dev/null 2>&1; then
+    echo "Decoded bundled character frame is not a readable image: ${destination_frame}" >&2
+    exit 1
+  fi
 done
 
 cat >"${OUTPUT_APP}/Contents/Info.plist" <<PLIST
@@ -104,7 +109,7 @@ fi
 
 for frame in 1 2 3 4; do
   bundled_frame="${BUILT_IN_CHARACTER_DESTINATION}/walk_${frame}.png"
-  if [[ ! -f "${bundled_frame}" || -L "${bundled_frame}" ]]; then
+  if [[ ! -f "${bundled_frame}" || -L "${bundled_frame}" || ! -s "${bundled_frame}" ]]; then
     echo "Bundled character frame is missing from application bundle: ${bundled_frame}" >&2
     exit 1
   fi
