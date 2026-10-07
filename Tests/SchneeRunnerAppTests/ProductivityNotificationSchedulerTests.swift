@@ -70,6 +70,34 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
         XCTAssertEqual(center.requestAuthorizationCount, 0)
     }
 
+    func testConcurrentNotDeterminedChecksRequestAuthorizationOnce() async throws {
+        let center = FakeProductivityNotificationCenterClient()
+        center.authorizationState = .notDetermined
+        center.authorizationRequestDelayNanoseconds = 20_000_000
+        let scheduler = ProductivityNotificationScheduler(center: center)
+        let now = start
+
+        async let timerStatus = scheduler.reconcileTimers([], now: now)
+        async let pomodoroStatus = scheduler.reconcilePomodoro(nil, now: now)
+        async let reminderStatus = scheduler.reconcileReminders(
+            [],
+            snoozes: [],
+            now: now,
+            calendar: .current
+        )
+
+        let statuses = try await (
+            timerStatus,
+            pomodoroStatus,
+            reminderStatus
+        )
+
+        XCTAssertEqual(statuses.0, .scheduled)
+        XCTAssertEqual(statuses.1, .scheduled)
+        XCTAssertEqual(statuses.2, .scheduled)
+        XCTAssertEqual(center.requestAuthorizationCount, 1)
+    }
+
     func testPomodoroIdentifierUsesStableSessionAndPhase() throws {
         let id = try XCTUnwrap(
             UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
@@ -154,6 +182,7 @@ private final class FakeProductivityNotificationCenterClient: ProductivityNotifi
     var removedIdentifiers: Set<String> = []
     var requestAuthorizationResult = true
     var requestAuthorizationCount = 0
+    var authorizationRequestDelayNanoseconds: UInt64 = 0
 
     func currentAuthorizationState() async -> NotificationAuthorizationState {
         authorizationState
@@ -161,6 +190,9 @@ private final class FakeProductivityNotificationCenterClient: ProductivityNotifi
 
     func requestAuthorization() async throws -> Bool {
         requestAuthorizationCount += 1
+        if authorizationRequestDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: authorizationRequestDelayNanoseconds)
+        }
         return requestAuthorizationResult
     }
 
