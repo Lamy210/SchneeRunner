@@ -49,8 +49,29 @@ final class ReminderApplicationControllerTests: XCTestCase {
         )
     }
 
+    func testStopCancelsInFlightLaunchReconciliation() async throws {
+        let scheduler = ReminderApplicationScheduler(
+            reconcileDelayNanoseconds: 100_000_000
+        )
+        let fixture = try makeFixture(notificationScheduler: scheduler)
+        defer { fixture.cleanup() }
+
+        fixture.controller.start(now: now)
+        for _ in 0 ..< 100 where !scheduler.reconcileStarted {
+            await Task.yield()
+        }
+        XCTAssertTrue(scheduler.reconcileStarted)
+
+        fixture.controller.stop()
+        try await Task<Never, Never>.sleep(nanoseconds: 150_000_000)
+
+        XCTAssertTrue(scheduler.reconcileWasCancelled)
+        XCTAssertFalse(scheduler.reconcileCompleted)
+    }
+
     private func makeFixture(
-        reminders: [ProductivityReminder] = []
+        reminders: [ProductivityReminder] = [],
+        notificationScheduler: ReminderApplicationScheduler = .init()
     ) throws -> ReminderApplicationFixture {
         let baseDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -64,12 +85,11 @@ final class ReminderApplicationControllerTests: XCTestCase {
         )
         try stateStore.save(ProductivitySnapshot(reminders: reminders))
         let menuController = StatusMenuController()
-        let scheduler = ReminderApplicationScheduler()
         let controller = try ReminderApplicationController(
             menuController: menuController,
             baseDirectory: baseDirectory,
             fileManager: .default,
-            notificationScheduler: scheduler,
+            notificationScheduler: notificationScheduler,
             calendar: utcCalendar()
         )
         return ReminderApplicationFixture(
@@ -103,13 +123,37 @@ final class ReminderApplicationControllerTests: XCTestCase {
 
 @MainActor
 private final class ReminderApplicationScheduler: ReminderNotificationScheduling {
+    private let reconcileDelayNanoseconds: UInt64
+
+    private(set) var reconcileStarted = false
+    private(set) var reconcileCompleted = false
+    private(set) var reconcileWasCancelled = false
+
+    init(reconcileDelayNanoseconds: UInt64 = 0) {
+        self.reconcileDelayNanoseconds = reconcileDelayNanoseconds
+    }
+
     func reconcileReminders(
         _: [ProductivityReminder],
         snoozes _: [ReminderSnooze],
         now _: Date,
         calendar _: Calendar
     ) async throws -> ProductivityNotificationDeliveryStatus {
-        .scheduled
+        reconcileStarted = true
+        do {
+            if reconcileDelayNanoseconds > 0 {
+                try await Task<Never, Never>.sleep(
+                    nanoseconds: reconcileDelayNanoseconds
+                )
+            }
+        } catch {
+            if error is CancellationError {
+                reconcileWasCancelled = true
+            }
+            throw error
+        }
+        reconcileCompleted = true
+        return .scheduled
     }
 }
 
