@@ -1,5 +1,5 @@
-@testable import SchneeRunnerApp
 import Foundation
+@testable import SchneeRunnerApp
 import XCTest
 
 final class BundledDefaultCharacterTests: XCTestCase {
@@ -46,7 +46,7 @@ final class BundledDefaultCharacterTests: XCTestCase {
                 "lamy-walk-01.png",
                 "lamy-walk-02.png",
                 "lamy-walk-03.png",
-                "lamy-walk-04.png",
+                "lamy-walk-04.png"
             ]
         )
     }
