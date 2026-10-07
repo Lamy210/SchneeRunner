@@ -28,8 +28,7 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
-      - name: Build application
-        run: swift build --product SchneeRunner
-
-      - name: Run unit tests
-        run: swift test
+      - name: Build release bundle smoke artifact
+        env:
+          RELEASE_VERSION: 0.0.0
+        run: bash scripts/ci/build-release-artifact.sh

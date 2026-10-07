@@ -8,6 +8,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BUILD_WORKFLOW = REPO_ROOT / "examples/app-release-build.yml"
 LEGACY_WORKFLOW = REPO_ROOT / "examples/app-release.yml"
+SCHNEE_RUNNER_CI_WORKFLOW = REPO_ROOT / ".github/workflows/schnee-runner-ci.yml"
 
 
 class ReleaseBuildWorkflowContractTests(unittest.TestCase):
@@ -110,6 +111,19 @@ class ReleaseBuildWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("uses: ./.github/workflows/reusable-macos-release.yml", text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("environment: release", text)
+
+
+class SchneeRunnerReleaseBundleCIContractTests(unittest.TestCase):
+    def test_app_ci_exercises_release_bundle_build_path(self) -> None:
+        self.assertTrue(
+            SCHNEE_RUNNER_CI_WORKFLOW.is_file(),
+            f"missing workflow: {SCHNEE_RUNNER_CI_WORKFLOW}",
+        )
+        text = SCHNEE_RUNNER_CI_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("      - name: Build release bundle smoke artifact\n", text)
+        self.assertIn("          RELEASE_VERSION: 0.0.0\n", text)
+        self.assertIn("        run: bash scripts/ci/build-release-artifact.sh\n", text)
 
 
 if __name__ == "__main__":
