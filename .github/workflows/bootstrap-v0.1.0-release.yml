@@ -170,6 +170,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
           SOURCE_SHA: ${{ github.sha }}
-          DMG_PATH: release-output/${{ env.DMG_NAME }}
-          RELEASE_PROVENANCE_PATH: release-output/release-provenance.json
+          DMG_PATH: ${{ github.workspace }}/release-output/${{ env.DMG_NAME }}
+          RELEASE_PROVENANCE_PATH: ${{ github.workspace }}/release-output/release-provenance.json
         run: bash scripts/release/publish-bootstrap-release.sh publish
