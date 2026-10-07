@@ -3,6 +3,8 @@ import SchneeRunnerCore
 
 @MainActor
 final class PomodoroApplicationController: NSObject {
+    var onSessionChanged: ((PomodoroSession?, Date) -> Void)?
+
     private let menuController: StatusMenuController
     private let managementWindow: ProductivityManagementWindowController?
     private let stateStore: ProductivityStateStore
@@ -14,16 +16,19 @@ final class PomodoroApplicationController: NSObject {
     private var coordinator: PomodoroCoordinator?
     private var refreshTimer: Timer?
     private var configuration: PomodoroConfiguration?
+    private var isReconcilingOnLaunch = false
 
     init(
         menuController: StatusMenuController,
         managementWindow: ProductivityManagementWindowController? = nil,
         fileManager: FileManager = .default,
         defaults: UserDefaults = .standard,
-        refreshInterval: TimeInterval = 1
+        refreshInterval: TimeInterval = 1,
+        notificationScheduler: ProductivityNotificationScheduler = .init()
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
+        self.notificationScheduler = notificationScheduler
         self.refreshInterval = refreshInterval
         configurationStore = PomodoroConfigurationStore(defaults: defaults)
         let applicationSupportDirectory = fileManager.urls(
@@ -39,7 +44,6 @@ final class PomodoroApplicationController: NSObject {
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
-        notificationScheduler = ProductivityNotificationScheduler()
         super.init()
         configureMenuCallbacks()
         configureManagementCallbacks()
@@ -57,12 +61,12 @@ final class PomodoroApplicationController: NSObject {
             )
             configureCoordinatorCallbacks(coordinator)
             self.coordinator = coordinator
+            isReconcilingOnLaunch = true
             menuController.setPomodoroSession(
                 coordinator.session,
                 now: Date()
             )
             reconcileOnLaunch(coordinator)
-            startRefreshing()
         } catch {
             log("Pomodoro state load error", error: error)
         }
@@ -104,9 +108,13 @@ final class PomodoroApplicationController: NSObject {
         _ coordinator: PomodoroCoordinator
     ) {
         coordinator.onChange = { [weak self] session in
-            self?.menuController.setPomodoroSession(
+            guard let self else {
+                return
+            }
+            publishSession(
                 session,
-                now: Date()
+                now: Date(),
+                notifyReaction: !isReconcilingOnLaunch
             )
         }
         coordinator.onNotificationStatus = { status in
@@ -134,6 +142,9 @@ final class PomodoroApplicationController: NSObject {
             } catch {
                 log("Pomodoro recovery error", error: error)
             }
+            isReconcilingOnLaunch = false
+            publishSession(coordinator.session, now: Date())
+            startRefreshing()
         }
     }
 
@@ -162,6 +173,17 @@ final class PomodoroApplicationController: NSObject {
             } catch {
                 log("Pomodoro refresh error", error: error)
             }
+        }
+    }
+
+    private func publishSession(
+        _ session: PomodoroSession?,
+        now: Date,
+        notifyReaction: Bool = true
+    ) {
+        menuController.setPomodoroSession(session, now: now)
+        if notifyReaction {
+            onSessionChanged?(session, now)
         }
     }
 

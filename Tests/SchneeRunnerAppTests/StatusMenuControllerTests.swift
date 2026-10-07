@@ -130,6 +130,35 @@ final class StatusMenuControllerTests: XCTestCase {
         XCTAssertEqual(manageCount, 1)
     }
 
+    func testProductivityReactionToggleDefaultsOnAndForwardsCallback() throws {
+        let controller = StatusMenuController()
+        var toggleCount = 0
+        controller.onToggleProductivityCharacterReactions = {
+            toggleCount += 1
+        }
+        let item = try XCTUnwrap(
+            controller.menu.item(withTitle: "Productivity Character Reactions")
+        )
+
+        XCTAssertEqual(item.state, .on)
+        perform(item)
+
+        XCTAssertEqual(toggleCount, 1)
+    }
+
+    func testProductivityReactionToggleReflectsPersistedState() throws {
+        let controller = StatusMenuController()
+        let item = try XCTUnwrap(
+            controller.menu.item(withTitle: "Productivity Character Reactions")
+        )
+
+        controller.setProductivityCharacterReactionsEnabled(false)
+        XCTAssertEqual(item.state, .off)
+
+        controller.setProductivityCharacterReactionsEnabled(true)
+        XCTAssertEqual(item.state, .on)
+    }
+
     private func perform(_ item: NSMenuItem) {
         guard
             let action = item.action,

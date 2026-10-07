@@ -9,6 +9,7 @@ The architecture should preserve these properties:
 - character artwork is data, not application-specific code;
 - animation timing is independent from rendering;
 - system metrics and external events are independent from animation clips;
+- productivity domain state is independent from AppKit presentation and `UserNotifications` delivery;
 - AppKit and Mach APIs stay at the application/platform boundary;
 - imported assets are read-only unless an explicit SchneeRunner-owned copy is introduced later;
 - network access is not required for the core experience.
@@ -22,6 +23,19 @@ NSApplication
 AppDelegate
      |
      +----> NSStatusItem
+     |
+     +----> ProductivityApplicationController
+     |            |
+     |            +----> TimerApplicationController ------> TimerCoordinator
+     |            +----> PomodoroApplicationController ---> PomodoroCoordinator
+     |            +----> ReminderApplicationController ---> ReminderCoordinator
+     |            +----> ProductivityManagementWindowController
+     |            +----> ProductivityNotificationScheduler ---> UNUserNotificationCenter
+     |            +----> ProductivityNotificationDeliveryMonitor
+     |            +----> ProductivityCharacterStateCoordinator
+     |                         |
+     |                         v
+     |                  CharacterStateCoordinator
      |
      +----> CharacterFrameRendererCoordinator
      |            |
@@ -128,6 +142,13 @@ Owns deterministic and reusable domain behavior:
 - priority-aware character-state trigger resolution with deterministic recency tie-breaking;
 - validated local character-state event payloads, channel identifiers, and TTL constraints;
 - versioned local build lifecycle event payloads;
+- deadline-authoritative countdown timer state and reconciliation;
+- Pomodoro phase/state transitions, pause/resume rules, and overdue reconciliation;
+- calendar-based one-shot/daily/weekday reminder recurrence and snooze values;
+- versioned productivity snapshot models;
+- bounded productivity history models;
+- productivity-character signal precedence and mapping;
+- productivity-character reaction preference persistence;
 - state-aware animation lookup with deterministic default fallback;
 - Character Pack v1 manifest validation and safe relative-path resolution;
 - state-specific pack loading into `CharacterAnimationLibrary`, including GIF, APNG, and WebP timing;
@@ -150,7 +171,7 @@ Owns deterministic and reusable domain behavior:
 - utilization-to-animation-pace policy;
 - validated animation frame timing schedules and playback-rate scaling.
 
-It must not own menu bar state, application lifecycle, timers, or macOS host-statistics calls.
+It must not own menu bar state, application lifecycle, run-loop timers, `UserNotifications`, or macOS host-statistics calls.
 
 ### SchneeRunnerApp
 
@@ -179,6 +200,12 @@ Owns macOS integration:
 - Dispatch system memory-pressure monitoring;
 - Mach host CPU sampling;
 - CPU sampling timer;
+- deadline-derived productivity UI refresh loops;
+- atomic Application Support persistence for productivity `state.json` and `history.json`;
+- `UNUserNotificationCenter` authorization, scheduling, cancellation, and owned-request reconciliation;
+- foreground reminder/snooze delivery observation for transient character reactions;
+- productivity management window, reminder editor, and Pomodoro settings presentation;
+- productivity-character aggregation, transient expiry scheduling, and single-trigger publication;
 - menu-bar image sizing;
 - user-facing error/state presentation;
 - save-panel coordination for Character Pack export;
@@ -226,6 +253,7 @@ CharacterState
           v
 CharacterStateTriggerEngine <---- Manual State Override
           ^                    <---- Local State Event
+          ^                    <---- Productivity Character State
           |
           v
 CharacterPlaybackController
@@ -242,7 +270,71 @@ The default smoother uses an EMA alpha of 0.25.
 
 The speed policy applies hysteresis around its thresholds to avoid rapid pace changes near a boundary.
 
-## 4. Planned boundaries
+## 4. Productivity pipeline
+
+Productivity state follows the same separation rule as the metric pipeline: deterministic time and recurrence rules live in Core; scheduling, persistence I/O, menus, windows, and macOS notifications live in App.
+
+```text
+state.json
+   |
+   v
+ProductivityStateStore
+   |
+   +----> TimerCoordinator ---------> deadline-derived timer state
+   +----> PomodoroCoordinator ------> deadline-derived phase state
+   +----> ReminderCoordinator ------> Calendar recurrence + snooze state
+   |             |
+   |             v
+   |     ProductivityNotificationScheduler
+   |             |
+   |             v
+   |       UNUserNotificationCenter
+   |
+   +----> Productivity UI / management window
+   |
+   +----> ProductivityCharacterStateCoordinator
+                 |
+                 v
+        ProductivityCharacterStatePolicy
+                 |
+                 v
+      CharacterStateCoordinator
+                 |
+                 v
+     CharacterStateTriggerEngine
+```
+
+Running countdowns and Pomodoro phases are deadline-authoritative. A running timer's persisted deadline, rather than the number of in-process timer ticks observed, determines remaining time. The same rule applies to a running Pomodoro phase. Run-loop timers are therefore presentation/refresh mechanisms only; a delayed callback or system sleep cannot extend a countdown merely because ticks were missed.
+
+The startup sequence is intentionally ordered:
+
+1. load the versioned productivity snapshot;
+2. reconcile overdue countdown/Pomodoro state and reminder recurrence;
+3. synchronize SchneeRunner-owned pending notifications;
+4. publish menu/management-window state;
+5. publish the resulting productivity character state;
+6. start normal refresh loops.
+
+Reconciliation is idempotent. An already-completed timer is not completed twice, an already-advanced Pomodoro phase is not advanced again, and notification synchronization derives a desired set from the reconciled snapshot rather than treating existing notifications as authority.
+
+Productivity persistence is local under `Application Support/SchneeRunner/Productivity/`:
+
+- `state.json` stores the versioned timer, Pomodoro, reminder, and snooze snapshot;
+- `history.json` stores the bounded history and retains the newest 500 entries;
+- character-reaction enablement is a separate `UserDefaults` preference, defaulting to enabled.
+
+Notification ownership is explicit. Stable identifiers use these prefixes:
+
+- `schneerunner.timer.`
+- `schneerunner.pomodoro.`
+- `schneerunner.reminder.`
+- `schneerunner.snooze.`
+
+Reconciliation may remove obsolete requests only under those owned prefixes and must preserve foreign pending notifications. Notification authorization failure or denial degrades notification delivery without rolling back committed timer, Pomodoro, or reminder state.
+
+`ProductivityCharacterStateCoordinator` publishes through exactly one `productivity` trigger at `.event` priority. It does not add new global priority classes or mutate the metric/system/manual ordering. Its internal signal precedence is reminder fired > timer completed > final minute > Pomodoro focus > active countdown > break. Reminder and completion reactions are transient and own a one-shot common/event-tracking run-loop expiry timer so they clear even when no countdown or Pomodoro refresh loop is active. Disabling reactions clears that single productivity trigger immediately.
+
+## 5. Planned boundaries
 
 The target model remains:
 
@@ -261,10 +353,10 @@ CharacterAsset --> AnimationLibrary --> AnimationPlayer --> Renderer
 These concepts must remain separable:
 
 ```text
-CharacterAsset != AnimationClip != Trigger != Metric != Renderer
+CharacterAsset != AnimationClip != Trigger != Metric != ProductivityState != Renderer
 ```
 
-A metric provider emits values. It must not directly manipulate a renderer.
+A metric provider emits values. It must not directly manipulate a renderer. Productivity state similarly publishes only through its narrow coordinator/trigger boundary and must not manipulate a renderer directly.
 
 The current renderer boundary fans each animation frame out to the menu bar and, when enabled, a transparent desktop window. The desktop renderer is presentation-only: it does not select states, decode assets, or own animation timing. Its last valid frame is stored through a platform-independent placement record that rejects non-finite, out-of-range, and materially non-square geometry; restoration chooses an intersecting connected display, falls back to the main display when the saved frame is fully offscreen, and clamps one shared square dimension against that display's visible short edge before clamping the origin. The user's desktop-visibility and click-through choices are persisted independently in Core and applied after App menu callbacks are wired during launch; autonomous movement remains an explicit per-launch opt-in. The AppKit renderer maps click-through mode to `NSPanel.ignoresMouseEvents`, so input passes to applications behind the character without changing renderer or animation state. A menu action can reset the panel to the standard 128-point placement on the current main display and persist that frame without changing autonomous-movement state. The renderer also observes display-parameter changes at runtime and recovers an existing panel onto the best remaining screen, falling back to the main display when the previous screen disappears.
 
@@ -272,7 +364,7 @@ Optional desktop movement is a separate pipeline. `DesktopCharacterMotionControl
 
 Current one-clip characters expose that clip as the animation library's default `run` state. Requests for unavailable states resolve to the default clip, and the playback coordinator avoids restarting the animation when multiple requested states resolve to the same clip.
 
-Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, battery warnings use the system-advisory priority, system memory pressure uses the system-event priority, generic local process events and build lifecycle events share the event priority, and a manual menu selection uses the manual priority. Removing or expiring a higher-priority trigger immediately exposes the next active trigger without coupling any source to the renderer.
+Character-state triggers are resolved independently of animation lookup. Higher priority wins; updates at the same priority use the most recently updated trigger. The current CPU metric uses the metric priority, battery warnings use the system-advisory priority, system memory pressure uses the system-event priority, generic local process events, build lifecycle events, and the single productivity trigger share the event priority, and a manual menu selection uses the manual priority. Removing or expiring a higher-priority trigger immediately exposes the next active trigger without coupling any source to the renderer. Sources at the same event priority continue to use the trigger engine's existing recency rule.
 
 Battery warning changes are observed through IOKit's power-source notification run-loop source and mapped from macOS's own low-battery warning level. No warning removes the advisory trigger, early warning maps to `walk`, and final warning maps to `idle`. The system-advisory priority sits above ordinary metrics but below memory pressure so a low-battery update does not hide an urgent memory-pressure state.
 
@@ -280,7 +372,7 @@ System memory pressure is observed through a Dispatch memory-pressure source. No
 
 Local state events are transported through macOS Distributed Notifications. The payload is a validated JSON value containing a set/clear action, a known `CharacterState`, an optional bounded TTL, and a validated channel identifier. Payloads that omit the channel remain compatible with v1 and resolve to the `default` channel. Each channel maps to an independent trigger ID and expiry timer, so clearing or expiring one automation does not remove another channel. Build lifecycle events use a separate versioned Distributed Notification payload containing only the lifecycle phase. `BuildStatePolicy` maps start to a persistent `dash` reaction, success to a 2-second `sprint`, failure to a 5-second `idle`, and cancellation to immediate removal. Both paths are local IPC rather than network services and are intended for same-user automation, not as authentication boundaries.
 
-## 5. Asset safety
+## 6. Asset safety
 
 The current PoC reads the user-selected PNG directly and does not mutate it.
 
@@ -290,7 +382,7 @@ Each stored character uses a UUID directory and a JSON manifest. Single-image an
 
 Third-party character art is not part of the application distribution by default.
 
-## 6. Failure handling
+## 7. Failure handling
 
 Boundary failures must become actionable errors.
 
@@ -300,13 +392,17 @@ Examples:
 - image without decodable bitmap data;
 - incompatible sprite-sheet dimensions;
 - frame crop failure;
-- unavailable Mach host statistics.
+- unavailable Mach host statistics;
+- malformed or unsupported productivity persistence;
+- denied local-notification permission.
 
 Loading a bad asset must not terminate the application or replace the last valid animation.
 
 A transient CPU sampling failure does not terminate playback. The menu reports CPU availability and keeps the current animation speed. The CPU-derived character-state trigger is removed on sampling failure and whenever CPU adaptation is disabled, allowing the trigger engine to fall back to the next active source instead of retaining stale CPU state.
 
-## 7. Performance direction
+A productivity notification failure must not roll back already-persisted domain state. Corrupt or unsupported productivity state fails explicitly rather than silently replacing the source file. History persistence is independent from completion state: a history write failure may be reported, but an already-completed timer or Pomodoro phase remains committed.
+
+## 8. Performance direction
 
 Menu bar playback is intentionally small.
 
@@ -316,13 +412,16 @@ Measure:
 - retained decoded-frame memory;
 - timer wakeups;
 - CPU usage at each supported FPS;
-- impact of one-second metric sampling.
+- impact of one-second metric sampling;
+- impact of productivity refresh and transient-expiry timers.
 
 Assets are decoded on import rather than decoded again for every displayed frame. Single-image mode renders a bounded 64-point-high working animation instead of retaining eight full-resolution copies of the source. Desktop drag and live-resize notifications are coalesced at the AppKit boundary: intermediate move/resize frames are not written to placement preferences, drag placement is persisted once on pointer release, and live resize persists its final frame once when resizing ends.
 
 The animation timer is not restarted when a CPU sample resolves to the already-active FPS. Playback uses one-shot frame timers derived from an immutable base schedule and a separate playback-rate multiplier. Uniform frame animations use a 12 FPS reference schedule, so the existing 6 / 8 / 12 / 18 / 24 FPS controls preserve their current effective timing while authored per-frame durations can be introduced without changing the renderer.
 
-## 8. Deferred decisions
+Productivity refresh loops do not accumulate elapsed ticks into domain time. They recompute presentation from persisted deadlines, so reducing or delaying UI refresh frequency changes visual freshness rather than timer correctness. Transient productivity reactions use one-shot timers only while a transient signal is active.
+
+## 9. Deferred decisions
 
 The following remain deliberately deferred:
 

@@ -4,20 +4,25 @@ import SchneeRunnerCore
 
 @MainActor
 final class TimerApplicationController {
+    var onTimersChanged: (([ProductivityCountdownTimer], Date) -> Void)?
+
     private let menuController: StatusMenuController
     private let managementWindow: ProductivityManagementWindowController?
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: ProductivityNotificationScheduler
     private var coordinator: TimerCoordinator?
+    private var isReconcilingOnLaunch = false
 
     init(
         menuController: StatusMenuController,
         managementWindow: ProductivityManagementWindowController? = nil,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        notificationScheduler: ProductivityNotificationScheduler = .init()
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
+        self.notificationScheduler = notificationScheduler
         let applicationSupportDirectory = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -31,7 +36,6 @@ final class TimerApplicationController {
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
-        notificationScheduler = ProductivityNotificationScheduler()
         configureMenuCallbacks()
         configureManagementCallbacks()
     }
@@ -45,8 +49,12 @@ final class TimerApplicationController {
             )
             configureCoordinatorCallbacks(coordinator)
             self.coordinator = coordinator
-            updateViews(timers: coordinator.timers, now: Date())
-            coordinator.startRefreshing()
+            isReconcilingOnLaunch = true
+            updateViews(
+                timers: coordinator.timers,
+                now: Date(),
+                notifyReaction: false
+            )
             reconcileOnLaunch(coordinator)
         } catch {
             log("timer state load error", error: error)
@@ -94,7 +102,14 @@ final class TimerApplicationController {
         _ coordinator: TimerCoordinator
     ) {
         coordinator.onChange = { [weak self] timers in
-            self?.updateViews(timers: timers, now: Date())
+            guard let self else {
+                return
+            }
+            updateViews(
+                timers: timers,
+                now: Date(),
+                notifyReaction: !isReconcilingOnLaunch
+            )
         }
         coordinator.onNotificationStatus = { status in
             if status == .disabled {
@@ -124,15 +139,23 @@ final class TimerApplicationController {
             } catch {
                 log("timer recovery error", error: error)
             }
+            isReconcilingOnLaunch = false
+            let now = Date()
+            updateViews(timers: coordinator.timers, now: now)
+            coordinator.startRefreshing()
         }
     }
 
     private func updateViews(
         timers: [ProductivityCountdownTimer],
-        now: Date
+        now: Date,
+        notifyReaction: Bool = true
     ) {
         menuController.setTimers(timers, now: now)
         managementWindow?.setTimers(timers)
+        if notifyReaction {
+            onTimersChanged?(timers, now)
+        }
     }
 
     private func showManagementWindow() {
