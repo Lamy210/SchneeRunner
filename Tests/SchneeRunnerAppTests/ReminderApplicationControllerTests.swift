@@ -26,17 +26,18 @@ final class ReminderApplicationControllerTests: XCTestCase {
     func testCreateReminderPersistsAndRefreshesMenu() async throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
-        fixture.controller.start(now: now)
+        let operationNow = Date()
+        fixture.controller.start(now: operationNow)
         let request = ReminderEditRequest(
             title: "Deploy",
             body: "Check production",
             enabled: true,
-            schedule: .once(now.addingTimeInterval(3600))
+            schedule: .once(operationNow.addingTimeInterval(3600))
         )
 
         _ = try await fixture.controller.createReminder(
             request,
-            now: now
+            now: operationNow
         )
 
         let persisted = try fixture.stateStore.load().reminders
