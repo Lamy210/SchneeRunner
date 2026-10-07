@@ -75,13 +75,14 @@ final class ProductivityNotificationSchedulerTests: XCTestCase {
         center.authorizationState = .notDetermined
         center.authorizationRequestDelayNanoseconds = 20_000_000
         let scheduler = ProductivityNotificationScheduler(center: center)
+        let now = start
 
-        async let timerStatus = scheduler.reconcileTimers([], now: start)
-        async let pomodoroStatus = scheduler.reconcilePomodoro(nil, now: start)
+        async let timerStatus = scheduler.reconcileTimers([], now: now)
+        async let pomodoroStatus = scheduler.reconcilePomodoro(nil, now: now)
         async let reminderStatus = scheduler.reconcileReminders(
             [],
             snoozes: [],
-            now: start,
+            now: now,
             calendar: .current
         )
 
