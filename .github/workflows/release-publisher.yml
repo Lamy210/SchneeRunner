@@ -211,6 +211,7 @@ jobs:
       app_path: SchneeRunner.app
       bundle_id: io.github.Lamy210.SchneeRunner
       dmg_name: SchneeRunner-${{ needs.validate.outputs.source_version }}.dmg
-      sign_release: false
+      sign_release: true
+      signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}
       entitlements_path: ""
       publish_github_release: true
