@@ -48,6 +48,11 @@ final class StatusMenuController: NSObject {
         action: nil,
         keyEquivalent: ""
     )
+    private let productivityNotificationStatusItem = NSMenuItem(
+        title: "Productivity Notifications: Disabled",
+        action: nil,
+        keyEquivalent: ""
+    )
     private let productivityCharacterReactionsItem = NSMenuItem(
         title: "Productivity Character Reactions",
         action: nil,
@@ -94,6 +99,12 @@ final class StatusMenuController: NSObject {
 
     func setAdaptiveSpeedEnabled(_ isEnabled: Bool) {
         adaptiveSpeedItem.state = isEnabled ? .on : .off
+    }
+
+    func setProductivityNotificationStatus(
+        _ status: ProductivityNotificationDeliveryStatus
+    ) {
+        productivityNotificationStatusItem.isHidden = status != .disabled
     }
 
     func setProductivityCharacterReactionsEnabled(_ isEnabled: Bool) {
@@ -224,6 +235,7 @@ private extension StatusMenuController {
         menu.addItem(timerMenuController.rootItem)
         menu.addItem(pomodoroMenuController.rootItem)
         menu.addItem(reminderMenuController.rootItem)
+        addProductivityNotificationStatusItem()
         addProductivityReactionItem()
         menu.addItem(.separator())
         addCPUItems()
@@ -316,6 +328,12 @@ private extension StatusMenuController {
         )
         item.submenu = recentCharactersMenu
         menu.addItem(item)
+    }
+
+    func addProductivityNotificationStatusItem() {
+        productivityNotificationStatusItem.isEnabled = false
+        productivityNotificationStatusItem.isHidden = true
+        menu.addItem(productivityNotificationStatusItem)
     }
 
     func addProductivityReactionItem() {
