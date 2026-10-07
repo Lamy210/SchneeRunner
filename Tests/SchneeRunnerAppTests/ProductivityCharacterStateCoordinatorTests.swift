@@ -21,6 +21,26 @@ final class ProductivityCharacterCoordinatorTests: XCTestCase {
         XCTAssertEqual(fixture.playbackController.requestedState, .walk)
     }
 
+    func testPausedFinalMinuteClearsCountdownReaction() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+        let now = Date(timeIntervalSince1970: 1000)
+        let timer = try ProductivityCountdownTimer(
+            id: UUID(),
+            title: "Build",
+            duration: 45,
+            startedAt: now
+        )
+        fixture.coordinator.updateTimers([timer], now: now)
+        XCTAssertEqual(fixture.playbackController.requestedState, .sprint)
+
+        let pausedAt = now.addingTimeInterval(5)
+        let paused = try timer.pausing(at: pausedAt)
+        fixture.coordinator.updateTimers([paused], now: pausedAt)
+
+        XCTAssertEqual(fixture.playbackController.requestedState, .run)
+    }
+
     func testFinalMinutePublishesSprint() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
