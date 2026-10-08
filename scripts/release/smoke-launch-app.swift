@@ -11,10 +11,10 @@ func fail(
     }
     FileHandle.standardError.write(Data((message + "\n").utf8))
 
-    if let traceURL,
-       let trace = try? String(contentsOf: traceURL, encoding: .utf8),
-       !trace.isEmpty
-    {
+    let trace = traceURL.flatMap { url in
+        try? String(contentsOf: url, encoding: .utf8)
+    }
+    if let trace, !trace.isEmpty {
         FileHandle.standardError.write(Data("Launch trace:\n\(trace)".utf8))
     }
     if let traceURL {
