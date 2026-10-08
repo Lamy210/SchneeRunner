@@ -131,6 +131,17 @@ jobs:
           cp source-artifact/release-input/unsigned-macos-app.tar.gz \
             validated-release-input/unsigned-macos-app.tar.gz
 
+      - name: Require signing identity configuration
+        shell: bash
+        env:
+          SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_IDENTITY}" ]]; then
+            echo "Repository variable MACOS_SIGNING_IDENTITY must contain the full Developer ID Application identity." >&2
+            exit 1
+          fi
+
       - name: Export validated release identity
         id: release_outputs
         shell: bash
@@ -211,6 +222,7 @@ jobs:
       app_path: SchneeRunner.app
       bundle_id: io.github.Lamy210.SchneeRunner
       dmg_name: SchneeRunner-${{ needs.validate.outputs.source_version }}.dmg
-      sign_release: false
+      sign_release: true
+      signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}
       entitlements_path: ""
       publish_github_release: true

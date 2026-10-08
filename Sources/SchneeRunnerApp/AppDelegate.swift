@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var productivityController = ProductivityApplicationController(
         menuController: menuController, characterStateCoordinator: characterStateCoordinator
     )
+    private lazy var startupCharacterLoader = StartupCharacterLoader(
+        characterLibrary: characterLibrary
+    )
     private var statusItem: NSStatusItem?
     private var currentAsset: StoredCharacterAsset?
     private var latestCPUUpdate: CPUMonitor.Update?
@@ -32,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configurePlaybackCallback()
         configureMenuCallbacks()
         configureCPUMonitor()
-        restoreLastCharacter()
+        restoreInitialCharacter()
         refreshRecentCharactersMenu()
         productivityController.start()
         characterStateCoordinator.start()
@@ -418,21 +421,18 @@ private extension AppDelegate {
         }
     }
 
-    func restoreLastCharacter() {
-        do {
-            guard let asset = try characterLibrary.lastSelectedAsset() else {
-                return
-            }
-
-            let library = try characterLibrary.library(for: asset)
-            play(library)
-            setCurrentAsset(asset)
-        } catch {
-            if let asset = try? characterLibrary.lastSelectedAsset() {
-                unavailableRecentCharacterIDs.insert(asset.id)
-            }
-            characterLibrary.clearLastSelection()
+    func restoreInitialCharacter() {
+        let result = startupCharacterLoader.load(
+            resourceRoot: Bundle.main.resourceURL
+        )
+        if let unavailableAssetID = result.unavailableAssetID {
+            unavailableRecentCharacterIDs.insert(unavailableAssetID)
         }
+        guard let library = result.library else {
+            return
+        }
+        play(library)
+        setCurrentAsset(result.asset)
     }
 }
 

@@ -14,6 +14,25 @@ case "${RELEASE_SIGNED}" in
 esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RESOURCE_RELATIVE_DIR="Contents/Resources/BuiltInCharacters/YukihanaLamy"
+
+verify_bundled_character() {
+  local app_path="$1"
+  local resource_dir="${app_path}/${RESOURCE_RELATIVE_DIR}"
+  if [[ ! -d "${resource_dir}" || -L "${resource_dir}" ]]; then
+    echo "Bundled character resource directory is missing or invalid: ${resource_dir}" >&2
+    exit 1
+  fi
+
+  local frame
+  for frame in 1 2 3 4; do
+    local frame_path="${resource_dir}/walk_${frame}.png"
+    if [[ ! -f "${frame_path}" || -L "${frame_path}" || ! -s "${frame_path}" ]]; then
+      echo "Bundled character frame is missing or invalid: ${frame_path}" >&2
+      exit 1
+    fi
+  done
+}
 
 if [[ ! -d "${APP_PATH}" ]]; then
   echo "Application bundle not found: ${APP_PATH}" >&2
@@ -30,6 +49,7 @@ executable_name="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${pli
 APP_PATH="${APP_PATH}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
+verify_bundled_character "${APP_PATH}"
 
 TEMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 MOUNT_POINT="$(mktemp -d "${TEMP_ROOT%/}/release-mount.XXXXXX")"
@@ -44,7 +64,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Gatekeeper, code-signing, and stapling checks only apply to signed releases.
 if [[ "${RELEASE_SIGNED}" == "true" ]]; then
   codesign --verify --deep --strict --verbose=2 "${APP_PATH}"
   spctl --assess --type execute --verbose=4 "${APP_PATH}"
@@ -57,11 +76,8 @@ if [[ "${RELEASE_SIGNED}" == "true" ]]; then
     "${DMG_PATH}"
 fi
 
-# Structural verification is required for both signed and unsigned distributions.
 hdiutil verify "${DMG_PATH}"
 
-# Mount the exact DMG that will be published and verify its payload is present
-# and executable after packaging.
 hdiutil attach \
   -readonly \
   -nobrowse \
@@ -78,6 +94,13 @@ fi
 APP_PATH="${mounted_app}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
+verify_bundled_character "${mounted_app}"
+for frame in 1 2 3 4; do
+  cmp \
+    "${APP_PATH}/${RESOURCE_RELATIVE_DIR}/walk_${frame}.png" \
+    "${mounted_app}/${RESOURCE_RELATIVE_DIR}/walk_${frame}.png"
+done
+
 if [[ "${RELEASE_SIGNED}" == "true" ]]; then
   codesign --verify --deep --strict --verbose=2 "${mounted_app}"
 fi

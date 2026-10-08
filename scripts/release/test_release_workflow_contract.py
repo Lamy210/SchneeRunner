@@ -16,6 +16,9 @@ from scripts.release.test_bootstrap_v0_1_0_release_contract import (
 from scripts.release.test_unsigned_release_workflow_contract import (
     UnsignedReleaseWorkflowContractTests,
 )
+from scripts.release.test_v0_1_1_distribution_contract import (
+    V011DistributionContractTests,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

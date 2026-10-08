@@ -5,6 +5,8 @@ readonly APP_NAME="SchneeRunner"
 readonly BUNDLE_ID="io.github.Lamy210.SchneeRunner"
 readonly MINIMUM_MACOS_VERSION="14.0"
 readonly OUTPUT_APP="build/${APP_NAME}.app"
+readonly BUILT_IN_CHARACTER_SOURCE="Resources/BuiltInCharacters/YukihanaLamy"
+readonly BUILT_IN_CHARACTER_DESTINATION="${OUTPUT_APP}/Contents/Resources/BuiltInCharacters/YukihanaLamy"
 
 release_version="${RELEASE_VERSION:-}"
 if [[ -z "${release_version}" ]]; then
@@ -29,6 +31,29 @@ fi
 rm -rf "${OUTPUT_APP}"
 mkdir -p "${OUTPUT_APP}/Contents/MacOS"
 install -m 0755 "${binary_path}" "${OUTPUT_APP}/Contents/MacOS/${APP_NAME}"
+
+mkdir -p "${BUILT_IN_CHARACTER_DESTINATION}"
+for frame in 1 2 3 4; do
+  source_frame="${BUILT_IN_CHARACTER_SOURCE}/walk_${frame}.png.b64"
+  destination_frame="${BUILT_IN_CHARACTER_DESTINATION}/walk_${frame}.png"
+
+  if [[ ! -f "${source_frame}" || -L "${source_frame}" ]]; then
+    echo "Bundled character source must be a regular non-symlink file: ${source_frame}" >&2
+    exit 1
+  fi
+
+  base64 -D <"${source_frame}" >"${destination_frame}"
+  chmod 0644 "${destination_frame}"
+
+  if [[ ! -s "${destination_frame}" ]]; then
+    echo "Decoded bundled character frame is empty: ${destination_frame}" >&2
+    exit 1
+  fi
+  if ! sips -g pixelWidth -g pixelHeight "${destination_frame}" >/dev/null 2>&1; then
+    echo "Decoded bundled character frame is not a readable image: ${destination_frame}" >&2
+    exit 1
+  fi
+done
 
 cat >"${OUTPUT_APP}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -81,6 +106,14 @@ if [[ "${actual_executable}" != "${APP_NAME}" ]]; then
   echo "Bundle executable mismatch after build: ${actual_executable}" >&2
   exit 1
 fi
+
+for frame in 1 2 3 4; do
+  bundled_frame="${BUILT_IN_CHARACTER_DESTINATION}/walk_${frame}.png"
+  if [[ ! -f "${bundled_frame}" || -L "${bundled_frame}" || ! -s "${bundled_frame}" ]]; then
+    echo "Bundled character frame is missing from application bundle: ${bundled_frame}" >&2
+    exit 1
+  fi
+done
 
 APP_PATH="${OUTPUT_APP}" \
   EXECUTABLE_NAME="${APP_NAME}" \
