@@ -275,7 +275,7 @@ Additionally verify:
 - built-in character resources exist exactly once in the expected packaged destination
 - unsigned release continues to opt out of unsafe system-notification startup behavior unless a later unsigned-safe implementation is proven
 
-Release validation must not claim that unsigned/notarized distribution bypasses Gatekeeper.
+Release validation must not claim that unsigned/unnotarized distribution bypasses Gatekeeper.
 
 ## Migration and compatibility
 
