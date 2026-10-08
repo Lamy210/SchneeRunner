@@ -27,11 +27,11 @@ def step_block(text: str, step_name: str) -> str:
 
 
 class UnsignedReleaseWorkflowContractTests(unittest.TestCase):
-    def test_schneerunner_publisher_requires_signed_release(self) -> None:
+    def test_schneerunner_publisher_explicitly_selects_unsigned_release(self) -> None:
         text = PUBLISHER.read_text(encoding="utf-8")
-        self.assertIn("sign_release: true", text)
-        self.assertIn("signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}", text)
-        self.assertNotIn("sign_release: false", text)
+        self.assertNotIn("Require signing identity configuration", text)
+        self.assertIn("sign_release: false", text)
+        self.assertNotIn("signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}", text)
         self.assertIn("publish_github_release: true", text)
 
     def test_reusable_release_keeps_signed_mode_as_default(self) -> None:
