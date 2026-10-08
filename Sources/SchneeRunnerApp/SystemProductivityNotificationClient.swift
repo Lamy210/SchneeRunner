@@ -10,8 +10,9 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
         bundleIdentifier: String? = Bundle.main.bundleIdentifier,
         bundleURL: URL = Bundle.main.bundleURL
     ) {
+        let identifier = bundleIdentifier ?? "nil"
         LaunchTrace.emit(
-            "SystemProductivityNotificationClient init bundleURL=\(bundleURL.path) bundleIdentifier=\(bundleIdentifier ?? "nil")"
+            "notification client init bundleURL=\(bundleURL.path) bundleIdentifier=\(identifier)"
         )
         guard SystemNotificationRuntime.isAvailable(
             bundleIdentifier: bundleIdentifier,
