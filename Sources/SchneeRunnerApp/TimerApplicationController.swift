@@ -12,18 +12,20 @@ final class TimerApplicationController {
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: ProductivityNotificationScheduler
     private var coordinator: TimerCoordinator?
+    private var launchReconciliationTask: Task<Void, Never>?
     private var isReconcilingOnLaunch = false
 
     init(
         menuController: StatusMenuController,
         managementWindow: ProductivityManagementWindowController? = nil,
+        baseDirectory: URL? = nil,
         fileManager: FileManager = .default,
         notificationScheduler: ProductivityNotificationScheduler = .init()
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
         self.notificationScheduler = notificationScheduler
-        let applicationSupportDirectory = fileManager.urls(
+        let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first ?? fileManager.homeDirectoryForCurrentUser
@@ -62,6 +64,9 @@ final class TimerApplicationController {
     }
 
     func stop() {
+        launchReconciliationTask?.cancel()
+        launchReconciliationTask = nil
+        isReconcilingOnLaunch = false
         coordinator?.stopRefreshing()
     }
 
@@ -118,6 +123,9 @@ final class TimerApplicationController {
             }
         }
         coordinator.onNotificationError = { [weak self] error in
+            guard !(error is CancellationError) else {
+                return
+            }
             self?.log("timer notification error", error: error)
         }
         coordinator.onPersistenceError = { [weak self] error in
@@ -131,14 +139,24 @@ final class TimerApplicationController {
     private func reconcileOnLaunch(
         _ coordinator: TimerCoordinator
     ) {
-        Task { @MainActor [weak self, weak coordinator] in
-            guard let self, let coordinator else {
+        launchReconciliationTask?.cancel()
+        launchReconciliationTask = Task { @MainActor [weak self, weak coordinator] in
+            guard
+                !Task.isCancelled,
+                let self,
+                let coordinator
+            else {
                 return
             }
             do {
                 try await coordinator.reconcile(now: Date())
+            } catch is CancellationError {
+                return
             } catch {
                 log("timer recovery error", error: error)
+            }
+            guard !Task.isCancelled else {
+                return
             }
             isReconcilingOnLaunch = false
             let now = Date()
