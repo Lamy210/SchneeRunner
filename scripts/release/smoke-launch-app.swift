@@ -100,4 +100,5 @@ print("Packaged application survived \(smokeSeconds)s launch smoke: \(appURL.pat
 if !application.terminate() {
     _ = application.forceTerminate()
 }
+
 try? FileManager.default.removeItem(at: traceURL)
