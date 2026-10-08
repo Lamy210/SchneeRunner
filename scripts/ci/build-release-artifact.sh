@@ -84,6 +84,8 @@ cat >"${OUTPUT_APP}/Contents/Info.plist" <<PLIST
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>SchneeRunnerSystemNotificationsEnabled</key>
+    <false/>
 </dict>
 </plist>
 PLIST
@@ -93,6 +95,7 @@ plutil -lint "${OUTPUT_APP}/Contents/Info.plist" >/dev/null
 actual_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${OUTPUT_APP}/Contents/Info.plist")"
 actual_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${OUTPUT_APP}/Contents/Info.plist")"
 actual_executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${OUTPUT_APP}/Contents/Info.plist")"
+actual_notifications_enabled="$(/usr/libexec/PlistBuddy -c 'Print :SchneeRunnerSystemNotificationsEnabled' "${OUTPUT_APP}/Contents/Info.plist")"
 
 if [[ "${actual_bundle_id}" != "${BUNDLE_ID}" ]]; then
   echo "Bundle identifier mismatch after build: ${actual_bundle_id}" >&2
@@ -104,6 +107,10 @@ if [[ "${actual_version}" != "${release_version}" ]]; then
 fi
 if [[ "${actual_executable}" != "${APP_NAME}" ]]; then
   echo "Bundle executable mismatch after build: ${actual_executable}" >&2
+  exit 1
+fi
+if [[ "${actual_notifications_enabled}" != "false" ]]; then
+  echo "Unsigned release must disable system notifications." >&2
   exit 1
 fi
 
