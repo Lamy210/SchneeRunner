@@ -34,11 +34,14 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
 
     func currentAuthorizationState() async -> NotificationAuthorizationState {
         guard let center else {
+            LaunchTrace.emit("currentAuthorizationState disabled: no notification center")
             return .denied
         }
 
+        LaunchTrace.emit("currentAuthorizationState before getNotificationSettings")
         return await withCheckedContinuation { continuation in
             center.getNotificationSettings { settings in
+                LaunchTrace.emit("currentAuthorizationState getNotificationSettings callback")
                 let state: NotificationAuthorizationState = switch settings.authorizationStatus {
                 case .authorized, .provisional, .ephemeral:
                     .authorized
