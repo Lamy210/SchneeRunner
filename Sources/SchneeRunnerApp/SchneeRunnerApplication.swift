@@ -4,8 +4,9 @@ import AppKit
 @MainActor
 struct SchneeRunnerApplication {
     static func main() {
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "nil"
         LaunchTrace.emit(
-            "main begin bundleURL=\(Bundle.main.bundleURL.path) bundleIdentifier=\(Bundle.main.bundleIdentifier ?? "nil")"
+            "main begin bundleURL=\(Bundle.main.bundleURL.path) bundleIdentifier=\(bundleIdentifier)"
         )
         LaunchTrace.emit("before NSApplication.shared")
         let application = NSApplication.shared
