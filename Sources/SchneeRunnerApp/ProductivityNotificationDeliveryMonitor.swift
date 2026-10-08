@@ -11,12 +11,14 @@ final class ProductivityNotificationDeliveryMonitor: NSObject, UNUserNotificatio
     func start(
         bundleIdentifier: String? = Bundle.main.bundleIdentifier,
         bundleURL: URL = Bundle.main.bundleURL,
+        notificationsEnabled: Bool = SystemNotificationRuntime.mainBundleNotificationsEnabled,
         center: UNUserNotificationCenter? = nil
     ) -> Bool {
         LaunchTrace.emit("ProductivityNotificationDeliveryMonitor.start begin")
         guard SystemNotificationRuntime.isAvailable(
             bundleIdentifier: bundleIdentifier,
-            bundleURL: bundleURL
+            bundleURL: bundleURL,
+            notificationsEnabled: notificationsEnabled
         ) else {
             LaunchTrace.emit("ProductivityNotificationDeliveryMonitor disabled by runtime policy")
             stop()
