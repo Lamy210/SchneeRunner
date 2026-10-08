@@ -1,8 +1,10 @@
 # SchneeRunner
 
-SchneeRunner is a native macOS menu bar character runner. It is designed to let users load their own character artwork and animate it locally in the menu bar.
+SchneeRunner is a native macOS menu bar character runner. It can animate the bundled default character or user-provided character artwork locally in the menu bar and optional desktop renderer.
 
-The project does **not** bundle third-party character artwork. Imported images stay on the user's Mac.
+The packaged application includes a generated, unofficial fan-made Yukihana Lamy walk-cycle as its default demo character. A previously selected local character always takes priority over the bundled fallback. Imported images stay on the user's Mac.
+
+SchneeRunner is an **unofficial fan-made project** and is not affiliated with or endorsed by **COVER Corp.** or hololive production. Yukihana Lamy and related names and characters belong to their respective rights holders. The bundled walk-cycle artwork is generated fan-made artwork, not official artwork.
 
 ## Download
 
@@ -14,7 +16,7 @@ Requirements: **macOS 14 or later**.
 2. Open the DMG and move **SchneeRunner.app** to **Applications**.
 3. Launch SchneeRunner from Applications.
 
-The current macOS release is intentionally **unsigned** and **not notarized**. macOS may block the first launch because there is no Developer ID signature. If that happens, use Finder's **Open** action for SchneeRunner and confirm the macOS prompt. This release does not claim Developer ID signing or Gatekeeper notarization.
+**Do not use v0.1.0.** It was an early **unsigned** and **not notarized** build, and macOS can report that quarantined copy as damaged or unable to open. The v0.1.1 release is published only after Developer ID signing, Apple notarization and stapling, Gatekeeper assessment, DMG verification, and release-provenance verification all succeed. There is no unsigned fallback for v0.1.1. If the latest-release link still resolves to v0.1.0, v0.1.1 has not passed the signed release gate and should not be replaced by an unverified build.
 
 ## Status
 
@@ -25,6 +27,7 @@ The current vertical slice supports:
 - macOS 14+
 - Swift 6 / Swift Package Manager
 - native AppKit menu bar UI
+- bundled four-frame default walk cycle when no saved character is available
 - local PNG import with pre-decode size/type validation
 - single-image procedural run animation
 - 4x2 sprite sheets with 8 frames
@@ -78,7 +81,7 @@ The **Launch at Login** menu item uses macOS system-managed login-item registrat
 
 Choose **Load Single Image…** to turn one PNG into an eight-frame procedural run cycle, **Load 4x2 Sprite Sheet…** for an authored sprite sheet, **Load PNG Sequence…** for multiple PNG frames, or **Load GIF…**, **Load APNG…**, and **Load WebP…** to preserve authored per-frame timing.
 
-Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. If that stored selection can no longer be loaded, SchneeRunner clears the saved selection, quarantines the unavailable asset from Recent Characters for the current app session, and continues launching with the placeholder. A Recent Character that fails when selected is quarantined the same way without deleting its stored files. Quarantined entries do not consume Recent Characters slots; older available assets fill the menu up to its normal limit. Recent Characters performs a filesystem-only structural preflight of SchneeRunner-owned backing paths whenever the status menu opens, including Character Pack manifest references, clip resource types, and PNG Sequence directory structure, so entries that become missing, symlinked, or structurally mismatched during the current session are omitted before the menu limit without decoding media or deleting stored data. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
+Single-image mode renders a small normalized working copy for the menu bar and leaves the original file untouched. The generated eight-frame cycle combines lift, tilt, squash, and stretch transforms around a foot-style anchor. Successful imports are copied into SchneeRunner-owned Application Support storage so recent characters can be reopened without depending on the original file. The last successfully selected stored character is restored automatically on the next launch. If that stored selection can no longer be loaded, SchneeRunner clears the saved selection, quarantines the unavailable asset from Recent Characters for the current app session, and continues launching with the bundled default character when that resource is available. A Recent Character that fails when selected is quarantined the same way without deleting its stored files. Quarantined entries do not consume Recent Characters slots; older available assets fill the menu up to its normal limit. Recent Characters performs a filesystem-only structural preflight of SchneeRunner-owned backing paths whenever the status menu opens, including Character Pack manifest references, clip resource types, and PNG Sequence directory structure, so entries that become missing, symlinked, or structurally mismatched during the current session are omitted before the menu limit without decoding media or deleting stored data. Imports are inspected before decode and currently reject files over 32 MiB, images over 8192 pixels on either axis, images over 16 million pixels total, non-PNG content, and animated PNGs.
 
 CPU adaptive speed is enabled by default. Selecting a manual playback rate disables CPU adaptive speed until **CPU Adaptive Speed** is enabled again. Disabling CPU adaptation clears the CPU-derived character-state trigger, and a CPU sampling error clears it as well, so stale CPU state does not remain active while other state triggers continue to resolve normally. The rate scales the animation's base timing, so GIF frame-duration ratios remain intact.
 
