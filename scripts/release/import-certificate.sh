@@ -35,8 +35,25 @@ security set-key-partition-list \
 # Restrict discovery to the temporary keychain on the ephemeral release runner.
 security list-keychains -d user -s "${KEYCHAIN_PATH}"
 
+signing_identities="$(
+  security find-identity -v -p codesigning "${KEYCHAIN_PATH}" |
+    sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p'
+)"
+identity_count="$(
+  printf '%s\n' "${signing_identities}" |
+    awk 'NF { count += 1 } END { print count + 0 }'
+)"
+if [[ "${identity_count}" -ne 1 ]]; then
+  echo "Expected exactly one Developer ID Application signing identity in imported keychain; found ${identity_count}." >&2
+  exit 1
+fi
+signing_identity="$(printf '%s\n' "${signing_identities}" | awk 'NF { print; exit }')"
+
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-  printf 'keychain-path=%s\n' "${KEYCHAIN_PATH}" >>"${GITHUB_OUTPUT}"
+  {
+    printf 'keychain-path=%s\n' "${KEYCHAIN_PATH}"
+    printf 'signing-identity=%s\n' "${signing_identity}"
+  } >>"${GITHUB_OUTPUT}"
 else
   printf '%s\n' "${KEYCHAIN_PATH}"
 fi
