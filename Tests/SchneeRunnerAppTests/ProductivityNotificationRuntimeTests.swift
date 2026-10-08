@@ -1,4 +1,5 @@
 import Foundation
+import SchneeRunnerCore
 import XCTest
 @testable import SchneeRunnerApp
 
@@ -43,9 +44,19 @@ final class ProductivityNotificationRuntimeTests: XCTestCase {
 
 @MainActor
 private final class FakeUnavailableNotificationCenterClient: ProductivityNotificationCenterClient {
-    func currentAuthorizationState() async -> NotificationAuthorizationState { .denied }
-    func requestAuthorization() async throws -> Bool { false }
-    func pendingIdentifiers() async -> Set<String> { [] }
+    func currentAuthorizationState() async -> NotificationAuthorizationState {
+        .denied
+    }
+
+    func requestAuthorization() async throws -> Bool {
+        false
+    }
+
+    func pendingIdentifiers() async -> Set<String> {
+        []
+    }
+
     func add(_: ProductivityNotificationRequest) async throws {}
+
     func removePending(identifiers _: Set<String>) {}
 }
