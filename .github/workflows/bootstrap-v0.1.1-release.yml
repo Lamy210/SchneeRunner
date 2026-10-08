@@ -104,17 +104,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require signing identity configuration
-        shell: bash
-        env:
-          SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${SIGNING_IDENTITY}" ]]; then
-            echo "Repository variable MACOS_SIGNING_IDENTITY must contain the full Developer ID Application identity." >&2
-            exit 1
-          fi
-
       - name: Build and test application
         shell: bash
         run: bash scripts/ci/build-release-artifact.sh
@@ -131,7 +120,7 @@ jobs:
         shell: bash
         env:
           APP_PATH: build/SchneeRunner.app
-          SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+          SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}
           KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
           ENTITLEMENTS_PATH: ""
         run: bash scripts/release/sign-app.sh
@@ -148,7 +137,7 @@ jobs:
         shell: bash
         env:
           DMG_PATH: release-output/${{ env.DMG_NAME }}
-          SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+          SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}
           KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
         run: |
           set -euo pipefail
