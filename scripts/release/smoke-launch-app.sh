@@ -20,6 +20,7 @@ if [[ ! -d "${APP_PATH}" || -L "${APP_PATH}" ]]; then
   exit 1
 fi
 
+APP_PATH="$(cd "$(dirname "${APP_PATH}")" && pwd -P)/$(basename "${APP_PATH}")"
 plist="${APP_PATH}/Contents/Info.plist"
 if [[ ! -f "${plist}" || -L "${plist}" ]]; then
   echo "Application Info.plist is missing or invalid: ${plist}" >&2
@@ -36,32 +37,52 @@ fi
 TEMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 log_path="$(mktemp "${TEMP_ROOT%/}/schneerunner-launch-smoke.XXXXXX.log")"
 crash_marker="$(mktemp "${TEMP_ROOT%/}/schneerunner-launch-smoke.XXXXXX.marker")"
-pid=''
+smoke_token="schneerunner-launch-smoke-$(/usr/bin/uuidgen)"
+launcher_pid=''
+app_pid=''
 
 cleanup() {
-  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-    kill -TERM "${pid}" 2>/dev/null || true
+  if [[ -n "${app_pid}" ]] && kill -0 "${app_pid}" 2>/dev/null; then
+    kill -TERM "${app_pid}" 2>/dev/null || true
     sleep 0.2
-    if kill -0 "${pid}" 2>/dev/null; then
-      kill -KILL "${pid}" 2>/dev/null || true
+    if kill -0 "${app_pid}" 2>/dev/null; then
+      kill -KILL "${app_pid}" 2>/dev/null || true
     fi
   fi
-  if [[ -n "${pid}" ]]; then
-    wait "${pid}" 2>/dev/null || true
+
+  if [[ -n "${launcher_pid}" ]] && kill -0 "${launcher_pid}" 2>/dev/null; then
+    kill -TERM "${launcher_pid}" 2>/dev/null || true
   fi
+  if [[ -n "${launcher_pid}" ]]; then
+    wait "${launcher_pid}" 2>/dev/null || true
+  fi
+
   rm -f "${log_path}" "${crash_marker}"
 }
 trap cleanup EXIT
 
-SCHNEERUNNER_LAUNCH_TRACE=1 NSUnbufferedIO=YES \
-  "${executable_path}" >"${log_path}" 2>&1 &
-pid="$!"
+/usr/bin/open -n -W "${APP_PATH}" --args "${smoke_token}" >"${log_path}" 2>&1 &
+launcher_pid="$!"
+
+for _ in {1..20}; do
+  while IFS= read -r candidate_pid; do
+    if [[ -n "${candidate_pid}" && "${candidate_pid}" != "${launcher_pid}" ]]; then
+      app_pid="${candidate_pid}"
+      break 2
+    fi
+  done < <(/usr/bin/pgrep -f "${smoke_token}" 2>/dev/null || true)
+
+  if ! kill -0 "${launcher_pid}" 2>/dev/null; then
+    break
+  fi
+  sleep 0.1
+done
 
 sleep "${SMOKE_SECONDS}"
 
-if ! kill -0 "${pid}" 2>/dev/null; then
+if ! kill -0 "${launcher_pid}" 2>/dev/null; then
   set +e
-  wait "${pid}"
+  wait "${launcher_pid}"
   status="$?"
   set -e
   echo "SchneeRunner exited during launch smoke with status ${status}." >&2
@@ -82,6 +103,12 @@ if ! kill -0 "${pid}" 2>/dev/null; then
     )
   fi
 
+  exit 1
+fi
+
+if [[ -z "${app_pid}" ]] || ! kill -0 "${app_pid}" 2>/dev/null; then
+  echo "SchneeRunner launch smoke could not confirm the launched application process." >&2
+  cat "${log_path}" >&2
   exit 1
 fi
 
