@@ -64,7 +64,6 @@ final class TimerApplicationController {
     }
 
     func stop() {
-        launchReconciliationTask?.cancel()
         launchReconciliationTask = nil
         isReconcilingOnLaunch = false
         coordinator?.stopRefreshing()
