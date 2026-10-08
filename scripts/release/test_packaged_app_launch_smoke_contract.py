@@ -30,6 +30,17 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
             text,
         )
 
+    def test_launch_smoke_treats_application_pid_as_survival_authority(self) -> None:
+        self.assertTrue(SMOKE_SCRIPT.is_file(), f"missing launch smoke script: {SMOKE_SCRIPT}")
+        text = SMOKE_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn(
+            'if [[ -n "${app_pid}" ]] && kill -0 "${app_pid}" 2>/dev/null; then\n'
+            '  echo "Packaged application survived ${SMOKE_SECONDS}s launch smoke: ${APP_PATH}"\n'
+            '  exit 0\n'
+            'fi\n',
+            text,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
