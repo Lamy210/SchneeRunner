@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / ".github/workflows/bootstrap-v0.1.1-release.yml"
 README = REPO_ROOT / "README.md"
 PUBLISHER = REPO_ROOT / "scripts/release/publish-bootstrap-release.sh"
+CERTIFICATE_IMPORTER = REPO_ROOT / "scripts/release/import-certificate.sh"
 
 
 class BootstrapV011SignedReleaseContractTests(unittest.TestCase):
@@ -33,8 +34,6 @@ class BootstrapV011SignedReleaseContractTests(unittest.TestCase):
         text = self.workflow_text()
         required = (
             "environment: release",
-            "Require signing identity configuration",
-            "MACOS_SIGNING_IDENTITY",
             "scripts/release/import-certificate.sh",
             "scripts/release/sign-app.sh",
             "scripts/release/create-dmg.sh",
@@ -47,6 +46,21 @@ class BootstrapV011SignedReleaseContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, text)
         self.assertNotIn("RELEASE_SIGNED: false", text)
+
+    def test_workflow_derives_signing_identity_from_imported_certificate(self) -> None:
+        text = self.workflow_text()
+        self.assertNotIn("MACOS_SIGNING_IDENTITY", text)
+        self.assertNotIn("Require signing identity configuration", text)
+        self.assertGreaterEqual(
+            text.count("SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}"),
+            2,
+        )
+
+        importer = CERTIFICATE_IMPORTER.read_text(encoding="utf-8")
+        self.assertIn("security find-identity", importer)
+        self.assertIn("Developer ID Application:", importer)
+        self.assertIn("signing-identity=%s", importer)
+        self.assertIn("GITHUB_OUTPUT", importer)
 
     def test_apple_credentials_are_isolated_from_repository_write_job(self) -> None:
         text = self.workflow_text()
