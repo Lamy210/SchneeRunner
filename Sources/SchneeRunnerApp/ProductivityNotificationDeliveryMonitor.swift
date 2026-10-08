@@ -13,17 +13,29 @@ final class ProductivityNotificationDeliveryMonitor: NSObject, UNUserNotificatio
         bundleURL: URL = Bundle.main.bundleURL,
         center: UNUserNotificationCenter? = nil
     ) -> Bool {
+        LaunchTrace.emit("ProductivityNotificationDeliveryMonitor.start begin")
         guard SystemNotificationRuntime.isAvailable(
             bundleIdentifier: bundleIdentifier,
             bundleURL: bundleURL
         ) else {
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor disabled by runtime policy")
             stop()
             return false
         }
 
-        let resolvedCenter = center ?? .current()
+        let resolvedCenter: UNUserNotificationCenter
+        if let center {
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor using injected center")
+            resolvedCenter = center
+        } else {
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor before UNUserNotificationCenter.current")
+            resolvedCenter = .current()
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor after UNUserNotificationCenter.current")
+        }
         self.center = resolvedCenter
+        LaunchTrace.emit("ProductivityNotificationDeliveryMonitor before delegate assignment")
         resolvedCenter.delegate = self
+        LaunchTrace.emit("ProductivityNotificationDeliveryMonitor after delegate assignment")
         return true
     }
 
