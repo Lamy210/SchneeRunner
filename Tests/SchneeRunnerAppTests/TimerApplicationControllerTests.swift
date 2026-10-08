@@ -11,6 +11,10 @@ final class TimerApplicationControllerTests: XCTestCase {
         )
         let fixture = try makeFixture(center: center)
         defer { fixture.cleanup() }
+        var observedChanges = 0
+        fixture.controller.onTimersChanged = { _, _ in
+            observedChanges += 1
+        }
 
         fixture.controller.start()
         for _ in 0 ..< 100 where !center.addStarted {
@@ -23,6 +27,7 @@ final class TimerApplicationControllerTests: XCTestCase {
 
         XCTAssertTrue(center.addWasCancelled)
         XCTAssertFalse(center.addCompleted)
+        XCTAssertEqual(observedChanges, 0)
     }
 
     private func makeFixture(
