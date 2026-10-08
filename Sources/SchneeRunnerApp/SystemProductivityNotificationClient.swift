@@ -3,15 +3,48 @@ import UserNotifications
 
 @MainActor
 final class SystemProductivityNotificationClient: ProductivityNotificationCenterClient {
-    private let center: UNUserNotificationCenter
+    private let center: UNUserNotificationCenter?
 
-    init(center: UNUserNotificationCenter = .current()) {
-        self.center = center
+    init(
+        center: UNUserNotificationCenter? = nil,
+        bundleIdentifier: String? = Bundle.main.bundleIdentifier,
+        bundleURL: URL = Bundle.main.bundleURL,
+        notificationsEnabled: Bool = SystemNotificationRuntime.mainBundleNotificationsEnabled
+    ) {
+        let identifier = bundleIdentifier ?? "nil"
+        LaunchTrace.emit(
+            "notification client init bundleURL=\(bundleURL.path) bundleIdentifier=\(identifier)"
+        )
+        guard SystemNotificationRuntime.isAvailable(
+            bundleIdentifier: bundleIdentifier,
+            bundleURL: bundleURL,
+            notificationsEnabled: notificationsEnabled
+        ) else {
+            LaunchTrace.emit("SystemProductivityNotificationClient disabled by runtime policy")
+            self.center = nil
+            return
+        }
+
+        if let center {
+            LaunchTrace.emit("SystemProductivityNotificationClient using injected center")
+            self.center = center
+        } else {
+            LaunchTrace.emit("before UNUserNotificationCenter.current")
+            self.center = .current()
+            LaunchTrace.emit("after UNUserNotificationCenter.current")
+        }
     }
 
     func currentAuthorizationState() async -> NotificationAuthorizationState {
-        await withCheckedContinuation { continuation in
+        guard let center else {
+            LaunchTrace.emit("currentAuthorizationState disabled: no notification center")
+            return .denied
+        }
+
+        LaunchTrace.emit("currentAuthorizationState before getNotificationSettings")
+        return await withCheckedContinuation { continuation in
             center.getNotificationSettings { settings in
+                LaunchTrace.emit("currentAuthorizationState getNotificationSettings callback")
                 let state: NotificationAuthorizationState = switch settings.authorizationStatus {
                 case .authorized, .provisional, .ephemeral:
                     .authorized
@@ -28,7 +61,11 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func requestAuthorization() async throws -> Bool {
-        try await withCheckedThrowingContinuation { continuation in
+        guard let center else {
+            return false
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
             center.requestAuthorization(
                 options: [.alert, .sound]
             ) { granted, error in
@@ -42,7 +79,11 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func pendingIdentifiers() async -> Set<String> {
-        await withCheckedContinuation { continuation in
+        guard let center else {
+            return []
+        }
+
+        return await withCheckedContinuation { continuation in
             center.getPendingNotificationRequests { requests in
                 continuation.resume(
                     returning: Set(requests.map(\.identifier))
@@ -52,6 +93,10 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func add(_ request: ProductivityNotificationRequest) async throws {
+        guard let center else {
+            return
+        }
+
         let content = UNMutableNotificationContent()
         content.title = request.title
         content.body = request.body
@@ -74,7 +119,7 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func removePending(identifiers: Set<String>) {
-        center.removePendingNotificationRequests(
+        center?.removePendingNotificationRequests(
             withIdentifiers: Array(identifiers)
         )
     }

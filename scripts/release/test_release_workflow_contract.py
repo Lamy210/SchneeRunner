@@ -16,6 +16,9 @@ from scripts.release.test_bootstrap_v0_1_0_release_contract import (
 from scripts.release.test_bootstrap_v0_1_1_release_contract import (
     BootstrapV011SignedReleaseContractTests,
 )
+from scripts.release.test_packaged_app_launch_smoke_contract import (
+    PackagedAppLaunchSmokeContractTests,
+)
 from scripts.release.test_unsigned_release_workflow_contract import (
     UnsignedReleaseWorkflowContractTests,
 )
@@ -143,6 +146,9 @@ class SchneeRunnerReleaseBundleCIContractTests(unittest.TestCase):
         self.assertIn("      - name: Build release bundle smoke artifact\n", text)
         self.assertIn("          RELEASE_VERSION: 0.0.0\n", text)
         self.assertIn("        run: bash scripts/ci/build-release-artifact.sh\n", text)
+        self.assertIn("      - name: Launch release bundle smoke artifact\n", text)
+        self.assertIn("          APP_PATH: build/SchneeRunner.app\n", text)
+        self.assertIn("        run: bash scripts/release/smoke-launch-app.sh\n", text)
 
 
 if __name__ == "__main__":

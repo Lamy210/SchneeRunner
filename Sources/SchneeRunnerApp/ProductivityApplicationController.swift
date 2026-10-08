@@ -17,6 +17,7 @@ final class ProductivityApplicationController {
         notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor = .init(),
         notificationScheduler: ProductivityNotificationScheduler? = nil
     ) {
+        LaunchTrace.emit("ProductivityApplicationController init begin")
         self.menuController = menuController
         self.notificationDeliveryMonitor = notificationDeliveryMonitor
         let managementWindow = ProductivityManagementWindowController()
@@ -26,7 +27,9 @@ final class ProductivityApplicationController {
             reactionStore: reactionStore
         )
         self.reactionCoordinator = reactionCoordinator
+        LaunchTrace.emit("ProductivityApplicationController before notification scheduler")
         let notificationScheduler = notificationScheduler ?? ProductivityNotificationScheduler()
+        LaunchTrace.emit("ProductivityApplicationController after notification scheduler")
 
         timerController = TimerApplicationController(
             menuController: menuController,
@@ -59,13 +62,24 @@ final class ProductivityApplicationController {
         menuController.setProductivityCharacterReactionsEnabled(
             reactionCoordinator.isEnabled
         )
+        LaunchTrace.emit("ProductivityApplicationController init end")
     }
 
     func start() {
+        LaunchTrace.emit("ProductivityApplicationController.start begin")
+        LaunchTrace.emit("before notificationDeliveryMonitor.start")
         notificationDeliveryMonitor.start()
+        LaunchTrace.emit("after notificationDeliveryMonitor.start")
+        LaunchTrace.emit("before timerController.start")
         timerController.start()
+        LaunchTrace.emit("after timerController.start")
+        LaunchTrace.emit("before pomodoroController.start")
         pomodoroController.start()
+        LaunchTrace.emit("after pomodoroController.start")
+        LaunchTrace.emit("before reminderController.start")
         reminderController.start()
+        LaunchTrace.emit("after reminderController.start")
+        LaunchTrace.emit("ProductivityApplicationController.start end")
     }
 
     func stop() {

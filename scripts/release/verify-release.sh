@@ -50,6 +50,8 @@ APP_PATH="${APP_PATH}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
 verify_bundled_character "${APP_PATH}"
+APP_PATH="${APP_PATH}" \
+  bash "${SCRIPT_DIR}/smoke-launch-app.sh"
 
 TEMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 MOUNT_POINT="$(mktemp -d "${TEMP_ROOT%/}/release-mount.XXXXXX")"
@@ -95,6 +97,8 @@ APP_PATH="${mounted_app}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
 verify_bundled_character "${mounted_app}"
+APP_PATH="${mounted_app}" \
+  bash "${SCRIPT_DIR}/smoke-launch-app.sh"
 for frame in 1 2 3 4; do
   cmp \
     "${APP_PATH}/${RESOURCE_RELATIVE_DIR}/walk_${frame}.png" \

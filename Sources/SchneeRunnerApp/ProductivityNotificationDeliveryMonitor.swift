@@ -1,3 +1,4 @@
+import Foundation
 import UserNotifications
 
 @MainActor
@@ -6,9 +7,38 @@ final class ProductivityNotificationDeliveryMonitor: NSObject, UNUserNotificatio
 
     private weak var center: UNUserNotificationCenter?
 
-    func start(center: UNUserNotificationCenter = .current()) {
-        self.center = center
-        center.delegate = self
+    @discardableResult
+    func start(
+        bundleIdentifier: String? = Bundle.main.bundleIdentifier,
+        bundleURL: URL = Bundle.main.bundleURL,
+        notificationsEnabled: Bool = SystemNotificationRuntime.mainBundleNotificationsEnabled,
+        center: UNUserNotificationCenter? = nil
+    ) -> Bool {
+        LaunchTrace.emit("ProductivityNotificationDeliveryMonitor.start begin")
+        guard SystemNotificationRuntime.isAvailable(
+            bundleIdentifier: bundleIdentifier,
+            bundleURL: bundleURL,
+            notificationsEnabled: notificationsEnabled
+        ) else {
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor disabled by runtime policy")
+            stop()
+            return false
+        }
+
+        let resolvedCenter: UNUserNotificationCenter
+        if let center {
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor using injected center")
+            resolvedCenter = center
+        } else {
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor before UNUserNotificationCenter.current")
+            resolvedCenter = .current()
+            LaunchTrace.emit("ProductivityNotificationDeliveryMonitor after UNUserNotificationCenter.current")
+        }
+        self.center = resolvedCenter
+        LaunchTrace.emit("ProductivityNotificationDeliveryMonitor before delegate assignment")
+        resolvedCenter.delegate = self
+        LaunchTrace.emit("ProductivityNotificationDeliveryMonitor after delegate assignment")
+        return true
     }
 
     func stop() {
