@@ -6,7 +6,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / ".github/workflows/bootstrap-v0.1.2-release.yml"
-README = REPO_ROOT / "README.md"
+RELEASE_NOTES = REPO_ROOT / "docs/releases/v0.1.2.md"
 PUBLISHER = REPO_ROOT / "scripts/release/publish-bootstrap-release.sh"
 
 
@@ -36,8 +36,14 @@ class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
         self.assertIn("scripts/release/create-dmg.sh", text)
         self.assertIn("scripts/release/verify-release.sh", text)
         self.assertIn("RELEASE_SIGNED: false", text)
-        self.assertIn("SchneeRunnerSystemNotificationsEnabled", (REPO_ROOT / "scripts/ci/build-release-artifact.sh").read_text(encoding="utf-8"))
-        self.assertIn('bash "${SCRIPT_DIR}/smoke-launch-app.sh"', (REPO_ROOT / "scripts/release/verify-release.sh").read_text(encoding="utf-8"))
+        self.assertIn(
+            "SchneeRunnerSystemNotificationsEnabled",
+            (REPO_ROOT / "scripts/ci/build-release-artifact.sh").read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            'bash "${SCRIPT_DIR}/smoke-launch-app.sh"',
+            (REPO_ROOT / "scripts/release/verify-release.sh").read_text(encoding="utf-8"),
+        )
 
     def test_workflow_does_not_require_apple_credentials(self) -> None:
         text = self.workflow_text()
@@ -66,8 +72,9 @@ class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
         text = PUBLISHER.read_text(encoding="utf-8")
         self.assertIn('"v0.1.2|0.1.2|SchneeRunner-0.1.2.dmg"', text)
 
-    def test_readme_marks_v0_1_1_as_runtime_broken_and_v0_1_2_as_fixed_unsigned(self) -> None:
-        text = README.read_text(encoding="utf-8").lower()
+    def test_release_notes_mark_v0_1_1_runtime_failure_and_v0_1_2_fix(self) -> None:
+        self.assertTrue(RELEASE_NOTES.is_file(), f"missing release notes: {RELEASE_NOTES}")
+        text = RELEASE_NOTES.read_text(encoding="utf-8").lower()
         self.assertIn("v0.1.1", text)
         self.assertIn("startup", text)
         self.assertIn("v0.1.2", text)
