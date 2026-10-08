@@ -53,7 +53,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"${executable_path}" >"${log_path}" 2>&1 &
+SCHNEERUNNER_LAUNCH_TRACE=1 NSUnbufferedIO=YES \
+  "${executable_path}" >"${log_path}" 2>&1 &
 pid="$!"
 
 sleep "${SMOKE_SECONDS}"
