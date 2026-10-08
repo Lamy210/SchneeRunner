@@ -1,0 +1,352 @@
+name: Bootstrap v0.1.1 Signed Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: bootstrap-v0.1.1-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: v0.1.1
+  RELEASE_VERSION: 0.1.1
+  DMG_NAME: SchneeRunner-0.1.1.dmg
+  BOOTSTRAP_EXPECTED_TAG: v0.1.1
+  BOOTSTRAP_EXPECTED_VERSION: 0.1.1
+  BOOTSTRAP_EXPECTED_DMG: SchneeRunner-0.1.1.dmg
+
+jobs:
+  preflight:
+    name: Check v0.1.1 release state
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      release_required: ${{ steps.remote_state.outputs.release_required }}
+
+    steps:
+      - name: Validate trusted main context
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY: Lamy210/SchneeRunner
+          EXPECTED_REF: refs/heads/main
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPOSITORY}" || "${GITHUB_REF}" != "${EXPECTED_REF}" ]]; then
+            echo "Signed bootstrap release must run from trusted main in ${EXPECTED_REPOSITORY}." >&2
+            exit 1
+          fi
+          live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "main moved after this bootstrap run started; refusing stale publication." >&2
+            exit 1
+          fi
+
+      - name: Checkout trusted bootstrap control code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Inspect immutable v0.1.1 release state
+        id: remote_state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: bash scripts/release/publish-bootstrap-release.sh preflight
+
+  sign:
+    name: Build, sign, notarize, and verify v0.1.1
+    needs: preflight
+    if: ${{ needs.preflight.outputs.release_required == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    environment: release
+    permissions:
+      contents: read
+    outputs:
+      verified_artifact_name: ${{ steps.artifact_identity.outputs.name }}
+      verified_artifact_id: ${{ steps.artifact_identity.outputs.id }}
+      verified_artifact_digest: ${{ steps.artifact_identity.outputs.digest }}
+
+    steps:
+      - name: Revalidate trusted main context
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY: Lamy210/SchneeRunner
+          EXPECTED_REF: refs/heads/main
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPOSITORY}" || "${GITHUB_REF}" != "${EXPECTED_REF}" ]]; then
+            echo "Signed bootstrap release must run from trusted main in ${EXPECTED_REPOSITORY}." >&2
+            exit 1
+          fi
+          live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "main moved before signing; refusing stale publication." >&2
+            exit 1
+          fi
+
+      - name: Checkout trusted release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require signing identity configuration
+        shell: bash
+        env:
+          SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_IDENTITY}" ]]; then
+            echo "Repository variable MACOS_SIGNING_IDENTITY must contain the full Developer ID Application identity." >&2
+            exit 1
+          fi
+
+      - name: Build and test application
+        shell: bash
+        run: bash scripts/ci/build-release-artifact.sh
+
+      - name: Import Developer ID certificate
+        id: certificate
+        shell: bash
+        env:
+          CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: bash scripts/release/import-certificate.sh
+
+      - name: Sign application
+        shell: bash
+        env:
+          APP_PATH: build/SchneeRunner.app
+          SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+          KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
+          ENTITLEMENTS_PATH: ""
+        run: bash scripts/release/sign-app.sh
+
+      - name: Create DMG
+        shell: bash
+        env:
+          APP_PATH: build/SchneeRunner.app
+          APP_NAME: SchneeRunner
+          OUTPUT_DMG: release-output/${{ env.DMG_NAME }}
+        run: bash scripts/release/create-dmg.sh
+
+      - name: Sign DMG
+        shell: bash
+        env:
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+          SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+          KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
+        run: |
+          set -euo pipefail
+          codesign --force --timestamp \
+            --sign "${SIGNING_IDENTITY}" \
+            --keychain "${KEYCHAIN_PATH}" \
+            "${DMG_PATH}"
+          codesign --verify --verbose=2 "${DMG_PATH}"
+
+      - name: Notarize and staple
+        shell: bash
+        env:
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: bash scripts/release/notarize.sh
+
+      - name: Verify signed distribution
+        shell: bash
+        env:
+          APP_PATH: build/SchneeRunner.app
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+          RELEASE_SIGNED: true
+        run: bash scripts/release/verify-release.sh
+
+      - name: Write bootstrap release provenance
+        shell: bash
+        env:
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release/write-bootstrap-release-provenance.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --source-sha "${GITHUB_SHA}" \
+            --tag "${RELEASE_TAG}" \
+            --version "${RELEASE_VERSION}" \
+            --workflow-run-id "${GITHUB_RUN_ID}" \
+            --workflow-run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --dmg-path "${DMG_PATH}" \
+            --output release-output/release-provenance.json
+
+      - name: Verify bootstrap release provenance
+        shell: bash
+        env:
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release/verify-bootstrap-release-provenance.py \
+            --metadata release-output/release-provenance.json \
+            --repository "${GITHUB_REPOSITORY}" \
+            --source-sha "${GITHUB_SHA}" \
+            --tag "${RELEASE_TAG}" \
+            --version "${RELEASE_VERSION}" \
+            --dmg-path "${DMG_PATH}"
+
+      - name: Upload verified signed release payload
+        id: verified_upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-bootstrap-v0.1.1-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            release-output/${{ env.DMG_NAME }}
+            release-output/${{ env.DMG_NAME }}.sha256
+            release-output/release-provenance.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Normalize verified artifact identity
+        id: artifact_identity
+        shell: bash
+        env:
+          ARTIFACT_NAME: signed-bootstrap-v0.1.1-${{ github.run_id }}-${{ github.run_attempt }}
+          RAW_ARTIFACT_ID: ${{ steps.verified_upload.outputs.artifact-id }}
+          RAW_ARTIFACT_DIGEST: ${{ steps.verified_upload.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          printf 'name=%s\n' "${ARTIFACT_NAME}" >>"${GITHUB_OUTPUT}"
+          python3 scripts/release/normalize-artifact-identity.py \
+            --artifact-id "${RAW_ARTIFACT_ID}" \
+            --artifact-digest "${RAW_ARTIFACT_DIGEST}" \
+            >>"${GITHUB_OUTPUT}"
+
+      - name: Delete temporary signing keychain
+        if: ${{ always() }}
+        shell: bash
+        env:
+          KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
+        run: |
+          if [[ -n "${KEYCHAIN_PATH}" ]]; then
+            security delete-keychain "${KEYCHAIN_PATH}" || true
+          fi
+
+  publish:
+    name: Publish verified v0.1.1
+    needs:
+      - preflight
+      - sign
+    if: ${{ needs.sign.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+
+    steps:
+      - name: Checkout trusted publication control code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact signer-produced artifact identity
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_ARTIFACT_ID: ${{ needs.sign.outputs.verified_artifact_id }}
+          VERIFIED_ARTIFACT_NAME: ${{ needs.sign.outputs.verified_artifact_name }}
+          VERIFIED_ARTIFACT_DIGEST: ${{ needs.sign.outputs.verified_artifact_digest }}
+        run: |
+          set -euo pipefail
+          metadata="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${VERIFIED_ARTIFACT_ID}")"
+          python3 - "${VERIFIED_ARTIFACT_ID}" "${VERIFIED_ARTIFACT_NAME}" "${VERIFIED_ARTIFACT_DIGEST}" "${metadata}" <<'PY'
+          import json
+          import re
+          import sys
+
+          expected_id, expected_name, expected_digest, payload = sys.argv[1:]
+          document = json.loads(payload)
+          if str(document.get("id")) != expected_id:
+              raise SystemExit("verified artifact id drift")
+          if document.get("name") != expected_name:
+              raise SystemExit("verified artifact name drift")
+          digest = document.get("digest")
+          if not isinstance(digest, str) or re.fullmatch(r"sha256:[0-9a-f]{64}", digest) is None:
+              raise SystemExit("verified artifact digest is invalid")
+          if digest != expected_digest:
+              raise SystemExit("verified artifact digest drift")
+          if document.get("expired") is not False:
+              raise SystemExit("verified artifact is expired")
+          PY
+
+      - name: Download exact verified signed release payload
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.sign.outputs.verified_artifact_id }}
+          path: release-output
+          merge-multiple: true
+
+      - name: Reverify exact signed release payload
+        shell: bash
+        env:
+          DMG_PATH: release-output/${{ env.DMG_NAME }}
+        run: |
+          set -euo pipefail
+          python3 - "release-output" "${DMG_NAME}" <<'PY'
+          from pathlib import Path
+          import sys
+
+          from scripts.release.verified_release_payload import validate_verified_release_payload
+
+          errors = validate_verified_release_payload(Path(sys.argv[1]), sys.argv[2])
+          if errors:
+              raise SystemExit("; ".join(errors))
+          PY
+          python3 scripts/release/verify-bootstrap-release-provenance.py \
+            --metadata release-output/release-provenance.json \
+            --repository "${GITHUB_REPOSITORY}" \
+            --source-sha "${GITHUB_SHA}" \
+            --tag "${RELEASE_TAG}" \
+            --version "${RELEASE_VERSION}" \
+            --dmg-path "${DMG_PATH}"
+          expected_digest="$(python3 scripts/release/release_checksum.py "${DMG_PATH}.sha256" "${DMG_NAME}")"
+          actual_digest="$(shasum -a 256 "${DMG_PATH}" | awk '{print $1}')"
+          if [[ "${expected_digest}" != "${actual_digest}" ]]; then
+            echo "Verified signed DMG checksum mismatch." >&2
+            exit 1
+          fi
+
+      - name: Rebind main immediately before publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          live_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "${live_main_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "main moved after signing; refusing to tag an older source commit." >&2
+            exit 1
+          fi
+
+      - name: Create immutable v0.1.1 tag and GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
+          SOURCE_SHA: ${{ github.sha }}
+          DMG_PATH: ${{ github.workspace }}/release-output/${{ env.DMG_NAME }}
+          RELEASE_PROVENANCE_PATH: ${{ github.workspace }}/release-output/release-provenance.json
+        run: bash scripts/release/publish-bootstrap-release.sh publish
