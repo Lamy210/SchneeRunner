@@ -6,6 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
 SMOKE_SCRIPT = REPO_ROOT / "scripts/release/smoke-launch-app.sh"
 SMOKE_HELPER = REPO_ROOT / "scripts/release/smoke-launch-app.swift"
+BUILD_SCRIPT = REPO_ROOT / "scripts/ci/build-release-artifact.sh"
 LAUNCH_TRACE = REPO_ROOT / "Sources/SchneeRunnerApp/LaunchTrace.swift"
 
 
@@ -44,6 +45,12 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
         self.assertIn("Launch trace:", helper_text)
         self.assertIn('"SCHNEERUNNER_LAUNCH_TRACE_FILE"', trace_text)
         self.assertIn("FileHandle(forWritingTo:", trace_text)
+
+    def test_unsigned_release_bundle_explicitly_disables_system_notifications(self) -> None:
+        text = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("<key>SchneeRunnerSystemNotificationsEnabled</key>", text)
+        self.assertIn("<false/>", text)
 
 
 if __name__ == "__main__":
