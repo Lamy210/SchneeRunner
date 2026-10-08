@@ -1,7 +1,7 @@
 import Foundation
+@testable import SchneeRunnerApp
 import SchneeRunnerCore
 import XCTest
-@testable import SchneeRunnerApp
 
 @MainActor
 final class ProductivityNotificationRuntimeTests: XCTestCase {
