@@ -80,6 +80,11 @@ done
 
 sleep "${SMOKE_SECONDS}"
 
+if [[ -n "${app_pid}" ]] && kill -0 "${app_pid}" 2>/dev/null; then
+  echo "Packaged application survived ${SMOKE_SECONDS}s launch smoke: ${APP_PATH}"
+  exit 0
+fi
+
 if ! kill -0 "${launcher_pid}" 2>/dev/null; then
   set +e
   wait "${launcher_pid}"
@@ -106,10 +111,6 @@ if ! kill -0 "${launcher_pid}" 2>/dev/null; then
   exit 1
 fi
 
-if [[ -z "${app_pid}" ]] || ! kill -0 "${app_pid}" 2>/dev/null; then
-  echo "SchneeRunner launch smoke could not confirm the launched application process." >&2
-  cat "${log_path}" >&2
-  exit 1
-fi
-
-echo "Packaged application survived ${SMOKE_SECONDS}s launch smoke: ${APP_PATH}"
+echo "SchneeRunner launch smoke could not confirm the launched application process." >&2
+cat "${log_path}" >&2
+exit 1
