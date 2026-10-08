@@ -103,12 +103,63 @@ class BootstrapReleaseProvenanceTests(unittest.TestCase):
         verify = self.run_command(self.verifier_command())
         self.assertEqual(verify.returncode, 0, verify.stderr)
 
+    def test_writer_and_verifier_accept_exact_signed_v0_1_1_identity(self) -> None:
+        dmg = self.root / "SchneeRunner-0.1.1.dmg"
+        dmg.write_bytes(b"schneerunner-signed-bootstrap-dmg\n")
+        provenance = self.root / "signed-release-provenance.json"
+        writer = [
+            sys.executable,
+            str(WRITER),
+            "--repository",
+            "Lamy210/SchneeRunner",
+            "--source-sha",
+            self.source_sha,
+            "--tag",
+            "v0.1.1",
+            "--version",
+            "0.1.1",
+            "--workflow-run-id",
+            "124",
+            "--workflow-run-attempt",
+            "1",
+            "--dmg-path",
+            str(dmg),
+            "--output",
+            str(provenance),
+        ]
+        result = self.run_command(writer)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        document = json.loads(provenance.read_text(encoding="utf-8"))
+        self.assertEqual(document["releaseMode"], "bootstrap-v0.1.1-signed")
+        self.assertEqual(document["tag"], "v0.1.1")
+        self.assertEqual(document["version"], "0.1.1")
+        self.assertEqual(document["dmgName"], "SchneeRunner-0.1.1.dmg")
+
+        verifier = [
+            sys.executable,
+            str(VERIFIER),
+            "--metadata",
+            str(provenance),
+            "--repository",
+            "Lamy210/SchneeRunner",
+            "--source-sha",
+            self.source_sha,
+            "--tag",
+            "v0.1.1",
+            "--version",
+            "0.1.1",
+            "--dmg-path",
+            str(dmg),
+        ]
+        verify = self.run_command(verifier)
+        self.assertEqual(verify.returncode, 0, verify.stderr)
+
     def test_writer_rejects_malformed_identity_and_run_values(self) -> None:
         cases = (
             ("--source-sha", "A" * 40),
             ("--source-sha", "1" * 39),
-            ("--tag", "v0.1.1"),
-            ("--version", "0.1.1"),
+            ("--tag", "v0.1.2"),
+            ("--version", "0.1.2"),
             ("--workflow-run-id", "0"),
             ("--workflow-run-attempt", "0"),
         )
