@@ -75,6 +75,7 @@ final class PomodoroApplicationController: NSObject {
     }
 
     func stop() {
+        launchReconciliationTask?.cancel()
         launchReconciliationTask = nil
         isReconcilingOnLaunch = false
         refreshTimer?.invalidate()
