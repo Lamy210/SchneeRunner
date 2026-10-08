@@ -14,6 +14,7 @@ final class PomodoroApplicationController: NSObject {
     private let notificationScheduler: ProductivityNotificationScheduler
     private let refreshInterval: TimeInterval
     private var coordinator: PomodoroCoordinator?
+    private var launchReconciliationTask: Task<Void, Never>?
     private var refreshTimer: Timer?
     private var configuration: PomodoroConfiguration?
     private var isReconcilingOnLaunch = false
@@ -21,6 +22,7 @@ final class PomodoroApplicationController: NSObject {
     init(
         menuController: StatusMenuController,
         managementWindow: ProductivityManagementWindowController? = nil,
+        baseDirectory: URL? = nil,
         fileManager: FileManager = .default,
         defaults: UserDefaults = .standard,
         refreshInterval: TimeInterval = 1,
@@ -31,7 +33,7 @@ final class PomodoroApplicationController: NSObject {
         self.notificationScheduler = notificationScheduler
         self.refreshInterval = refreshInterval
         configurationStore = PomodoroConfigurationStore(defaults: defaults)
-        let applicationSupportDirectory = fileManager.urls(
+        let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first ?? fileManager.homeDirectoryForCurrentUser
@@ -73,6 +75,9 @@ final class PomodoroApplicationController: NSObject {
     }
 
     func stop() {
+        launchReconciliationTask?.cancel()
+        launchReconciliationTask = nil
+        isReconcilingOnLaunch = false
         refreshTimer?.invalidate()
         refreshTimer = nil
     }
@@ -124,6 +129,9 @@ final class PomodoroApplicationController: NSObject {
             }
         }
         coordinator.onNotificationError = { [weak self] error in
+            guard !(error is CancellationError) else {
+                return
+            }
             self?.log("Pomodoro notification error", error: error)
         }
         coordinator.onHistoryError = { [weak self] error in
@@ -134,14 +142,24 @@ final class PomodoroApplicationController: NSObject {
     private func reconcileOnLaunch(
         _ coordinator: PomodoroCoordinator
     ) {
-        Task { @MainActor [weak self, weak coordinator] in
-            guard let self, let coordinator else {
+        launchReconciliationTask?.cancel()
+        launchReconciliationTask = Task { @MainActor [weak self, weak coordinator] in
+            guard
+                !Task.isCancelled,
+                let self,
+                let coordinator
+            else {
                 return
             }
             do {
                 try await coordinator.reconcile(now: Date())
+            } catch is CancellationError {
+                return
             } catch {
                 log("Pomodoro recovery error", error: error)
+            }
+            guard !Task.isCancelled else {
+                return
             }
             isReconcilingOnLaunch = false
             publishSession(coordinator.session, now: Date())
