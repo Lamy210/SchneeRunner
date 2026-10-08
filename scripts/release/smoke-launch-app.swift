@@ -45,8 +45,8 @@ guard application.processIdentifier > 0 else {
     fail("SchneeRunner launch smoke received an invalid process identifier.", application: application)
 }
 
-if let launchedURL = application.bundleURL?.standardizedFileURL,
-   launchedURL.path != appURL.path {
+let launchedURL = application.bundleURL?.standardizedFileURL
+if let launchedURL, launchedURL.path != appURL.path {
     fail(
         "SchneeRunner launch smoke opened an unexpected application: \(launchedURL.path)",
         application: application
