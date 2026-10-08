@@ -8,7 +8,8 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     init(
         center: UNUserNotificationCenter? = nil,
         bundleIdentifier: String? = Bundle.main.bundleIdentifier,
-        bundleURL: URL = Bundle.main.bundleURL
+        bundleURL: URL = Bundle.main.bundleURL,
+        notificationsEnabled: Bool = SystemNotificationRuntime.mainBundleNotificationsEnabled
     ) {
         let identifier = bundleIdentifier ?? "nil"
         LaunchTrace.emit(
@@ -16,7 +17,8 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
         )
         guard SystemNotificationRuntime.isAvailable(
             bundleIdentifier: bundleIdentifier,
-            bundleURL: bundleURL
+            bundleURL: bundleURL,
+            notificationsEnabled: notificationsEnabled
         ) else {
             LaunchTrace.emit("SystemProductivityNotificationClient disabled by runtime policy")
             self.center = nil
