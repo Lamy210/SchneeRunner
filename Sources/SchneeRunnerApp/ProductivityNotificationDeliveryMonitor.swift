@@ -1,3 +1,4 @@
+import Foundation
 import UserNotifications
 
 @MainActor
@@ -6,9 +7,24 @@ final class ProductivityNotificationDeliveryMonitor: NSObject, UNUserNotificatio
 
     private weak var center: UNUserNotificationCenter?
 
-    func start(center: UNUserNotificationCenter = .current()) {
-        self.center = center
-        center.delegate = self
+    @discardableResult
+    func start(
+        bundleIdentifier: String? = Bundle.main.bundleIdentifier,
+        bundleURL: URL = Bundle.main.bundleURL,
+        center: UNUserNotificationCenter? = nil
+    ) -> Bool {
+        guard SystemNotificationRuntime.isAvailable(
+            bundleIdentifier: bundleIdentifier,
+            bundleURL: bundleURL
+        ) else {
+            stop()
+            return false
+        }
+
+        let resolvedCenter = center ?? .current()
+        self.center = resolvedCenter
+        resolvedCenter.delegate = self
+        return true
     }
 
     func stop() {
