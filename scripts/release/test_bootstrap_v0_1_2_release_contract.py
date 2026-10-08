@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 
@@ -8,6 +12,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / ".github/workflows/bootstrap-v0.1.2-release.yml"
 RELEASE_NOTES = REPO_ROOT / "docs/releases/v0.1.2.md"
 PUBLISHER = REPO_ROOT / "scripts/release/publish-bootstrap-release.sh"
+WRITER = REPO_ROOT / "scripts/release/write-bootstrap-release-provenance.py"
+VERIFIER = REPO_ROOT / "scripts/release/verify-bootstrap-release-provenance.py"
 
 
 class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
@@ -71,6 +77,70 @@ class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
     def test_bootstrap_publisher_supports_exact_v0_1_2_identity(self) -> None:
         text = PUBLISHER.read_text(encoding="utf-8")
         self.assertIn('"v0.1.2|0.1.2|SchneeRunner-0.1.2.dmg"', text)
+
+    def test_provenance_writer_and_verifier_support_exact_v0_1_2_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            dmg = root / "SchneeRunner-0.1.2.dmg"
+            dmg.write_bytes(b"schneerunner-v0.1.2-provenance-contract\n")
+            provenance = root / "release-provenance.json"
+            source_sha = "3" * 40
+
+            writer = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRITER),
+                    "--repository",
+                    "Lamy210/SchneeRunner",
+                    "--source-sha",
+                    source_sha,
+                    "--tag",
+                    "v0.1.2",
+                    "--version",
+                    "0.1.2",
+                    "--workflow-run-id",
+                    "125",
+                    "--workflow-run-attempt",
+                    "1",
+                    "--dmg-path",
+                    str(dmg),
+                    "--output",
+                    str(provenance),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(writer.returncode, 0, writer.stderr)
+
+            document = json.loads(provenance.read_text(encoding="utf-8"))
+            self.assertEqual(document["releaseMode"], "bootstrap-v0.1.2-unsigned-runtime-fix")
+            self.assertEqual(document["tag"], "v0.1.2")
+            self.assertEqual(document["version"], "0.1.2")
+            self.assertEqual(document["dmgName"], "SchneeRunner-0.1.2.dmg")
+
+            verifier = subprocess.run(
+                [
+                    sys.executable,
+                    str(VERIFIER),
+                    "--metadata",
+                    str(provenance),
+                    "--repository",
+                    "Lamy210/SchneeRunner",
+                    "--source-sha",
+                    source_sha,
+                    "--tag",
+                    "v0.1.2",
+                    "--version",
+                    "0.1.2",
+                    "--dmg-path",
+                    str(dmg),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(verifier.returncode, 0, verifier.stderr)
 
     def test_release_notes_mark_v0_1_1_runtime_failure_and_v0_1_2_fix(self) -> None:
         self.assertTrue(RELEASE_NOTES.is_file(), f"missing release notes: {RELEASE_NOTES}")

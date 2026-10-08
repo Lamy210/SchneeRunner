@@ -10,6 +10,7 @@ SCHEMA_VERSION = 1
 SUPPORTED_RELEASES = {
     ("v0.1.0", "0.1.0", "SchneeRunner-0.1.0.dmg"): "bootstrap-v0.1.0",
     ("v0.1.1", "0.1.1", "SchneeRunner-0.1.1.dmg"): "bootstrap-v0.1.1-unsigned",
+    ("v0.1.2", "0.1.2", "SchneeRunner-0.1.2.dmg"): "bootstrap-v0.1.2-unsigned-runtime-fix",
 }
 EXPECTED_KEYS = frozenset(
     {
