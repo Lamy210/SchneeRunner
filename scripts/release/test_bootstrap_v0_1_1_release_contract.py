@@ -93,10 +93,14 @@ class BootstrapV011UnsignedReleaseContractTests(unittest.TestCase):
 
     def test_readme_marks_v0_1_0_unusable_and_describes_unsigned_v0_1_1(self) -> None:
         text = README.read_text(encoding="utf-8")
+        lower = text.lower()
         self.assertIn("releases/latest", text)
         self.assertIn("v0.1.0", text)
-        self.assertIn("do not use", text.lower())
-        self.assertIn("unsigned", text.lower())
+        self.assertIn("do not use", lower)
+        self.assertIn("v0.1.1 is intentionally published unsigned and not notarized", lower)
+        self.assertIn("damaged", lower)
+        self.assertNotIn("there is no unsigned fallback for v0.1.1", lower)
+        self.assertNotIn("v0.1.1 release is published only after developer id signing", lower)
         self.assertIn("COVER", text)
 
 
