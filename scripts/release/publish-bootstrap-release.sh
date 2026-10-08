@@ -21,7 +21,8 @@ BOOTSTRAP_EXPECTED_VERSION="${BOOTSTRAP_EXPECTED_VERSION:-0.1.0}"
 BOOTSTRAP_EXPECTED_DMG="${BOOTSTRAP_EXPECTED_DMG:-SchneeRunner-0.1.0.dmg}"
 case "${BOOTSTRAP_EXPECTED_TAG}|${BOOTSTRAP_EXPECTED_VERSION}|${BOOTSTRAP_EXPECTED_DMG}" in
   "v0.1.0|0.1.0|SchneeRunner-0.1.0.dmg" | \
-    "v0.1.1|0.1.1|SchneeRunner-0.1.1.dmg") ;;
+    "v0.1.1|0.1.1|SchneeRunner-0.1.1.dmg" | \
+    "v0.1.2|0.1.2|SchneeRunner-0.1.2.dmg") ;;
   *)
     echo "Unsupported bootstrap release identity." >&2
     exit 1
