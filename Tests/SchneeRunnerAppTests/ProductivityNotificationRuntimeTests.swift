@@ -6,6 +6,7 @@ import XCTest
 @MainActor
 final class ProductivityNotificationRuntimeTests: XCTestCase {
     func testBareExecutableRuntimeDisablesSystemNotificationClient() async throws {
+        let now = Date()
         let client = SystemProductivityNotificationClient(
             bundleIdentifier: nil,
             bundleURL: URL(fileURLWithPath: "/tmp/SchneeRunner")
@@ -13,13 +14,17 @@ final class ProductivityNotificationRuntimeTests: XCTestCase {
         let scheduler = ProductivityNotificationScheduler(center: client)
 
         let timer = try ProductivityCountdownTimer(
+            id: UUID(),
             title: "Smoke",
             duration: 60,
-            now: Date()
+            startedAt: now
         )
-        let status = try await scheduler.scheduleTimer(timer, now: Date())
+        let status = try await scheduler.scheduleTimer(timer, now: now)
 
-        XCTAssertEqual(status, .disabled)
+        XCTAssertEqual(
+            status,
+            ProductivityNotificationDeliveryStatus.disabled
+        )
     }
 
     func testApplicationBundleRuntimeEnablesSystemNotificationPolicy() {
