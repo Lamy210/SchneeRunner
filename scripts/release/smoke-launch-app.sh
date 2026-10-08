@@ -35,6 +35,7 @@ fi
 
 TEMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 log_path="$(mktemp "${TEMP_ROOT%/}/schneerunner-launch-smoke.XXXXXX.log")"
+crash_marker="$(mktemp "${TEMP_ROOT%/}/schneerunner-launch-smoke.XXXXXX.marker")"
 pid=''
 
 cleanup() {
@@ -48,7 +49,7 @@ cleanup() {
   if [[ -n "${pid}" ]]; then
     wait "${pid}" 2>/dev/null || true
   fi
-  rm -f "${log_path}"
+  rm -f "${log_path}" "${crash_marker}"
 }
 trap cleanup EXIT
 
@@ -64,6 +65,22 @@ if ! kill -0 "${pid}" 2>/dev/null; then
   set -e
   echo "SchneeRunner exited during launch smoke with status ${status}." >&2
   cat "${log_path}" >&2
+
+  # CrashReporter can flush the .ips/.crash file just after the process exits.
+  sleep 1
+  diagnostic_dir="${HOME}/Library/Logs/DiagnosticReports"
+  if [[ -d "${diagnostic_dir}" ]]; then
+    echo "Recent SchneeRunner diagnostic reports:" >&2
+    while IFS= read -r report; do
+      echo "===== ${report} =====" >&2
+      cat "${report}" >&2 || true
+    done < <(
+      find "${diagnostic_dir}" -type f \
+        \( -name 'SchneeRunner*.ips' -o -name 'SchneeRunner*.crash' \) \
+        -newer "${crash_marker}" -print 2>/dev/null
+    )
+  fi
+
   exit 1
 fi
 
