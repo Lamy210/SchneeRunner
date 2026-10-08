@@ -13,6 +13,9 @@ from scripts.release.test_bootstrap_release_publisher import (
 from scripts.release.test_bootstrap_v0_1_0_release_contract import (
     BootstrapV010ReleaseContractTests,
 )
+from scripts.release.test_bootstrap_v0_1_1_release_contract import (
+    BootstrapV011SignedReleaseContractTests,
+)
 from scripts.release.test_unsigned_release_workflow_contract import (
     UnsignedReleaseWorkflowContractTests,
 )

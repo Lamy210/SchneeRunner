@@ -7,10 +7,10 @@ from typing import Any
 
 
 SCHEMA_VERSION = 1
-RELEASE_MODE = "bootstrap-v0.1.0"
-EXPECTED_TAG = "v0.1.0"
-EXPECTED_VERSION = "0.1.0"
-EXPECTED_DMG_NAME = "SchneeRunner-0.1.0.dmg"
+SUPPORTED_RELEASES = {
+    ("v0.1.0", "0.1.0", "SchneeRunner-0.1.0.dmg"): "bootstrap-v0.1.0",
+    ("v0.1.1", "0.1.1", "SchneeRunner-0.1.1.dmg"): "bootstrap-v0.1.1-signed",
+}
 EXPECTED_KEYS = frozenset(
     {
         "schemaVersion",
@@ -54,8 +54,14 @@ def _validate_positive_int(value: Any, name: str) -> int:
     return value
 
 
-def validate_dmg_path(dmg_path: Path) -> Path:
-    _require(dmg_path.name == EXPECTED_DMG_NAME, f"DMG must be named {EXPECTED_DMG_NAME}")
+def _release_mode(tag: str, version: str, dmg_name: str) -> str:
+    identity = (tag, version, dmg_name)
+    _require(identity in SUPPORTED_RELEASES, "unsupported bootstrap release identity")
+    return SUPPORTED_RELEASES[identity]
+
+
+def validate_dmg_path(dmg_path: Path, expected_name: str) -> Path:
+    _require(dmg_path.name == expected_name, f"DMG must be named {expected_name}")
     _require(not dmg_path.is_symlink(), "DMG must not be a symlink")
     _require(dmg_path.is_file(), "DMG must be a regular file")
     return dmg_path
@@ -81,22 +87,21 @@ def build_bootstrap_provenance(
 ) -> dict[str, object]:
     repository = _validate_repository(repository)
     source_sha = _validate_source_sha(source_sha)
-    _require(tag == EXPECTED_TAG, f"tag must be {EXPECTED_TAG}")
-    _require(version == EXPECTED_VERSION, f"version must be {EXPECTED_VERSION}")
+    release_mode = _release_mode(tag, version, dmg_path.name)
     workflow_run_id = _validate_positive_int(workflow_run_id, "workflow run ID")
     workflow_run_attempt = _validate_positive_int(workflow_run_attempt, "workflow run attempt")
-    dmg_path = validate_dmg_path(dmg_path)
+    dmg_path = validate_dmg_path(dmg_path, dmg_path.name)
 
     return {
         "schemaVersion": SCHEMA_VERSION,
-        "releaseMode": RELEASE_MODE,
+        "releaseMode": release_mode,
         "repository": repository,
         "sourceSHA": source_sha,
         "tag": tag,
         "version": version,
         "workflowRunId": workflow_run_id,
         "workflowRunAttempt": workflow_run_attempt,
-        "dmgName": EXPECTED_DMG_NAME,
+        "dmgName": dmg_path.name,
         "dmgSHA256": sha256_file(dmg_path),
     }
 
@@ -112,21 +117,20 @@ def validate_bootstrap_provenance(
 ) -> None:
     _validate_repository(expected_repository)
     _validate_source_sha(expected_source_sha)
-    _require(expected_tag == EXPECTED_TAG, f"expected tag must be {EXPECTED_TAG}")
-    _require(expected_version == EXPECTED_VERSION, f"expected version must be {EXPECTED_VERSION}")
-    dmg_path = validate_dmg_path(dmg_path)
+    release_mode = _release_mode(expected_tag, expected_version, dmg_path.name)
+    dmg_path = validate_dmg_path(dmg_path, dmg_path.name)
 
     _require(isinstance(document, dict), "bootstrap provenance must be an object")
     _require(set(document) == EXPECTED_KEYS, "bootstrap provenance schema keys do not match")
     _require(type(document["schemaVersion"]) is int and document["schemaVersion"] == SCHEMA_VERSION, "invalid schema version")
-    _require(document["releaseMode"] == RELEASE_MODE, "invalid release mode")
+    _require(document["releaseMode"] == release_mode, "invalid release mode")
     _validate_repository(document["repository"])
     _validate_source_sha(document["sourceSHA"])
-    _require(document["tag"] == EXPECTED_TAG, "invalid tag")
-    _require(document["version"] == EXPECTED_VERSION, "invalid version")
+    _require(document["tag"] == expected_tag, "invalid tag")
+    _require(document["version"] == expected_version, "invalid version")
     _validate_positive_int(document["workflowRunId"], "workflow run ID")
     _validate_positive_int(document["workflowRunAttempt"], "workflow run attempt")
-    _require(document["dmgName"] == EXPECTED_DMG_NAME, "invalid DMG name")
+    _require(document["dmgName"] == dmg_path.name, "invalid DMG name")
     _require(isinstance(document["dmgSHA256"], str) and _DIGEST_RE.fullmatch(document["dmgSHA256"]) is not None, "invalid DMG digest")
 
     _require(document["repository"] == expected_repository, "repository does not match expected identity")
