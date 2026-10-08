@@ -5,6 +5,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
 SMOKE_SCRIPT = REPO_ROOT / "scripts/release/smoke-launch-app.sh"
+SMOKE_HELPER = REPO_ROOT / "scripts/release/smoke-launch-app.swift"
 
 
 class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
@@ -15,30 +16,22 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
         self.assertIn('APP_PATH="${APP_PATH}"', text)
         self.assertIn('APP_PATH="${mounted_app}"', text)
 
-    def test_launch_smoke_requires_process_to_survive_startup_window(self) -> None:
+    def test_launch_smoke_delegates_to_nsworkspace_helper(self) -> None:
         self.assertTrue(SMOKE_SCRIPT.is_file(), f"missing launch smoke script: {SMOKE_SCRIPT}")
-        text = SMOKE_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("kill -0", text)
-        self.assertIn("SchneeRunner exited during launch smoke", text)
+        self.assertTrue(SMOKE_HELPER.is_file(), f"missing launch smoke helper: {SMOKE_HELPER}")
+        shell_text = SMOKE_SCRIPT.read_text(encoding="utf-8")
+        helper_text = SMOKE_HELPER.read_text(encoding="utf-8")
 
-    def test_launch_smoke_uses_launchservices_for_application_bundle(self) -> None:
-        self.assertTrue(SMOKE_SCRIPT.is_file(), f"missing launch smoke script: {SMOKE_SCRIPT}")
-        text = SMOKE_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn('/usr/bin/open -n -W "${APP_PATH}"', text)
+        self.assertIn('xcrun swift "${SCRIPT_DIR}/smoke-launch-app.swift"', shell_text)
+        self.assertIn("NSWorkspace.shared.openApplication", helper_text)
+        self.assertIn("createsNewApplicationInstance = true", helper_text)
+        self.assertIn("allowsRunningApplicationSubstitution = false", helper_text)
+        self.assertIn("processIdentifier", helper_text)
+        self.assertIn("isTerminated", helper_text)
+        self.assertNotIn('/usr/bin/open -n -W "${APP_PATH}"', shell_text)
         self.assertNotIn(
             '"${executable_path}" >"${log_path}" 2>&1 &',
-            text,
-        )
-
-    def test_launch_smoke_treats_application_pid_as_survival_authority(self) -> None:
-        self.assertTrue(SMOKE_SCRIPT.is_file(), f"missing launch smoke script: {SMOKE_SCRIPT}")
-        text = SMOKE_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn(
-            'if [[ -n "${app_pid}" ]] && kill -0 "${app_pid}" 2>/dev/null; then\n'
-            '  echo "Packaged application survived ${SMOKE_SECONDS}s launch smoke: ${APP_PATH}"\n'
-            '  exit 0\n'
-            'fi\n',
-            text,
+            shell_text,
         )
 
 
