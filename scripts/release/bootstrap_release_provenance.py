@@ -9,7 +9,7 @@ from typing import Any
 SCHEMA_VERSION = 1
 SUPPORTED_RELEASES = {
     ("v0.1.0", "0.1.0", "SchneeRunner-0.1.0.dmg"): "bootstrap-v0.1.0",
-    ("v0.1.1", "0.1.1", "SchneeRunner-0.1.1.dmg"): "bootstrap-v0.1.1-signed",
+    ("v0.1.1", "0.1.1", "SchneeRunner-0.1.1.dmg"): "bootstrap-v0.1.1-unsigned",
 }
 EXPECTED_KEYS = frozenset(
     {

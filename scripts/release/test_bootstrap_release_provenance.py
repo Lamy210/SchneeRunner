@@ -103,10 +103,10 @@ class BootstrapReleaseProvenanceTests(unittest.TestCase):
         verify = self.run_command(self.verifier_command())
         self.assertEqual(verify.returncode, 0, verify.stderr)
 
-    def test_writer_and_verifier_accept_exact_signed_v0_1_1_identity(self) -> None:
+    def test_writer_and_verifier_accept_exact_unsigned_v0_1_1_identity(self) -> None:
         dmg = self.root / "SchneeRunner-0.1.1.dmg"
-        dmg.write_bytes(b"schneerunner-signed-bootstrap-dmg\n")
-        provenance = self.root / "signed-release-provenance.json"
+        dmg.write_bytes(b"schneerunner-unsigned-bootstrap-dmg\n")
+        provenance = self.root / "unsigned-release-provenance.json"
         writer = [
             sys.executable,
             str(WRITER),
@@ -130,7 +130,7 @@ class BootstrapReleaseProvenanceTests(unittest.TestCase):
         result = self.run_command(writer)
         self.assertEqual(result.returncode, 0, result.stderr)
         document = json.loads(provenance.read_text(encoding="utf-8"))
-        self.assertEqual(document["releaseMode"], "bootstrap-v0.1.1-signed")
+        self.assertEqual(document["releaseMode"], "bootstrap-v0.1.1-unsigned")
         self.assertEqual(document["tag"], "v0.1.1")
         self.assertEqual(document["version"], "0.1.1")
         self.assertEqual(document["dmgName"], "SchneeRunner-0.1.1.dmg")

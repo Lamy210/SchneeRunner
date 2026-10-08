@@ -16,7 +16,9 @@ Requirements: **macOS 14 or later**.
 2. Open the DMG and move **SchneeRunner.app** to **Applications**.
 3. Launch SchneeRunner from Applications.
 
-**Do not use v0.1.0.** It was an early **unsigned** and **not notarized** build, and macOS can report that quarantined copy as damaged or unable to open. The v0.1.1 release is published only after Developer ID signing, Apple notarization and stapling, Gatekeeper assessment, DMG verification, and release-provenance verification all succeed. There is no unsigned fallback for v0.1.1. If the latest-release link still resolves to v0.1.0, v0.1.1 has not passed the signed release gate and should not be replaced by an unverified build.
+**Do not use v0.1.0.** It was an early **unsigned** and **not notarized** build, and macOS can report that quarantined copy as damaged or unable to open.
+
+**v0.1.1 is intentionally published unsigned and not notarized.** Before publication, the release pipeline still verifies the DMG structure, bundled application executable, bundled four-frame default character, SHA-256 checksum, release provenance, and trusted source binding. Because the app is not Developer ID signed or Apple-notarized, macOS Gatekeeper may still report a downloaded or quarantined copy as **damaged** or refuse to open it. Developer ID signing and Apple notarization are required to remove that trust warning reliably; DMG integrity verification alone cannot replace those trust checks.
 
 ## Status
 

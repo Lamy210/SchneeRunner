@@ -8,17 +8,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / ".github/workflows/bootstrap-v0.1.1-release.yml"
 README = REPO_ROOT / "README.md"
 PUBLISHER = REPO_ROOT / "scripts/release/publish-bootstrap-release.sh"
-CERTIFICATE_IMPORTER = REPO_ROOT / "scripts/release/import-certificate.sh"
 
 
-class BootstrapV011SignedReleaseContractTests(unittest.TestCase):
+class BootstrapV011UnsignedReleaseContractTests(unittest.TestCase):
     def workflow_text(self) -> str:
-        self.assertTrue(WORKFLOW.is_file(), f"missing signed bootstrap workflow: {WORKFLOW}")
+        self.assertTrue(WORKFLOW.is_file(), f"missing unsigned bootstrap workflow: {WORKFLOW}")
         return WORKFLOW.read_text(encoding="utf-8")
 
     def test_workflow_is_trusted_main_only_and_exactly_v0_1_1(self) -> None:
         text = self.workflow_text()
-        self.assertIn("name: Bootstrap v0.1.1 Signed Release", text)
+        self.assertIn("name: Bootstrap v0.1.1 Unsigned Release", text)
         self.assertIn("branches:", text)
         self.assertIn("- main", text)
         self.assertIn("workflow_dispatch:", text)
@@ -30,72 +29,40 @@ class BootstrapV011SignedReleaseContractTests(unittest.TestCase):
         self.assertIn("bootstrap-v0.1.1-release", text)
         self.assertIn("cancel-in-progress: false", text)
 
-    def test_workflow_requires_signed_notarized_gatekeeper_verified_distribution(self) -> None:
+    def test_workflow_builds_unsigned_distribution_without_apple_credentials(self) -> None:
         text = self.workflow_text()
-        required = (
+        for required in (
+            "scripts/release/create-dmg.sh",
+            "scripts/release/verify-release.sh",
+            "RELEASE_SIGNED: false",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+
+        for forbidden in (
             "environment: release",
             "scripts/release/import-certificate.sh",
             "scripts/release/sign-app.sh",
-            "scripts/release/create-dmg.sh",
             "codesign --force --timestamp",
             "scripts/release/notarize.sh",
-            "scripts/release/verify-release.sh",
             "RELEASE_SIGNED: true",
-        )
-        for token in required:
-            with self.subTest(token=token):
-                self.assertIn(token, text)
-        self.assertNotIn("RELEASE_SIGNED: false", text)
-
-    def test_workflow_derives_signing_identity_from_imported_certificate(self) -> None:
-        text = self.workflow_text()
-        self.assertNotIn("MACOS_SIGNING_IDENTITY", text)
-        self.assertNotIn("Require signing identity configuration", text)
-        self.assertGreaterEqual(
-            text.count("SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}"),
-            2,
-        )
-
-        importer = CERTIFICATE_IMPORTER.read_text(encoding="utf-8")
-        self.assertIn("security find-identity", importer)
-        self.assertIn("Developer ID Application:", importer)
-        self.assertIn("signing-identity=%s", importer)
-        self.assertIn("GITHUB_OUTPUT", importer)
-
-    def test_apple_credentials_are_isolated_from_repository_write_job(self) -> None:
-        text = self.workflow_text()
-        sign_start = text.find("  sign:\n")
-        publish_start = text.find("  publish:\n")
-        self.assertGreaterEqual(sign_start, 0)
-        self.assertGreater(publish_start, sign_start)
-        sign_block = text[sign_start:publish_start]
-        publish_block = text[publish_start:]
-
-        self.assertIn("environment: release", sign_block)
-        self.assertIn("contents: read", sign_block)
-        self.assertNotIn("contents: write", sign_block)
-        self.assertIn("contents: write", publish_block)
-        for credential in (
             "MACOS_CERTIFICATE_P12_BASE64",
             "MACOS_CERTIFICATE_PASSWORD",
             "APP_STORE_CONNECT_API_KEY_P8",
             "APP_STORE_CONNECT_KEY_ID",
             "APP_STORE_CONNECT_ISSUER_ID",
         ):
-            with self.subTest(credential=credential):
-                self.assertIn(credential, sign_block)
-                self.assertNotIn(credential, publish_block)
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, text)
 
-    def test_publication_happens_only_after_notarization_and_signed_verification(self) -> None:
+    def test_publication_happens_only_after_unsigned_verification(self) -> None:
         text = self.workflow_text()
-        sign = text.find("      - name: Sign application\n")
-        notarize = text.find("      - name: Notarize and staple\n")
-        verify = text.find("      - name: Verify signed distribution\n")
+        create_dmg = text.find("      - name: Create DMG\n")
+        verify = text.find("      - name: Verify unsigned distribution\n")
         rebind = text.find("      - name: Rebind main immediately before publication\n")
         publish = text.find("      - name: Create immutable v0.1.1 tag and GitHub Release\n")
-        self.assertGreaterEqual(sign, 0)
-        self.assertGreater(notarize, sign)
-        self.assertGreater(verify, notarize)
+        self.assertGreaterEqual(create_dmg, 0)
+        self.assertGreater(verify, create_dmg)
         self.assertGreater(rebind, verify)
         self.assertGreater(publish, rebind)
 
@@ -124,15 +91,21 @@ class BootstrapV011SignedReleaseContractTests(unittest.TestCase):
         self.assertIn("v0.1.1", text)
         self.assertIn("SchneeRunner-0.1.1.dmg", text)
 
-    def test_readme_points_users_away_from_unsigned_v0_1_0(self) -> None:
+    def test_readme_marks_v0_1_0_unusable_and_describes_unsigned_v0_1_1(self) -> None:
         text = README.read_text(encoding="utf-8")
+        lower = text.lower()
         self.assertIn("releases/latest", text)
         self.assertIn("v0.1.0", text)
-        self.assertIn("do not use", text.lower())
-        self.assertIn("signed", text.lower())
-        self.assertIn("notarized", text.lower())
-        self.assertIn("unofficial", text.lower())
+        self.assertIn("do not use", lower)
+        self.assertIn("v0.1.1 is intentionally published unsigned and not notarized", lower)
+        self.assertIn("damaged", lower)
+        self.assertNotIn("there is no unsigned fallback for v0.1.1", lower)
+        self.assertNotIn("v0.1.1 release is published only after developer id signing", lower)
         self.assertIn("COVER", text)
+
+
+# Compatibility alias retained while historical imports still use the old class name.
+BootstrapV011SignedReleaseContractTests = BootstrapV011UnsignedReleaseContractTests
 
 
 if __name__ == "__main__":
