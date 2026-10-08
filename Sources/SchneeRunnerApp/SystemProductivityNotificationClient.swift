@@ -3,14 +3,30 @@ import UserNotifications
 
 @MainActor
 final class SystemProductivityNotificationClient: ProductivityNotificationCenterClient {
-    private let center: UNUserNotificationCenter
+    private let center: UNUserNotificationCenter?
 
-    init(center: UNUserNotificationCenter = .current()) {
-        self.center = center
+    init(
+        center: UNUserNotificationCenter? = nil,
+        bundleIdentifier: String? = Bundle.main.bundleIdentifier,
+        bundleURL: URL = Bundle.main.bundleURL
+    ) {
+        guard SystemNotificationRuntime.isAvailable(
+            bundleIdentifier: bundleIdentifier,
+            bundleURL: bundleURL
+        ) else {
+            self.center = nil
+            return
+        }
+
+        self.center = center ?? .current()
     }
 
     func currentAuthorizationState() async -> NotificationAuthorizationState {
-        await withCheckedContinuation { continuation in
+        guard let center else {
+            return .denied
+        }
+
+        return await withCheckedContinuation { continuation in
             center.getNotificationSettings { settings in
                 let state: NotificationAuthorizationState = switch settings.authorizationStatus {
                 case .authorized, .provisional, .ephemeral:
@@ -28,7 +44,11 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func requestAuthorization() async throws -> Bool {
-        try await withCheckedThrowingContinuation { continuation in
+        guard let center else {
+            return false
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
             center.requestAuthorization(
                 options: [.alert, .sound]
             ) { granted, error in
@@ -42,7 +62,11 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func pendingIdentifiers() async -> Set<String> {
-        await withCheckedContinuation { continuation in
+        guard let center else {
+            return []
+        }
+
+        return await withCheckedContinuation { continuation in
             center.getPendingNotificationRequests { requests in
                 continuation.resume(
                     returning: Set(requests.map(\.identifier))
@@ -52,6 +76,10 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func add(_ request: ProductivityNotificationRequest) async throws {
+        guard let center else {
+            return
+        }
+
         let content = UNMutableNotificationContent()
         content.title = request.title
         content.body = request.body
@@ -74,7 +102,7 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
     }
 
     func removePending(identifiers: Set<String>) {
-        center.removePendingNotificationRequests(
+        center?.removePendingNotificationRequests(
             withIdentifiers: Array(identifiers)
         )
     }
