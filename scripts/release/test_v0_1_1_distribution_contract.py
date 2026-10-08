@@ -46,12 +46,12 @@ class V011DistributionContractTests(unittest.TestCase):
         self.assertIn("restoreInitialCharacter()", app_delegate)
         self.assertLessEqual(len(app_delegate.splitlines()), 500)
 
-    def test_normal_release_publisher_requires_signing_and_notarization(self) -> None:
+    def test_normal_release_publisher_explicitly_selects_unsigned_mode(self) -> None:
         text = PUBLISHER.read_text(encoding="utf-8")
-        self.assertIn("Require signing identity configuration", text)
-        self.assertIn("sign_release: true", text)
-        self.assertIn("signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}", text)
-        self.assertNotIn("sign_release: false", text)
+        self.assertNotIn("Require signing identity configuration", text)
+        self.assertIn("sign_release: false", text)
+        self.assertNotIn("signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}", text)
+        self.assertIn("publish_github_release: true", text)
 
 
 if __name__ == "__main__":
