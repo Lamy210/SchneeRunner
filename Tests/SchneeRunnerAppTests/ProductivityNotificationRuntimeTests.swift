@@ -31,7 +31,18 @@ final class ProductivityNotificationRuntimeTests: XCTestCase {
         XCTAssertTrue(
             SystemNotificationRuntime.isAvailable(
                 bundleIdentifier: "io.github.Lamy210.SchneeRunner",
-                bundleURL: URL(fileURLWithPath: "/Applications/SchneeRunner.app")
+                bundleURL: URL(fileURLWithPath: "/Applications/SchneeRunner.app"),
+                notificationsEnabled: true
+            )
+        )
+    }
+
+    func testApplicationBundleRuntimeCanExplicitlyDisableSystemNotifications() {
+        XCTAssertFalse(
+            SystemNotificationRuntime.isAvailable(
+                bundleIdentifier: "io.github.Lamy210.SchneeRunner",
+                bundleURL: URL(fileURLWithPath: "/Applications/SchneeRunner.app"),
+                notificationsEnabled: false
             )
         )
     }
