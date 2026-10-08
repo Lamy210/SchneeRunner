@@ -21,6 +21,15 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
         self.assertIn("kill -0", text)
         self.assertIn("SchneeRunner exited during launch smoke", text)
 
+    def test_launch_smoke_uses_launchservices_for_application_bundle(self) -> None:
+        self.assertTrue(SMOKE_SCRIPT.is_file(), f"missing launch smoke script: {SMOKE_SCRIPT}")
+        text = SMOKE_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('/usr/bin/open -n -W "${APP_PATH}"', text)
+        self.assertNotIn(
+            '"${executable_path}" >"${log_path}" 2>&1 &',
+            text,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
