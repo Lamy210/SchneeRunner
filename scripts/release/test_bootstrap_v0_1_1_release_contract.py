@@ -48,6 +48,30 @@ class BootstrapV011SignedReleaseContractTests(unittest.TestCase):
                 self.assertIn(token, text)
         self.assertNotIn("RELEASE_SIGNED: false", text)
 
+    def test_apple_credentials_are_isolated_from_repository_write_job(self) -> None:
+        text = self.workflow_text()
+        sign_start = text.find("  sign:\n")
+        publish_start = text.find("  publish:\n")
+        self.assertGreaterEqual(sign_start, 0)
+        self.assertGreater(publish_start, sign_start)
+        sign_block = text[sign_start:publish_start]
+        publish_block = text[publish_start:]
+
+        self.assertIn("environment: release", sign_block)
+        self.assertIn("contents: read", sign_block)
+        self.assertNotIn("contents: write", sign_block)
+        self.assertIn("contents: write", publish_block)
+        for credential in (
+            "MACOS_CERTIFICATE_P12_BASE64",
+            "MACOS_CERTIFICATE_PASSWORD",
+            "APP_STORE_CONNECT_API_KEY_P8",
+            "APP_STORE_CONNECT_KEY_ID",
+            "APP_STORE_CONNECT_ISSUER_ID",
+        ):
+            with self.subTest(credential=credential):
+                self.assertIn(credential, sign_block)
+                self.assertNotIn(credential, publish_block)
+
     def test_publication_happens_only_after_notarization_and_signed_verification(self) -> None:
         text = self.workflow_text()
         sign = text.find("      - name: Sign application\n")
