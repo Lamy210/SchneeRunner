@@ -10,15 +10,26 @@ final class SystemProductivityNotificationClient: ProductivityNotificationCenter
         bundleIdentifier: String? = Bundle.main.bundleIdentifier,
         bundleURL: URL = Bundle.main.bundleURL
     ) {
+        LaunchTrace.emit(
+            "SystemProductivityNotificationClient init bundleURL=\(bundleURL.path) bundleIdentifier=\(bundleIdentifier ?? "nil")"
+        )
         guard SystemNotificationRuntime.isAvailable(
             bundleIdentifier: bundleIdentifier,
             bundleURL: bundleURL
         ) else {
+            LaunchTrace.emit("SystemProductivityNotificationClient disabled by runtime policy")
             self.center = nil
             return
         }
 
-        self.center = center ?? .current()
+        if let center {
+            LaunchTrace.emit("SystemProductivityNotificationClient using injected center")
+            self.center = center
+        } else {
+            LaunchTrace.emit("before UNUserNotificationCenter.current")
+            self.center = .current()
+            LaunchTrace.emit("after UNUserNotificationCenter.current")
+        }
     }
 
     func currentAuthorizationState() async -> NotificationAuthorizationState {
