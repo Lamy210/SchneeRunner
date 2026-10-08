@@ -11,6 +11,10 @@ final class PomodoroApplicationControllerTests: XCTestCase {
         )
         let fixture = try makeFixture(center: center)
         defer { fixture.cleanup() }
+        var observedChanges = 0
+        fixture.controller.onSessionChanged = { _, _ in
+            observedChanges += 1
+        }
 
         fixture.controller.start()
         for _ in 0 ..< 100 where !center.addStarted {
@@ -23,6 +27,7 @@ final class PomodoroApplicationControllerTests: XCTestCase {
 
         XCTAssertTrue(center.addWasCancelled)
         XCTAssertFalse(center.addCompleted)
+        XCTAssertEqual(observedChanges, 0)
     }
 
     private func makeFixture(
@@ -59,6 +64,7 @@ final class PomodoroApplicationControllerTests: XCTestCase {
         )
         return PomodoroApplicationFixture(
             baseDirectory: baseDirectory,
+            defaults: defaults,
             defaultsSuiteName: suiteName,
             controller: controller
         )
@@ -109,11 +115,12 @@ private final class DelayedPomodoroNotificationCenter: ProductivityNotificationC
 
 private struct PomodoroApplicationFixture {
     let baseDirectory: URL
+    let defaults: UserDefaults
     let defaultsSuiteName: String
     let controller: PomodoroApplicationController
 
     func cleanup() {
-        UserDefaults.standard.removePersistentDomain(forName: defaultsSuiteName)
+        defaults.removePersistentDomain(forName: defaultsSuiteName)
         try? FileManager.default.removeItem(at: baseDirectory)
     }
 }
