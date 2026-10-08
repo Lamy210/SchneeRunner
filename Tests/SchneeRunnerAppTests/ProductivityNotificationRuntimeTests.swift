@@ -40,6 +40,17 @@ final class ProductivityNotificationRuntimeTests: XCTestCase {
 
         XCTAssertTrue(didCreateSystemClient)
     }
+
+    func testBareExecutableRuntimeDoesNotStartNotificationDeliveryMonitor() {
+        let monitor = ProductivityNotificationDeliveryMonitor()
+
+        let didStart = monitor.start(
+            bundleIdentifier: nil,
+            bundleURL: URL(fileURLWithPath: "/tmp/SchneeRunner")
+        )
+
+        XCTAssertFalse(didStart)
+    }
 }
 
 @MainActor
