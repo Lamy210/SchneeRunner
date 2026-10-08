@@ -21,8 +21,8 @@ final class StartupCharacterLoader {
         do {
             if let asset = try characterLibrary.lastSelectedAsset() {
                 do {
-                    return StartupCharacterLoadResult(
-                        library: try characterLibrary.library(for: asset),
+                    return try StartupCharacterLoadResult(
+                        library: characterLibrary.library(for: asset),
                         asset: asset,
                         unavailableAssetID: nil
                     )
