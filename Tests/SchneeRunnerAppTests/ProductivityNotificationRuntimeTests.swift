@@ -5,16 +5,12 @@ import XCTest
 
 @MainActor
 final class ProductivityNotificationRuntimeTests: XCTestCase {
-    func testBareExecutableRuntimeDoesNotCreateSystemNotificationClient() async throws {
-        var didCreateSystemClient = false
-        let scheduler = ProductivityNotificationScheduler(
+    func testBareExecutableRuntimeDisablesSystemNotificationClient() async throws {
+        let client = SystemProductivityNotificationClient(
             bundleIdentifier: nil,
-            bundleURL: URL(fileURLWithPath: "/tmp/SchneeRunner"),
-            systemClientFactory: {
-                didCreateSystemClient = true
-                return FakeUnavailableNotificationCenterClient()
-            }
+            bundleURL: URL(fileURLWithPath: "/tmp/SchneeRunner")
         )
+        let scheduler = ProductivityNotificationScheduler(center: client)
 
         let timer = try ProductivityCountdownTimer(
             title: "Smoke",
@@ -23,22 +19,16 @@ final class ProductivityNotificationRuntimeTests: XCTestCase {
         )
         let status = try await scheduler.scheduleTimer(timer, now: Date())
 
-        XCTAssertFalse(didCreateSystemClient)
         XCTAssertEqual(status, .disabled)
     }
 
-    func testApplicationBundleRuntimeCreatesSystemNotificationClient() {
-        var didCreateSystemClient = false
-        _ = ProductivityNotificationScheduler(
-            bundleIdentifier: "io.github.Lamy210.SchneeRunner",
-            bundleURL: URL(fileURLWithPath: "/Applications/SchneeRunner.app"),
-            systemClientFactory: {
-                didCreateSystemClient = true
-                return FakeUnavailableNotificationCenterClient()
-            }
+    func testApplicationBundleRuntimeEnablesSystemNotificationPolicy() {
+        XCTAssertTrue(
+            SystemNotificationRuntime.isAvailable(
+                bundleIdentifier: "io.github.Lamy210.SchneeRunner",
+                bundleURL: URL(fileURLWithPath: "/Applications/SchneeRunner.app")
+            )
         )
-
-        XCTAssertTrue(didCreateSystemClient)
     }
 
     func testBareExecutableRuntimeDoesNotStartNotificationDeliveryMonitor() {
@@ -51,23 +41,4 @@ final class ProductivityNotificationRuntimeTests: XCTestCase {
 
         XCTAssertFalse(didStart)
     }
-}
-
-@MainActor
-private final class FakeUnavailableNotificationCenterClient: ProductivityNotificationCenterClient {
-    func currentAuthorizationState() async -> NotificationAuthorizationState {
-        .denied
-    }
-
-    func requestAuthorization() async throws -> Bool {
-        false
-    }
-
-    func pendingIdentifiers() async -> Set<String> {
-        []
-    }
-
-    func add(_: ProductivityNotificationRequest) async throws {}
-
-    func removePending(identifiers _: Set<String>) {}
 }
