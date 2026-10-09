@@ -6,6 +6,15 @@ struct RuntimeCapabilities: Equatable, Sendable {
     let bundledResourcesAvailable: Bool
     let inProcessFallbackAvailable: Bool
 
+    static var current: RuntimeCapabilities {
+        detect(
+            bundleIdentifier: Bundle.main.bundleIdentifier,
+            bundleURL: Bundle.main.bundleURL,
+            notificationsEnabled: SystemNotificationRuntime.mainBundleNotificationsEnabled,
+            resourceURL: Bundle.main.resourceURL
+        )
+    }
+
     static func detect(
         bundleIdentifier: String?,
         bundleURL: URL,
