@@ -4,7 +4,7 @@ import SchneeRunnerCore
 import XCTest
 
 @MainActor
-final class ProductivityFallbackApplicationControllerTests: XCTestCase {
+final class FallbackApplicationControllerTests: XCTestCase {
     func testOverdueTimerUsesFallbackWhenSystemNotificationsAreDisabled() async throws {
         let baseDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: baseDirectory) }
