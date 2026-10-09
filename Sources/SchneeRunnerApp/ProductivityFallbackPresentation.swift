@@ -1,7 +1,7 @@
 import SchneeRunnerCore
 
 @MainActor
-enum ProductivityFallbackEvent: Equatable, Sendable {
+enum ProductivityFallbackEvent: Equatable {
     case timerCompleted(title: String)
     case pomodoroPhaseCompleted(phase: PomodoroPhase)
     case reminderDue(title: String, body: String?)

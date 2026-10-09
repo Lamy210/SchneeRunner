@@ -27,6 +27,7 @@ final class PomodoroCoordinator {
     var onNotificationStatus: ((ProductivityNotificationDeliveryStatus) -> Void)?
     var onNotificationError: ((Error) -> Void)?
     var onHistoryError: ((Error) -> Void)?
+    var onPhaseCompleted: ((PomodoroSession, Date) -> Void)?
 
     private(set) var snapshot: ProductivitySnapshot
 
@@ -217,6 +218,7 @@ private extension PomodoroCoordinator {
             return
         }
         recordCompletedPhase(before, occurredAt: occurredAt)
+        onPhaseCompleted?(before, occurredAt)
     }
 
     func recordCompletedPhase(

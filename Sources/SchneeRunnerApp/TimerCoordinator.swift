@@ -12,6 +12,7 @@ final class TimerCoordinator: NSObject {
     var onNotificationError: ((Error) -> Void)?
     var onPersistenceError: ((Error) -> Void)?
     var onHistoryError: ((Error) -> Void)?
+    var onTimerCompleted: ((ProductivityCountdownTimer) -> Void)?
 
     private(set) var snapshot: ProductivitySnapshot
 
@@ -181,7 +182,7 @@ final class TimerCoordinator: NSObject {
                 before: previous,
                 after: reconciled
             ) {
-                recordCompletion(timer)
+                handleCompletion(timer)
                 await notificationScheduler.cancelTimer(id: timer.id)
             }
         }
@@ -243,7 +244,12 @@ final class TimerCoordinator: NSObject {
         guard before.state != .completed, after.state == .completed else {
             return
         }
-        recordCompletion(after)
+        handleCompletion(after)
+    }
+
+    private func handleCompletion(_ timer: ProductivityCountdownTimer) {
+        recordCompletion(timer)
+        onTimerCompleted?(timer)
     }
 
     private func recordCompletion(_ timer: ProductivityCountdownTimer) {

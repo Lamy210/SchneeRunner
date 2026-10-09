@@ -71,8 +71,7 @@ final class StartupCharacterLoader {
             if explicitURLs.count == 4,
                explicitURLs.allSatisfy({
                    FileManager.default.isReadableFile(atPath: $0.path)
-               })
-            {
+               }) {
                 return explicitURLs
             }
         }
