@@ -64,7 +64,7 @@ for frame in 1 2 3 4; do
     exit 1
   fi
   /usr/bin/sips -g pixelWidth -g pixelHeight "${destination}" >/dev/null
- done
+done
 
 cat >"${OUTPUT_APP}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
