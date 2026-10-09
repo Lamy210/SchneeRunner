@@ -14,7 +14,7 @@ case "${RELEASE_SIGNED}" in
 esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RESOURCE_RELATIVE_DIR="Contents/Resources/BuiltInCharacters/YukihanaLamy"
+RESOURCE_RELATIVE_DIR="Contents/Resources/SchneeRunner_SchneeRunnerApp.bundle/BuiltInCharacters/YukihanaLamy"
 
 verify_bundled_character() {
   local app_path="$1"

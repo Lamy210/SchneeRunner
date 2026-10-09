@@ -35,7 +35,8 @@ final class StartupCharacterLoader {
             characterLibrary.clearLastSelection()
         }
 
-        guard let resourceRoot else {
+        let frameURLs = resolvedBuiltInFrameURLs(resourceRoot: resourceRoot)
+        guard frameURLs.count == 4 else {
             return StartupCharacterLoadResult(
                 library: nil,
                 asset: nil,
@@ -44,9 +45,6 @@ final class StartupCharacterLoader {
         }
 
         do {
-            let frameURLs = BuiltInCharacterResources.yukihanaLamyWalkCycle(
-                resourceRoot: resourceRoot
-            )
             let frames = try characterLibrary.frames(
                 fromPNGSequence: frameURLs
             )
@@ -63,5 +61,24 @@ final class StartupCharacterLoader {
                 unavailableAssetID: unavailableAssetID
             )
         }
+    }
+
+    private func resolvedBuiltInFrameURLs(resourceRoot: URL?) -> [URL] {
+        if let resourceRoot {
+            let explicitURLs = BuiltInCharacterResources.yukihanaLamyWalkCycle(
+                resourceRoot: resourceRoot
+            )
+            if explicitURLs.count == 4,
+               explicitURLs.allSatisfy({
+                   FileManager.default.isReadableFile(atPath: $0.path)
+               })
+            {
+                return explicitURLs
+            }
+        }
+
+        return BuiltInCharacterResources.yukihanaLamyWalkCycle(
+            bundle: BuiltInCharacterResources.runtimeBundle()
+        )
     }
 }
