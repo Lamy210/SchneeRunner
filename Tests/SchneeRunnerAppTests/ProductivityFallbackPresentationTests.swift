@@ -31,7 +31,7 @@ final class ProductivityFallbackPresentationTests: XCTestCase {
             [
                 .timerCompleted(title: "Tea"),
                 .pomodoroPhaseCompleted(phase: .shortBreak),
-                .reminderDue(title: "Stand", body: nil),
+                .reminderDue(title: "Stand", body: nil)
             ]
         )
     }
