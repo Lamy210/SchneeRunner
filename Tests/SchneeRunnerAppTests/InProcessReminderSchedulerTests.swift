@@ -191,6 +191,7 @@ private final class RecordingReminderFallbackPresenter: ProductivityFallbackPres
     }
 }
 
+@MainActor
 private struct ReminderSchedulerFixture {
     let baseDirectory: URL
     let defaults: UserDefaults
