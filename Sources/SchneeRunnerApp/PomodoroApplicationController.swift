@@ -12,6 +12,7 @@ final class PomodoroApplicationController: NSObject {
     private let configurationStore: PomodoroConfigurationStore
     private let settingsController = PomodoroSettingsController()
     private let notificationScheduler: ProductivityNotificationScheduler
+    private let fallbackRouter: ProductivityFallbackRouter?
     private let refreshInterval: TimeInterval
     private var coordinator: PomodoroCoordinator?
     private var launchReconciliationTask: Task<Void, Never>?
@@ -26,11 +27,15 @@ final class PomodoroApplicationController: NSObject {
         fileManager: FileManager = .default,
         defaults: UserDefaults = .standard,
         refreshInterval: TimeInterval = 1,
-        notificationScheduler: ProductivityNotificationScheduler = .init()
+        notificationScheduler: ProductivityNotificationScheduler = .init(),
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
         self.notificationScheduler = notificationScheduler
+        fallbackRouter = fallbackPresenter.map {
+            ProductivityFallbackRouter(presenter: $0)
+        }
         self.refreshInterval = refreshInterval
         configurationStore = PomodoroConfigurationStore(defaults: defaults)
         let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
@@ -122,8 +127,17 @@ final class PomodoroApplicationController: NSObject {
                 notifyReaction: !isReconcilingOnLaunch
             )
         }
+        coordinator.onPhaseCompleted = { [weak self] session, _ in
+            self?.fallbackRouter?.enqueue(
+                .pomodoroPhaseCompleted(phase: session.currentPhase)
+            )
+        }
         coordinator.onNotificationStatus = { [weak self] status in
-            self?.menuController.setProductivityNotificationStatus(status)
+            guard let self else {
+                return
+            }
+            fallbackRouter?.updateNotificationStatus(status)
+            menuController.setProductivityNotificationStatus(status)
             if status == .disabled {
                 NSLog("SchneeRunner Pomodoro notifications are disabled")
             }

@@ -15,7 +15,8 @@ final class ProductivityApplicationController {
         characterStateCoordinator: CharacterStateCoordinator,
         reactionStore: ProductivityCharacterReactionStore = .init(),
         notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor = .init(),
-        notificationScheduler: ProductivityNotificationScheduler? = nil
+        notificationScheduler: ProductivityNotificationScheduler? = nil,
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil
     ) {
         LaunchTrace.emit("ProductivityApplicationController init begin")
         self.menuController = menuController
@@ -29,17 +30,20 @@ final class ProductivityApplicationController {
         self.reactionCoordinator = reactionCoordinator
         LaunchTrace.emit("ProductivityApplicationController before notification scheduler")
         let notificationScheduler = notificationScheduler ?? ProductivityNotificationScheduler()
+        let fallbackPresenter = fallbackPresenter ?? AppKitProductivityFallbackPresenter()
         LaunchTrace.emit("ProductivityApplicationController after notification scheduler")
 
         timerController = TimerApplicationController(
             menuController: menuController,
             managementWindow: managementWindow,
-            notificationScheduler: notificationScheduler
+            notificationScheduler: notificationScheduler,
+            fallbackPresenter: fallbackPresenter
         )
         pomodoroController = PomodoroApplicationController(
             menuController: menuController,
             managementWindow: managementWindow,
-            notificationScheduler: notificationScheduler
+            notificationScheduler: notificationScheduler,
+            fallbackPresenter: fallbackPresenter
         )
         reminderController = ReminderApplicationController(
             menuController: menuController,
