@@ -30,7 +30,7 @@ final class AppKitProductivityFallbackPresenter: NSObject, ProductivityFallbackP
             label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             label.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
             label.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
-            label.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20),
+            label.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
         ])
         panel.contentView = contentView
 
