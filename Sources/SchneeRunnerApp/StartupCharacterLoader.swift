@@ -71,8 +71,10 @@ final class StartupCharacterLoader {
             let allFramesReadable = explicitURLs.allSatisfy {
                 FileManager.default.isReadableFile(atPath: $0.path)
             }
-            if explicitURLs.count == 4 && allFramesReadable {
-                return explicitURLs
+            if explicitURLs.count == 4 {
+                if allFramesReadable {
+                    return explicitURLs
+                }
             }
         }
 

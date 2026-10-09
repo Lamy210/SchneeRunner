@@ -102,7 +102,7 @@ final class ProductivityFallbackApplicationControllerTests: XCTestCase {
     private func waitForFallbackEvent(
         in presenter: RecordingApplicationFallbackPresenter
     ) async {
-        for _ in 0 ..< 1_000 {
+        for _ in 0 ..< 1000 {
             if !presenter.events.isEmpty {
                 return
             }
