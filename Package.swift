@@ -24,7 +24,7 @@ let package = Package(
             name: "SchneeRunnerApp",
             dependencies: ["SchneeRunnerCore"],
             resources: [
-                .process("Resources"),
+                .copy("Resources/BuiltInCharacters"),
             ]
         ),
         .executableTarget(
