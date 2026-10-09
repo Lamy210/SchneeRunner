@@ -1,10 +1,11 @@
 // swift-tools-version: 6.0
+
 import PackageDescription
 
 let package = Package(
     name: "SchneeRunner",
     platforms: [
-        .macOS(.v14),
+        .macOS(.v14)
     ],
     products: [
         .executable(
@@ -14,7 +15,7 @@ let package = Package(
         .executable(
             name: "schneerunnerctl",
             targets: ["SchneeRunnerCtl"]
-        ),
+        )
     ],
     targets: [
         .target(
@@ -24,7 +25,7 @@ let package = Package(
             name: "SchneeRunnerApp",
             dependencies: ["SchneeRunnerCore"],
             resources: [
-                .copy("Resources/BuiltInCharacters"),
+                .copy("Resources/BuiltInCharacters")
             ]
         ),
         .executableTarget(
@@ -37,7 +38,10 @@ let package = Package(
         ),
         .testTarget(
             name: "SchneeRunnerAppTests",
-            dependencies: ["SchneeRunnerApp", "SchneeRunnerCore"]
-        ),
+            dependencies: [
+                "SchneeRunnerApp",
+                "SchneeRunnerCore"
+            ]
+        )
     ]
 )
