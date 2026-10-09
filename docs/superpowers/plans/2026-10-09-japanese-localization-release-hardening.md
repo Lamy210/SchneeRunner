@@ -4,7 +4,7 @@
 
 **Goal:** Add English/Japanese AppKit localization and make the unsigned release pipeline verify localized resources and the unified built-in character resources without changing persisted/protocol values.
 
-**Architecture:** Keep localization entirely in `SchneeRunnerApp`, backed by SwiftPM resources under `en.lproj` and `ja.lproj`, with a small app-layer lookup facade and typed helpers for domain presentation such as CharacterState. Reuse the SwiftPM resource bundle established by the runtime-parity plan and extend release verification so packaged `.app`/DMG contents are validated for both localizations.
+**Architecture:** Keep localization entirely in `SchneeRunnerApp`, backed by SwiftPM resources under `en.lproj` and `ja.lproj`, with an injectable app-layer `AppLocalization` value and typed helpers for domain presentation such as CharacterState. Reuse the SwiftPM resource bundle established by the runtime-parity plan and extend release verification so packaged `.app`/DMG contents are validated for both localizations.
 
 **Tech Stack:** Swift 6, Swift Package Manager resources, AppKit, Foundation localization APIs, XCTest, existing shell release scripts.
 
@@ -31,9 +31,10 @@
 
 ---
 
-### Task 1: Add Localization Resources and an App-layer Lookup Facade
+### Task 1: Add Localization Resources and an Injectable App-layer Lookup Facade
 
 **Files:**
+- Modify: `Package.swift`
 - Create: `Sources/SchneeRunnerApp/Resources/en.lproj/Localizable.strings`
 - Create: `Sources/SchneeRunnerApp/Resources/ja.lproj/Localizable.strings`
 - Create: `Sources/SchneeRunnerApp/AppLocalization.swift`
@@ -42,8 +43,9 @@
 
 **Interfaces:**
 - Consumes: the SwiftPM resource bundle established by the runtime-parity plan.
-- Produces: `enum AppLocalization` with `static func string(_ key: String, localeIdentifier: String? = nil, arguments: CVarArg...) -> String` or an equivalent testable API that reads from the app resource bundle.
-- Produces: typed presentation helpers such as `AppLocalization.characterState(_ state: CharacterState, localeIdentifier: String? = nil) -> String`.
+- Produces: `struct AppLocalization: Sendable` initialized with `bundle: Bundle = .module` and optional `localeIdentifier: String? = nil`.
+- Produces: `func string(_ key: String, arguments: CVarArg...) -> String` and `func characterState(_ state: CharacterState) -> String`.
+- Produces: `static let system = AppLocalization()` as the default controller dependency; tests inject `AppLocalization(localeIdentifier: "ja")` or `"en"` rather than mutating process-global language state.
 - English resources are the canonical fallback for missing Japanese keys.
 
 - [ ] **Step 1: Write failing locale-lookup tests**
@@ -60,16 +62,16 @@ Also assert an intentionally missing Japanese key falls back to the English reso
 
 - [ ] **Step 2: Write a failing CharacterState presentation test**
 
-Assert `.idle.rawValue == "idle"` remains unchanged while localized presentation yields `Idle` in English and `待機` in Japanese (use one agreed Japanese term consistently across all UI).
+Assert `.idle.rawValue == "idle"` remains unchanged while localized presentation yields `Idle` in English and `待機` in Japanese. Use that Japanese term consistently across all UI.
 
 - [ ] **Step 3: Run tests and verify RED**
 
 Run: `swift test --filter AppLocalizationTests`
 Expected: FAIL because localization resources/facade do not exist.
 
-- [ ] **Step 4: Implement the localization facade and resource files**
+- [ ] **Step 4: Enable localized SwiftPM resources and implement the facade**
 
-Use the SwiftPM module resource bundle; locale override exists only for deterministic tests and does not become a user preference. Keep English keys complete and Japanese keys complete for every key introduced in this task.
+Set `defaultLocalization: "en"` in `Package(...)`. Keep the existing `SchneeRunnerApp` processed resource directory from the runtime-parity plan. Implement locale-specific lookup by selecting the requested `.lproj` sub-bundle when a test locale is injected; production `.system` follows macOS bundle localization. If a Japanese key is missing, explicitly retry the English table before returning the key.
 
 - [ ] **Step 5: Run focused tests**
 
@@ -80,7 +82,7 @@ Expected: PASS without changing Core raw values.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Sources/SchneeRunnerApp/Resources Sources/SchneeRunnerApp/AppLocalization.swift Tests/SchneeRunnerAppTests/AppLocalizationTests.swift Tests/SchneeRunnerAppTests/CharacterStateStatusFormatterTests.swift
+git add Package.swift Sources/SchneeRunnerApp/Resources Sources/SchneeRunnerApp/AppLocalization.swift Tests/SchneeRunnerAppTests/AppLocalizationTests.swift Tests/SchneeRunnerAppTests/CharacterStateStatusFormatterTests.swift
 git commit -m "feat: add English and Japanese localization resources"
 ```
 
@@ -111,12 +113,13 @@ git commit -m "feat: add English and Japanese localization resources"
 
 **Interfaces:**
 - Consumes: `AppLocalization` from Task 1.
+- Every modified UI controller receives `localization: AppLocalization = .system` in its initializer, preserving existing call sites while making locale deterministic in tests.
 - All visible Timer/Pomodoro/Reminder/status-menu chrome uses localization keys; user-entered titles/bodies remain untouched.
 - Notification and fallback text uses the same terminology keys as menus where concepts overlap.
 
 - [ ] **Step 1: Add RED Japanese status/productivity tests**
 
-Construct controllers with a deterministic Japanese localization context and assert menu/action labels for Timer, Pomodoro, Reminder, notification-disabled status, productivity reactions, and management actions.
+Construct controllers with `AppLocalization(localeIdentifier: "ja")` and assert menu/action labels for Timer, Pomodoro, Reminder, notification-disabled status, productivity reactions, and management actions.
 
 - [ ] **Step 2: Add RED dynamic-format tests**
 
@@ -127,13 +130,13 @@ Assert examples such as `5 min` / `5分`, paused timer status, Pomodoro phase co
 Run: `swift test --filter JapaneseProductivityPresentationTests`
 Expected: FAIL because controllers still contain hard-coded English strings.
 
-- [ ] **Step 4: Replace hard-coded application-facing strings in productivity/status controllers**
+- [ ] **Step 4: Inject localization and replace hard-coded application-facing strings**
 
-Do not localize log-only developer diagnostics unless they are also user-visible. Do not localize persisted history titles unless they are presentation-generated at read time; keep stored historical compatibility intact.
+Add `localization: AppLocalization = .system` to the modified controller/presenter initializers and thread the same value through nested controllers so one UI tree cannot mix locales. Do not localize log-only developer diagnostics unless they are also user-visible. Do not rewrite persisted historical/user titles.
 
 - [ ] **Step 5: Localize system-notification and fallback presentation content**
 
-Use the same localization facade for `Timer finished`, Pomodoro phase completion, reminder default body, and the in-process fallback presenter.
+Use the same injected localization value for `Timer finished`, Pomodoro phase completion, reminder default body, and the in-process fallback presenter.
 
 - [ ] **Step 6: Run focused tests and full suite**
 
@@ -173,7 +176,7 @@ git commit -m "feat: localize productivity and status menu UI"
 - Create: `Tests/SchneeRunnerAppTests/JapaneseGeneralPresentationTests.swift`
 
 **Interfaces:**
-- Consumes: `AppLocalization.characterState(_:)` and generic localization lookup.
+- Consumes: the same `AppLocalization` instance threaded from `AppDelegate` into the menu/presenter tree.
 - Core `displayName` helpers may remain for non-UI compatibility, but AppKit presentation must not depend on their English output.
 
 - [ ] **Step 1: Add RED general Japanese UI tests**
@@ -198,7 +201,7 @@ Expected: FAIL on hard-coded English labels.
 
 - [ ] **Step 4: Replace remaining user-facing literals with localized lookup**
 
-Preserve filenames, pack names, imported asset names, schema values, key equivalents, identifiers, and diagnostic log strings unless they are directly displayed to the user.
+Add defaulted localization dependencies where needed and preserve filenames, pack names, imported asset names, schema values, key equivalents, identifiers, and diagnostic log strings unless directly displayed to the user.
 
 - [ ] **Step 5: Run focused and full tests**
 
@@ -277,6 +280,6 @@ Inspect the final app resource bundle and confirm both localizations and four PN
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts .github README.md Tests Sources/SchneeRunnerApp/Resources
+git add scripts .github README.md Tests Sources/SchneeRunnerApp/Resources Package.swift
 git commit -m "test: verify localized unsigned release resources"
 ```
