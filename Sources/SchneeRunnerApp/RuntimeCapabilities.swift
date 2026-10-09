@@ -19,8 +19,9 @@ struct RuntimeCapabilities: Equatable, Sendable {
             .caseInsensitiveCompare("app") == .orderedSame
 
         return RuntimeCapabilities(
-            systemNotificationsAvailable:
-                notificationsEnabled && hasBundleIdentifier && isApplicationBundle,
+            systemNotificationsAvailable: notificationsEnabled
+                && hasBundleIdentifier
+                && isApplicationBundle,
             launchAtLoginAvailable: hasBundleIdentifier && isApplicationBundle,
             bundledResourcesAvailable: resourceURL != nil,
             inProcessFallbackAvailable: true
