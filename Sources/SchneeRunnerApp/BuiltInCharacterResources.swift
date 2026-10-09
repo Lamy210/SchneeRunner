@@ -30,15 +30,16 @@ enum BuiltInCharacterResources {
             return mainBundle
         }
 
-        if let resourceRoot = mainBundle.resourceURL,
-           let packagedBundle = Bundle(
-               url: resourceRoot.appendingPathComponent(
-                   swiftPMResourceBundleName,
-                   isDirectory: true
-               )
-           ),
-           hasReadableWalkCycle(in: packagedBundle) {
-            return packagedBundle
+        if let resourceRoot = mainBundle.resourceURL {
+            let bundleURL = resourceRoot.appendingPathComponent(
+                swiftPMResourceBundleName,
+                isDirectory: true
+            )
+            if let packagedBundle = Bundle(url: bundleURL) {
+                if hasReadableWalkCycle(in: packagedBundle) {
+                    return packagedBundle
+                }
+            }
         }
 
         return .module

@@ -68,10 +68,10 @@ final class StartupCharacterLoader {
             let explicitURLs = BuiltInCharacterResources.yukihanaLamyWalkCycle(
                 resourceRoot: resourceRoot
             )
-            if explicitURLs.count == 4,
-               explicitURLs.allSatisfy({
-                   FileManager.default.isReadableFile(atPath: $0.path)
-               }) {
+            let allFramesReadable = explicitURLs.allSatisfy {
+                FileManager.default.isReadableFile(atPath: $0.path)
+            }
+            if explicitURLs.count == 4 && allFramesReadable {
                 return explicitURLs
             }
         }
