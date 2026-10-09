@@ -48,7 +48,8 @@ final class ProductivityApplicationController {
         reminderController = ReminderApplicationController(
             menuController: menuController,
             notificationScheduler: notificationScheduler,
-            managementWindow: managementWindow
+            managementWindow: managementWindow,
+            fallbackPresenter: fallbackPresenter
         )
 
         timerController.onTimersChanged = { [weak reactionCoordinator] timers, now in
@@ -58,6 +59,9 @@ final class ProductivityApplicationController {
             reactionCoordinator?.updatePomodoro(session, now: now)
         }
         notificationDeliveryMonitor.onReminderFired = { [weak reactionCoordinator] in
+            reactionCoordinator?.recordReminderFired()
+        }
+        reminderController.onReminderFired = { [weak reactionCoordinator] in
             reactionCoordinator?.recordReminderFired()
         }
         menuController.onToggleProductivityCharacterReactions = { [weak self] in

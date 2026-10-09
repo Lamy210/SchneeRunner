@@ -7,6 +7,8 @@ enum ReminderApplicationControllerError: Error, Equatable {
 
 @MainActor
 final class ReminderApplicationController {
+    var onReminderFired: (() -> Void)?
+
     private let menuController: StatusMenuController
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
@@ -14,6 +16,7 @@ final class ReminderApplicationController {
     private let editor = ReminderEditorController()
     private let managementWindow: ProductivityManagementWindowController
     private let calendar: Calendar
+    private let fallbackScheduler: InProcessReminderScheduler?
 
     private var coordinator: ReminderCoordinator?
     private var launchReconciliationTask: Task<Void, Never>?
@@ -24,7 +27,10 @@ final class ReminderApplicationController {
         fileManager: FileManager = .default,
         notificationScheduler: any ReminderNotificationScheduling = ProductivityNotificationScheduler(),
         calendar: Calendar = .current,
-        managementWindow: ProductivityManagementWindowController? = nil
+        managementWindow: ProductivityManagementWindowController? = nil,
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil,
+        fallbackDeliveryDefaults: UserDefaults = .standard,
+        fallbackRefreshInterval: TimeInterval = 1
     ) {
         self.menuController = menuController
         self.notificationScheduler = notificationScheduler
@@ -36,16 +42,31 @@ final class ReminderApplicationController {
             in: .userDomainMask
         ).first ?? fileManager.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support", isDirectory: true)
-        stateStore = ProductivityStateStore(
+        let stateStore = ProductivityStateStore(
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
+        self.stateStore = stateStore
         historyStore = ProductivityHistoryStore(
             baseDirectory: applicationSupportDirectory,
             fileManager: fileManager
         )
+        if let fallbackPresenter {
+            fallbackScheduler = InProcessReminderScheduler(
+                stateStore: stateStore,
+                presenter: fallbackPresenter,
+                deliveryStore: ReminderFallbackDeliveryStore(
+                    defaults: fallbackDeliveryDefaults
+                ),
+                calendar: calendar,
+                refreshInterval: fallbackRefreshInterval
+            )
+        } else {
+            fallbackScheduler = nil
+        }
         configureMenuCallbacks()
         configureManagementCallbacks()
+        configureFallbackCallbacks()
     }
 
     func start(now: Date = Date()) {
@@ -68,6 +89,7 @@ final class ReminderApplicationController {
     func stop() {
         launchReconciliationTask?.cancel()
         launchReconciliationTask = nil
+        fallbackScheduler?.stop()
     }
 
     @discardableResult
@@ -116,6 +138,15 @@ private extension ReminderApplicationController {
         }
     }
 
+    func configureFallbackCallbacks() {
+        fallbackScheduler?.onReminderDelivered = { [weak self] in
+            self?.onReminderFired?()
+        }
+        fallbackScheduler?.onError = { [weak self] error in
+            self?.log("reminder fallback error", error: error)
+        }
+    }
+
     func configureCoordinatorCallbacks(
         _ coordinator: ReminderCoordinator
     ) {
@@ -123,8 +154,15 @@ private extension ReminderApplicationController {
             self?.updateViews(reminders: reminders, now: Date())
         }
         coordinator.onNotificationStatus = { [weak self] status in
-            self?.menuController.setProductivityNotificationStatus(status)
-            if status == .disabled {
+            guard let self else {
+                return
+            }
+            menuController.setProductivityNotificationStatus(status)
+            switch status {
+            case .scheduled:
+                fallbackScheduler?.stop()
+            case .disabled:
+                fallbackScheduler?.start()
                 NSLog("SchneeRunner reminder notifications are disabled")
             }
         }
