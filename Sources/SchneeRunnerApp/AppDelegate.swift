@@ -8,15 +8,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let characterLibrary = CharacterLibraryController()
     private let frameRendererCoordinator = CharacterFrameRendererCoordinator()
     private let localization = AppLocalization.current
-    private lazy var importPresenter = CharacterImportPresenter(
-        localization: localization
-    )
-    private lazy var packBuilderPresenter = CharacterPackBuilderPresenter(
-        localization: localization
-    )
-    private lazy var menuController = StatusMenuController(
-        localization: localization
-    )
+    private lazy var importPresenter = CharacterImportPresenter(localization: localization)
+    private lazy var packBuilderPresenter = CharacterPackBuilderPresenter(localization: localization)
+    private lazy var menuController = StatusMenuController(localization: localization)
 
     private lazy var characterPlaybackController = CharacterPlaybackController(animationController: animationController)
     private lazy var characterStateCoordinator = CharacterStateCoordinator(
@@ -81,23 +75,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureMenuCallbacks() {
+        let singleImageTitle = localization.string("import.panel.singleImage")
+        let spriteSheetTitle = localization.string("import.panel.spriteSheet4x2")
         menuController.onLoadSingleImage = { [weak self] in
-            guard let self else {
-                return
-            }
-            loadImportedCharacter(
-                kind: .singleImage,
-                panelTitle: localization.string("import.panel.singleImage")
-            )
+            self?.loadImportedCharacter(kind: .singleImage, panelTitle: singleImageTitle)
         }
         menuController.onLoadSpriteSheet = { [weak self] in
-            guard let self else {
-                return
-            }
-            loadImportedCharacter(
-                kind: .spriteSheet4x2,
-                panelTitle: localization.string("import.panel.spriteSheet4x2")
-            )
+            self?.loadImportedCharacter(kind: .spriteSheet4x2, panelTitle: spriteSheetTitle)
         }
         menuController.onLoadPNGSequence = { [weak self] in
             self?.loadPNGSequence()
