@@ -21,7 +21,7 @@ final class AppLocalizationTests: XCTestCase {
         XCTAssertEqual(japanese.string("launchAtLogin.title"), "ログイン時に起動")
     }
 
-    func testJapaneseProductivityAuxiliaryCopy() {
+    func testJapaneseProductivityDialogCopy() {
         let japanese = AppLocalization(localeIdentifier: "ja")
 
         XCTAssertEqual(japanese.string("timer.dialog.title"), "新しいタイマー")
@@ -67,6 +67,10 @@ final class AppLocalizationTests: XCTestCase {
         XCTAssertEqual(japanese.string("reminder.schedule.daily"), "毎日")
         XCTAssertEqual(japanese.string("reminder.schedule.weekdays"), "曜日指定")
         XCTAssertEqual(japanese.string("reminder.enabled"), "有効")
+    }
+
+    func testJapaneseManagementAndDeliveryCopy() {
+        let japanese = AppLocalization(localeIdentifier: "ja")
 
         XCTAssertEqual(japanese.string("management.window.title"), "SchneeRunner 生産性ツール")
         XCTAssertEqual(japanese.string("management.history.title"), "最近の履歴")
