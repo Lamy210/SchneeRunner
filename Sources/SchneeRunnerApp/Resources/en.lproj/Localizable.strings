@@ -1,0 +1,12 @@
+"menu.timers" = "Timers";
+"timer.new" = "New Timer";
+"action.pause" = "Pause";
+"pomodoro.focus" = "Focus";
+"reminder.root" = "Reminders";
+"launchAtLogin.title" = "Launch at Login";
+"characterState.idle" = "Idle";
+"characterState.walk" = "Walk";
+"characterState.run" = "Run";
+"characterState.dash" = "Dash";
+"characterState.sprint" = "Sprint";
+"localization.englishFallbackProbe" = "English fallback";
