@@ -6,92 +6,38 @@ import XCTest
 @MainActor
 final class UnsignedRuntimeParityTests: XCTestCase {
     func testUnsignedRuntimeKeepsProductivityFlowsUsableWithoutSystemNotifications() async throws {
-        let baseDirectory = try makeTemporaryDirectory()
-        defer { try? FileManager.default.removeItem(at: baseDirectory) }
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+        fixture.start()
+        defer { fixture.stop() }
 
-        let suiteName = "UnsignedRuntimeParityTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defaults.removePersistentDomain(forName: suiteName)
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let menuController = StatusMenuController()
-        let presenter = RecordingUnsignedRuntimeFallbackPresenter()
-        let scheduler = ProductivityNotificationScheduler(
-            center: DisabledUnsignedRuntimeNotificationCenter()
-        )
-        let stateStore = ProductivityStateStore(
-            baseDirectory: baseDirectory,
-            fileManager: .default
-        )
-
-        let timerController = TimerApplicationController(
-            menuController: menuController,
-            baseDirectory: baseDirectory,
-            fileManager: .default,
-            notificationScheduler: scheduler,
-            fallbackPresenter: presenter
-        )
-        let pomodoroController = PomodoroApplicationController(
-            menuController: menuController,
-            baseDirectory: baseDirectory,
-            fileManager: .default,
-            defaults: defaults,
-            refreshInterval: 3600,
-            notificationScheduler: scheduler,
-            fallbackPresenter: presenter
-        )
-        let reminderController = ReminderApplicationController(
-            menuController: menuController,
-            baseDirectory: baseDirectory,
-            fileManager: .default,
-            notificationScheduler: scheduler,
-            calendar: utcCalendar(),
-            fallbackPresenter: presenter,
-            fallbackDeliveryDefaults: defaults,
-            fallbackRefreshInterval: 0.01
-        )
-
-        timerController.start()
-        pomodoroController.start()
-        reminderController.start()
-        defer {
-            timerController.stop()
-            pomodoroController.stop()
-            reminderController.stop()
-        }
-
-        menuController.onStartTimerPreset?(60)
+        fixture.menuController.onStartTimerPreset?(60)
         try await waitUntil {
-            try stateStore.load().timers.count == 1
+            try fixture.stateStore.load().timers.count == 1
         }
-        XCTAssertEqual(try stateStore.load().timers.first?.state, .running)
+        XCTAssertEqual(
+            try fixture.stateStore.load().timers.first?.state,
+            .running
+        )
 
         let configuration = try PomodoroConfiguration(focusDuration: 60)
-        menuController.onStartPomodoro?(configuration)
+        fixture.menuController.onStartPomodoro?(configuration)
         try await waitUntil {
-            try stateStore.load().pomodoro != nil
+            try fixture.stateStore.load().pomodoro != nil
         }
-        XCTAssertEqual(try stateStore.load().pomodoro?.state, .running)
-
-        let reminderNow = Date()
-        let request = ReminderEditRequest(
-            title: "Stretch",
-            body: "Stand up",
-            enabled: true,
-            schedule: .once(reminderNow.addingTimeInterval(0.1))
-        )
-        _ = try await reminderController.createReminder(
-            request,
-            now: reminderNow
+        XCTAssertEqual(
+            try fixture.stateStore.load().pomodoro?.state,
+            .running
         )
 
+        try await createDueReminder(in: fixture)
         try await waitUntil(timeout: 2) {
-            presenter.events.contains(
+            fixture.presenter.events.contains(
                 .reminderDue(title: "Stretch", body: "Stand up")
             )
         }
 
-        let snapshot = try stateStore.load()
+        let snapshot = try fixture.stateStore.load()
         XCTAssertEqual(snapshot.timers.count, 1)
         XCTAssertNotNil(snapshot.pomodoro)
         XCTAssertEqual(snapshot.reminders.map(\.title), ["Stretch"])
@@ -112,6 +58,48 @@ final class UnsignedRuntimeParityTests: XCTestCase {
         XCTAssertNotNil(menuController.menu.item(withTitle: "Timers"))
         XCTAssertNotNil(menuController.menu.item(withTitle: "Pomodoro"))
         XCTAssertNotNil(menuController.menu.item(withTitle: "Reminders"))
+    }
+
+    private func createDueReminder(
+        in fixture: UnsignedRuntimeFixture
+    ) async throws {
+        let now = Date()
+        let request = ReminderEditRequest(
+            title: "Stretch",
+            body: "Stand up",
+            enabled: true,
+            schedule: .once(now.addingTimeInterval(0.1))
+        )
+        _ = try await fixture.reminderController.createReminder(
+            request,
+            now: now
+        )
+    }
+
+    private func makeFixture() throws -> UnsignedRuntimeFixture {
+        let baseDirectory = try makeTemporaryDirectory()
+        let suiteName = "UnsignedRuntimeParityTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        let menuController = StatusMenuController()
+        let presenter = RecordingUnsignedRuntimeFallbackPresenter()
+        let scheduler = ProductivityNotificationScheduler(
+            center: DisabledUnsignedRuntimeNotificationCenter()
+        )
+        let stateStore = ProductivityStateStore(
+            baseDirectory: baseDirectory,
+            fileManager: .default
+        )
+        return UnsignedRuntimeFixture(
+            baseDirectory: baseDirectory,
+            suiteName: suiteName,
+            defaults: defaults,
+            menuController: menuController,
+            presenter: presenter,
+            stateStore: stateStore,
+            scheduler: scheduler,
+            calendar: try utcCalendar()
+        )
     }
 
     private func makeTemporaryDirectory() throws -> URL {
@@ -142,6 +130,79 @@ final class UnsignedRuntimeParityTests: XCTestCase {
             try await Task<Never, Never>.sleep(nanoseconds: 10_000_000)
         }
         XCTFail("condition was not satisfied before timeout")
+    }
+}
+
+@MainActor
+private final class UnsignedRuntimeFixture {
+    let baseDirectory: URL
+    let suiteName: String
+    let defaults: UserDefaults
+    let menuController: StatusMenuController
+    let presenter: RecordingUnsignedRuntimeFallbackPresenter
+    let stateStore: ProductivityStateStore
+    let reminderController: ReminderApplicationController
+
+    private let timerController: TimerApplicationController
+    private let pomodoroController: PomodoroApplicationController
+
+    init(
+        baseDirectory: URL,
+        suiteName: String,
+        defaults: UserDefaults,
+        menuController: StatusMenuController,
+        presenter: RecordingUnsignedRuntimeFallbackPresenter,
+        stateStore: ProductivityStateStore,
+        scheduler: ProductivityNotificationScheduler,
+        calendar: Calendar
+    ) {
+        self.baseDirectory = baseDirectory
+        self.suiteName = suiteName
+        self.defaults = defaults
+        self.menuController = menuController
+        self.presenter = presenter
+        self.stateStore = stateStore
+        timerController = TimerApplicationController(
+            menuController: menuController,
+            baseDirectory: baseDirectory,
+            notificationScheduler: scheduler,
+            fallbackPresenter: presenter
+        )
+        pomodoroController = PomodoroApplicationController(
+            menuController: menuController,
+            baseDirectory: baseDirectory,
+            defaults: defaults,
+            refreshInterval: 3600,
+            notificationScheduler: scheduler,
+            fallbackPresenter: presenter
+        )
+        reminderController = ReminderApplicationController(
+            menuController: menuController,
+            baseDirectory: baseDirectory,
+            notificationScheduler: scheduler,
+            calendar: calendar,
+            fallbackPresenter: presenter,
+            fallbackDeliveryDefaults: defaults,
+            fallbackRefreshInterval: 0.01
+        )
+    }
+
+    func start() {
+        timerController.start()
+        pomodoroController.start()
+        reminderController.start()
+    }
+
+    func stop() {
+        timerController.stop()
+        pomodoroController.stop()
+        reminderController.stop()
+    }
+
+    func cleanup() {
+        stop()
+        try? FileManager.default.removeItem(at: baseDirectory)
+        defaults.removePersistentDomain(forName: suiteName)
     }
 }
 
