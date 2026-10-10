@@ -83,10 +83,7 @@ final class ReminderMenuController: NSObject {
         menu.addItem(item)
     }
 
-    private func nextReminder() -> (
-        reminder: ProductivityReminder,
-        date: Date
-    )? {
+    private func nextReminder() -> (reminder: ProductivityReminder, date: Date)? {
         reminders.compactMap { reminder in
             guard let date = reminder.nextOccurrence(
                 after: now,
