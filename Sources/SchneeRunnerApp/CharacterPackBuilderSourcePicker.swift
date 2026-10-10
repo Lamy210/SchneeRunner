@@ -19,41 +19,41 @@ final class CharacterPackBuilderSourcePicker {
         switch kind {
         case .singleImage, .spriteSheet4x2:
             chooseFile(
-                title: localization.format(
+                title: localization.string(
                     "characterPack.picker.pngTitle",
-                    stateName
+                    arguments: stateName
                 ),
                 contentTypes: [.png]
             )
         case .gif:
             chooseFile(
-                title: localization.format(
+                title: localization.string(
                     "characterPack.picker.gifTitle",
-                    stateName
+                    arguments: stateName
                 ),
                 contentTypes: [.gif]
             )
         case .apng:
             chooseFile(
-                title: localization.format(
+                title: localization.string(
                     "characterPack.picker.apngTitle",
-                    stateName
+                    arguments: stateName
                 ),
                 contentTypes: apngContentTypes
             )
         case .webP:
             chooseFile(
-                title: localization.format(
+                title: localization.string(
                     "characterPack.picker.webPTitle",
-                    stateName
+                    arguments: stateName
                 ),
                 contentTypes: [.webP]
             )
         case .pngSequence:
             chooseDirectory(
-                title: localization.format(
+                title: localization.string(
                     "characterPack.picker.pngSequenceTitle",
-                    stateName
+                    arguments: stateName
                 )
             )
         }
