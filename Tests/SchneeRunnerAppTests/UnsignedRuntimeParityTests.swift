@@ -123,7 +123,7 @@ private final class UnsignedRuntimeFixture {
     let suiteName: String
     let defaults: UserDefaults
     let menuController: StatusMenuController
-    let presenter: RecordingUnsignedRuntimeFallbackPresenter
+    let presenter: RecordingFallbackPresenter
     let stateStore: ProductivityStateStore
     let reminderController: ReminderApplicationController
 
@@ -141,9 +141,9 @@ private final class UnsignedRuntimeFixture {
         self.defaults = defaults
 
         let menuController = StatusMenuController()
-        let presenter = RecordingUnsignedRuntimeFallbackPresenter()
+        let presenter = RecordingFallbackPresenter()
         let scheduler = ProductivityNotificationScheduler(
-            center: DisabledUnsignedRuntimeNotificationCenter()
+            center: DisabledNotificationCenter()
         )
         let stateStore = ProductivityStateStore(
             baseDirectory: baseDirectory,
@@ -198,7 +198,7 @@ private final class UnsignedRuntimeFixture {
 }
 
 @MainActor
-private final class RecordingUnsignedRuntimeFallbackPresenter: ProductivityFallbackPresenting {
+private final class RecordingFallbackPresenter: ProductivityFallbackPresenting {
     private(set) var events: [ProductivityFallbackEvent] = []
 
     func present(_ event: ProductivityFallbackEvent) {
@@ -207,7 +207,7 @@ private final class RecordingUnsignedRuntimeFallbackPresenter: ProductivityFallb
 }
 
 @MainActor
-private final class DisabledUnsignedRuntimeNotificationCenter: ProductivityNotificationCenterClient {
+private final class DisabledNotificationCenter: ProductivityNotificationCenterClient {
     func currentAuthorizationState() async -> NotificationAuthorizationState {
         .denied
     }
