@@ -317,22 +317,21 @@ private extension ReminderEditorController {
     }
 
     func shortTitle(for weekday: Weekday) -> String {
-        let key: String
-        switch weekday {
+        let key = switch weekday {
         case .sunday:
-            key = "weekday.sun.short"
+            "weekday.sun.short"
         case .monday:
-            key = "weekday.mon.short"
+            "weekday.mon.short"
         case .tuesday:
-            key = "weekday.tue.short"
+            "weekday.tue.short"
         case .wednesday:
-            key = "weekday.wed.short"
+            "weekday.wed.short"
         case .thursday:
-            key = "weekday.thu.short"
+            "weekday.thu.short"
         case .friday:
-            key = "weekday.fri.short"
+            "weekday.fri.short"
         case .saturday:
-            key = "weekday.sat.short"
+            "weekday.sat.short"
         }
         return localization.string(key)
     }
