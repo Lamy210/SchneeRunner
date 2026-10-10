@@ -52,6 +52,7 @@
 "reminder.editor.titlePlaceholder" = "リマインダーのタイトル";
 "reminder.editor.bodyPlaceholder" = "メッセージ（任意）";
 "reminder.editor.invalidTitle" = "リマインダーが無効です";
+"reminder.editor.invalidDetail" = "タイトルと有効なリマインダースケジュールを入力してください。";
 "reminder.form.title" = "タイトル";
 "reminder.form.message" = "メッセージ";
 "reminder.form.schedule" = "スケジュール";
