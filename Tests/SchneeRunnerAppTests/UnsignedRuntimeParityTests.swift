@@ -15,20 +15,16 @@ final class UnsignedRuntimeParityTests: XCTestCase {
         try await waitUntil {
             try fixture.stateStore.load().timers.count == 1
         }
-        XCTAssertEqual(
-            try fixture.stateStore.load().timers.first?.state,
-            .running
-        )
+        let timerState = try fixture.stateStore.load().timers.first?.state
+        XCTAssertEqual(timerState, .running)
 
         let configuration = try PomodoroConfiguration(focusDuration: 60)
         fixture.menuController.onStartPomodoro?(configuration)
         try await waitUntil {
             try fixture.stateStore.load().pomodoro != nil
         }
-        XCTAssertEqual(
-            try fixture.stateStore.load().pomodoro?.state,
-            .running
-        )
+        let pomodoroState = try fixture.stateStore.load().pomodoro?.state
+        XCTAssertEqual(pomodoroState, .running)
 
         try await createDueReminder(in: fixture)
         try await waitUntil(timeout: 2) {
@@ -80,12 +76,13 @@ final class UnsignedRuntimeParityTests: XCTestCase {
         let baseDirectory = try makeTemporaryDirectory()
         let suiteName = "UnsignedRuntimeParityTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        let calendar = try utcCalendar()
         defaults.removePersistentDomain(forName: suiteName)
         return UnsignedRuntimeFixture(
             baseDirectory: baseDirectory,
             suiteName: suiteName,
             defaults: defaults,
-            calendar: try utcCalendar()
+            calendar: calendar
         )
     }
 
