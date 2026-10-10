@@ -38,6 +38,7 @@ final class StatusMenuController: NSObject {
     var onResetDesktopCharacterPlacement: (() -> Void)?
     var onQuit: (() -> Void)?
 
+    private let localization: AppLocalization
     private let cpuUsageItem = NSMenuItem(
         title: "CPU: sampling…",
         action: nil,
@@ -48,20 +49,12 @@ final class StatusMenuController: NSObject {
         action: nil,
         keyEquivalent: ""
     )
-    private let productivityNotificationStatusItem = NSMenuItem(
-        title: "Productivity Notifications: Disabled",
-        action: nil,
-        keyEquivalent: ""
-    )
-    private let productivityCharacterReactionsItem = NSMenuItem(
-        title: "Productivity Character Reactions",
-        action: nil,
-        keyEquivalent: ""
-    )
+    private let productivityNotificationStatusItem: NSMenuItem
+    private let productivityCharacterReactionsItem: NSMenuItem
     private let recentCharactersMenu = NSMenu(title: "Recent Characters")
-    private let timerMenuController = TimerMenuController()
-    private let pomodoroMenuController = PomodoroMenuController()
-    private let reminderMenuController = ReminderMenuController()
+    private let timerMenuController: TimerMenuController
+    private let pomodoroMenuController: PomodoroMenuController
+    private let reminderMenuController: ReminderMenuController
     private let stateMenuController = CharacterStateMenuController()
     private let desktopCharacterMenuController = DesktopCharacterMenuController()
     private let launchAtLoginMenuController = LaunchAtLoginMenuController()
@@ -71,7 +64,21 @@ final class StatusMenuController: NSObject {
         keyEquivalent: ""
     )
 
-    override init() {
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        productivityNotificationStatusItem = NSMenuItem(
+            title: localization.string("status.productivityNotificationsDisabled"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        productivityCharacterReactionsItem = NSMenuItem(
+            title: localization.string("status.productivityCharacterReactions"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        timerMenuController = TimerMenuController(localization: localization)
+        pomodoroMenuController = PomodoroMenuController(localization: localization)
+        reminderMenuController = ReminderMenuController(localization: localization)
         super.init()
         configureTimerCallbacks()
         configurePomodoroCallbacks()
