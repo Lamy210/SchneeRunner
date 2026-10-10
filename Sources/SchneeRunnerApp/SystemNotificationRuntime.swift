@@ -12,17 +12,11 @@ enum SystemNotificationRuntime {
         bundleURL: URL,
         notificationsEnabled: Bool = mainBundleNotificationsEnabled
     ) -> Bool {
-        guard notificationsEnabled else {
-            return false
-        }
-
-        guard
-            let bundleIdentifier,
-            !bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else {
-            return false
-        }
-
-        return bundleURL.pathExtension.caseInsensitiveCompare("app") == .orderedSame
+        RuntimeCapabilities.detect(
+            bundleIdentifier: bundleIdentifier,
+            bundleURL: bundleURL,
+            notificationsEnabled: notificationsEnabled,
+            resourceURL: Bundle.main.resourceURL
+        ).systemNotificationsAvailable
     }
 }

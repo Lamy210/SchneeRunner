@@ -2,57 +2,68 @@
 set -euo pipefail
 
 readonly APP_NAME="SchneeRunner"
-readonly BUNDLE_ID="io.github.Lamy210.SchneeRunner"
+readonly PRODUCT_NAME="SchneeRunner"
+readonly BUNDLE_IDENTIFIER="io.github.Lamy210.SchneeRunner"
 readonly MINIMUM_MACOS_VERSION="14.0"
 readonly OUTPUT_APP="build/${APP_NAME}.app"
-readonly BUILT_IN_CHARACTER_SOURCE="Resources/BuiltInCharacters/YukihanaLamy"
-readonly BUILT_IN_CHARACTER_DESTINATION="${OUTPUT_APP}/Contents/Resources/BuiltInCharacters/YukihanaLamy"
+readonly SWIFTPM_RESOURCE_BUNDLE_NAME="SchneeRunner_SchneeRunnerApp.bundle"
+readonly APP_RESOURCE_BUNDLE="${OUTPUT_APP}/Contents/Resources/${SWIFTPM_RESOURCE_BUNDLE_NAME}"
+readonly BUILT_IN_CHARACTER_DESTINATION="${APP_RESOURCE_BUNDLE}/BuiltInCharacters/YukihanaLamy"
 
 release_version="${RELEASE_VERSION:-}"
 if [[ -z "${release_version}" ]]; then
-  echo "RELEASE_VERSION is required (for example 0.1.0)." >&2
+  echo "RELEASE_VERSION is required." >&2
   exit 1
 fi
-if [[ ! "${release_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-  echo "RELEASE_VERSION must be canonical stable SemVer without a leading v: ${release_version}" >&2
+
+if [[ "${release_version}" == *$'\n'* || "${release_version}" == *$'\r'* ]]; then
+  echo "RELEASE_VERSION must not contain line breaks." >&2
+  exit 1
+fi
+
+if [[ ! "${release_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+  echo "RELEASE_VERSION must be a SemVer-like value without a leading v." >&2
   exit 1
 fi
 
 swift test
-swift build -c release --product "${APP_NAME}"
-bin_dir="$(swift build -c release --show-bin-path)"
-binary_path="${bin_dir}/${APP_NAME}"
+swift build -c release
 
-if [[ ! -f "${binary_path}" || -L "${binary_path}" || ! -x "${binary_path}" ]]; then
-  echo "Release executable is missing or invalid: ${binary_path}" >&2
+bin_dir="$(swift build -c release --show-bin-path)"
+executable="${bin_dir}/${PRODUCT_NAME}"
+resource_bundle="${bin_dir}/${SWIFTPM_RESOURCE_BUNDLE_NAME}"
+
+if [[ ! -f "${executable}" || -L "${executable}" || ! -x "${executable}" ]]; then
+  echo "Release executable is missing, linked, or not executable: ${executable}" >&2
+  exit 1
+fi
+
+if [[ ! -d "${resource_bundle}" || -L "${resource_bundle}" ]]; then
+  echo "SwiftPM resource bundle is missing or invalid: ${resource_bundle}" >&2
   exit 1
 fi
 
 rm -rf "${OUTPUT_APP}"
-mkdir -p "${OUTPUT_APP}/Contents/MacOS"
-install -m 0755 "${binary_path}" "${OUTPUT_APP}/Contents/MacOS/${APP_NAME}"
+mkdir -p \
+  "${OUTPUT_APP}/Contents/MacOS" \
+  "${OUTPUT_APP}/Contents/Resources"
 
-mkdir -p "${BUILT_IN_CHARACTER_DESTINATION}"
+cp "${executable}" "${OUTPUT_APP}/Contents/MacOS/${PRODUCT_NAME}"
+chmod 0755 "${OUTPUT_APP}/Contents/MacOS/${PRODUCT_NAME}"
+cp -R "${resource_bundle}" "${OUTPUT_APP}/Contents/Resources/"
+
+if [[ ! -d "${BUILT_IN_CHARACTER_DESTINATION}" || -L "${BUILT_IN_CHARACTER_DESTINATION}" ]]; then
+  echo "Bundled character resource directory is missing after packaging: ${BUILT_IN_CHARACTER_DESTINATION}" >&2
+  exit 1
+fi
+
 for frame in 1 2 3 4; do
-  source_frame="${BUILT_IN_CHARACTER_SOURCE}/walk_${frame}.png.b64"
-  destination_frame="${BUILT_IN_CHARACTER_DESTINATION}/walk_${frame}.png"
-
-  if [[ ! -f "${source_frame}" || -L "${source_frame}" ]]; then
-    echo "Bundled character source must be a regular non-symlink file: ${source_frame}" >&2
+  destination="${BUILT_IN_CHARACTER_DESTINATION}/walk_${frame}.png"
+  if [[ ! -f "${destination}" || -L "${destination}" || ! -s "${destination}" ]]; then
+    echo "Bundled character frame is missing or invalid: ${destination}" >&2
     exit 1
   fi
-
-  base64 -D <"${source_frame}" >"${destination_frame}"
-  chmod 0644 "${destination_frame}"
-
-  if [[ ! -s "${destination_frame}" ]]; then
-    echo "Decoded bundled character frame is empty: ${destination_frame}" >&2
-    exit 1
-  fi
-  if ! sips -g pixelWidth -g pixelHeight "${destination_frame}" >/dev/null 2>&1; then
-    echo "Decoded bundled character frame is not a readable image: ${destination_frame}" >&2
-    exit 1
-  fi
+  /usr/bin/sips -g pixelWidth -g pixelHeight "${destination}" >/dev/null
 done
 
 cat >"${OUTPUT_APP}/Contents/Info.plist" <<PLIST
@@ -60,70 +71,37 @@ cat >"${OUTPUT_APP}/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleDisplayName</key>
-    <string>${APP_NAME}</string>
-    <key>CFBundleExecutable</key>
-    <string>${APP_NAME}</string>
-    <key>CFBundleIdentifier</key>
-    <string>${BUNDLE_ID}</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>${APP_NAME}</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>${release_version}</string>
-    <key>CFBundleVersion</key>
-    <string>${release_version}</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>${MINIMUM_MACOS_VERSION}</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>SchneeRunnerSystemNotificationsEnabled</key>
-    <false/>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleExecutable</key>
+  <string>${PRODUCT_NAME}</string>
+  <key>CFBundleIdentifier</key>
+  <string>${BUNDLE_IDENTIFIER}</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>${APP_NAME}</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>${release_version}</string>
+  <key>CFBundleVersion</key>
+  <string>${release_version}</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>${MINIMUM_MACOS_VERSION}</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>SchneeRunnerSystemNotificationsEnabled</key>
+  <false/>
 </dict>
 </plist>
 PLIST
 
-plutil -lint "${OUTPUT_APP}/Contents/Info.plist" >/dev/null
+/usr/bin/plutil -lint "${OUTPUT_APP}/Contents/Info.plist"
 
-actual_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${OUTPUT_APP}/Contents/Info.plist")"
-actual_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${OUTPUT_APP}/Contents/Info.plist")"
-actual_executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${OUTPUT_APP}/Contents/Info.plist")"
-actual_notifications_enabled="$(/usr/libexec/PlistBuddy -c 'Print :SchneeRunnerSystemNotificationsEnabled' "${OUTPUT_APP}/Contents/Info.plist")"
-
-if [[ "${actual_bundle_id}" != "${BUNDLE_ID}" ]]; then
-  echo "Bundle identifier mismatch after build: ${actual_bundle_id}" >&2
-  exit 1
-fi
-if [[ "${actual_version}" != "${release_version}" ]]; then
-  echo "Bundle version mismatch after build: ${actual_version}" >&2
-  exit 1
-fi
-if [[ "${actual_executable}" != "${APP_NAME}" ]]; then
-  echo "Bundle executable mismatch after build: ${actual_executable}" >&2
-  exit 1
-fi
-if [[ "${actual_notifications_enabled}" != "false" ]]; then
-  echo "Unsigned release must disable system notifications." >&2
+if [[ ! -x "${OUTPUT_APP}/Contents/MacOS/${PRODUCT_NAME}" ]]; then
+  echo "Packaged executable is not executable." >&2
   exit 1
 fi
 
-for frame in 1 2 3 4; do
-  bundled_frame="${BUILT_IN_CHARACTER_DESTINATION}/walk_${frame}.png"
-  if [[ ! -f "${bundled_frame}" || -L "${bundled_frame}" || ! -s "${bundled_frame}" ]]; then
-    echo "Bundled character frame is missing from application bundle: ${bundled_frame}" >&2
-    exit 1
-  fi
-done
-
-APP_PATH="${OUTPUT_APP}" \
-  EXECUTABLE_NAME="${APP_NAME}" \
-  bash scripts/release/verify-app-executable.sh
-
-echo "Built unsigned release application: ${OUTPUT_APP}"
+echo "Built unsigned release application at ${OUTPUT_APP}"

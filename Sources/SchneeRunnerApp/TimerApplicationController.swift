@@ -11,6 +11,7 @@ final class TimerApplicationController {
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: ProductivityNotificationScheduler
+    private let fallbackRouter: ProductivityFallbackRouter?
     private var coordinator: TimerCoordinator?
     private var launchReconciliationTask: Task<Void, Never>?
     private var isReconcilingOnLaunch = false
@@ -20,11 +21,15 @@ final class TimerApplicationController {
         managementWindow: ProductivityManagementWindowController? = nil,
         baseDirectory: URL? = nil,
         fileManager: FileManager = .default,
-        notificationScheduler: ProductivityNotificationScheduler = .init()
+        notificationScheduler: ProductivityNotificationScheduler = .init(),
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
         self.notificationScheduler = notificationScheduler
+        fallbackRouter = fallbackPresenter.map {
+            ProductivityFallbackRouter(presenter: $0)
+        }
         let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -116,8 +121,17 @@ final class TimerApplicationController {
                 notifyReaction: !isReconcilingOnLaunch
             )
         }
+        coordinator.onTimerCompleted = { [weak self] timer in
+            self?.fallbackRouter?.enqueue(
+                .timerCompleted(title: timer.title)
+            )
+        }
         coordinator.onNotificationStatus = { [weak self] status in
-            self?.menuController.setProductivityNotificationStatus(status)
+            guard let self else {
+                return
+            }
+            fallbackRouter?.updateNotificationStatus(status)
+            menuController.setProductivityNotificationStatus(status)
             if status == .disabled {
                 NSLog("SchneeRunner timer notifications are disabled")
             }

@@ -23,7 +23,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "SchneeRunnerApp",
-            dependencies: ["SchneeRunnerCore"]
+            dependencies: ["SchneeRunnerCore"],
+            resources: [
+                .copy("Resources/BuiltInCharacters")
+            ]
         ),
         .executableTarget(
             name: "SchneeRunnerCtl",

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from pathlib import Path
 import unittest
 
@@ -11,28 +10,31 @@ APP_DELEGATE = REPO_ROOT / "Sources/SchneeRunnerApp/AppDelegate.swift"
 STARTUP_LOADER = REPO_ROOT / "Sources/SchneeRunnerApp/StartupCharacterLoader.swift"
 PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
-ASSET_ROOT = REPO_ROOT / "Resources/BuiltInCharacters/YukihanaLamy"
-RESOURCE_PATH = "Contents/Resources/BuiltInCharacters/YukihanaLamy"
+ASSET_ROOT = REPO_ROOT / "Sources/SchneeRunnerApp/Resources/BuiltInCharacters/YukihanaLamy"
+RESOURCE_PATH = (
+    "Contents/Resources/SchneeRunner_SchneeRunnerApp.bundle/"
+    "BuiltInCharacters/YukihanaLamy"
+)
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 class V011DistributionContractTests(unittest.TestCase):
     def test_bundled_walk_cycle_contains_four_real_ordered_png_frames(self) -> None:
-        expected = [ASSET_ROOT / f"walk_{index}.png.b64" for index in range(1, 5)]
+        expected = [ASSET_ROOT / f"walk_{index}.png" for index in range(1, 5)]
         for path in expected:
             with self.subTest(path=path.name):
                 self.assertTrue(path.is_file(), f"missing bundled walk-cycle source: {path}")
-                encoded = "".join(path.read_text(encoding="ascii").split())
-                decoded = base64.b64decode(encoded, validate=True)
+                decoded = path.read_bytes()
                 self.assertTrue(decoded.startswith(PNG_SIGNATURE), f"not a PNG payload: {path}")
                 self.assertGreater(len(decoded), 8_000, f"bundled frame is unexpectedly small: {path}")
 
-    def test_release_build_decodes_bundled_character_into_app_resources(self) -> None:
+    def test_release_build_packages_swiftpm_resource_bundle(self) -> None:
         text = BUILD_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("Resources/BuiltInCharacters/YukihanaLamy", text)
-        self.assertIn("walk_${frame}.png.b64", text)
-        self.assertIn("base64 -D", text)
-        self.assertIn(RESOURCE_PATH, text)
+        self.assertIn('SWIFTPM_RESOURCE_BUNDLE_NAME="SchneeRunner_SchneeRunnerApp.bundle"', text)
+        self.assertIn('BuiltInCharacters/YukihanaLamy', text)
+        self.assertIn("cp -R", text)
+        self.assertNotIn("walk_${frame}.png.b64", text)
+        self.assertNotIn("base64 -D", text)
 
     def test_release_verifier_checks_bundled_character_inside_mounted_dmg(self) -> None:
         text = VERIFY_RELEASE.read_text(encoding="utf-8")

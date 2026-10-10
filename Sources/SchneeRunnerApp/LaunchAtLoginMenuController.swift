@@ -1,6 +1,57 @@
 import AppKit
 import ServiceManagement
 
+enum LaunchAtLoginServiceStatus: Equatable {
+    case enabled
+    case notRegistered
+    case requiresApproval
+    case notFound
+}
+
+@MainActor
+protocol LaunchAtLoginServicing: AnyObject {
+    var status: LaunchAtLoginServiceStatus { get }
+    func register() throws
+    func unregister() throws
+    func openSystemSettingsLoginItems()
+}
+
+@MainActor
+final class SystemLaunchAtLoginService: LaunchAtLoginServicing {
+    private let service: SMAppService
+
+    init(service: SMAppService = .mainApp) {
+        self.service = service
+    }
+
+    var status: LaunchAtLoginServiceStatus {
+        switch service.status {
+        case .enabled:
+            .enabled
+        case .notRegistered:
+            .notRegistered
+        case .requiresApproval:
+            .requiresApproval
+        case .notFound:
+            .notFound
+        @unknown default:
+            .notFound
+        }
+    }
+
+    func register() throws {
+        try service.register()
+    }
+
+    func unregister() throws {
+        try service.unregister()
+    }
+
+    func openSystemSettingsLoginItems() {
+        SMAppService.openSystemSettingsLoginItems()
+    }
+}
+
 @MainActor
 final class LaunchAtLoginMenuController: NSObject {
     let item = NSMenuItem(
@@ -9,10 +60,15 @@ final class LaunchAtLoginMenuController: NSObject {
         keyEquivalent: ""
     )
 
-    private let service: SMAppService
+    private let service: any LaunchAtLoginServicing
+    private let isAvailable: Bool
 
-    init(service: SMAppService = .mainApp) {
+    init(
+        service: any LaunchAtLoginServicing = SystemLaunchAtLoginService(),
+        isAvailable: Bool = RuntimeCapabilities.current.launchAtLoginAvailable
+    ) {
         self.service = service
+        self.isAvailable = isAvailable
         super.init()
 
         item.target = self
@@ -21,6 +77,11 @@ final class LaunchAtLoginMenuController: NSObject {
     }
 
     func refresh() {
+        guard isAvailable else {
+            setUnavailable()
+            return
+        }
+
         switch service.status {
         case .enabled:
             item.title = "Launch at Login"
@@ -39,14 +100,15 @@ final class LaunchAtLoginMenuController: NSObject {
 
         case .notFound:
             setUnavailable()
-
-        @unknown default:
-            setUnavailable()
         }
     }
 
     @objc
-    private func toggleLaunchAtLogin() {
+    func toggleLaunchAtLogin() {
+        guard isAvailable else {
+            return
+        }
+
         do {
             switch service.status {
             case .enabled:
@@ -56,12 +118,9 @@ final class LaunchAtLoginMenuController: NSObject {
                 try service.register()
 
             case .requiresApproval:
-                SMAppService.openSystemSettingsLoginItems()
+                service.openSystemSettingsLoginItems()
 
             case .notFound:
-                return
-
-            @unknown default:
                 return
             }
 

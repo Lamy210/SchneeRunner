@@ -12,6 +12,7 @@ final class PomodoroApplicationController: NSObject {
     private let configurationStore: PomodoroConfigurationStore
     private let settingsController = PomodoroSettingsController()
     private let notificationScheduler: ProductivityNotificationScheduler
+    private let fallbackRouter: ProductivityFallbackRouter?
     private let refreshInterval: TimeInterval
     private var coordinator: PomodoroCoordinator?
     private var launchReconciliationTask: Task<Void, Never>?
@@ -26,11 +27,15 @@ final class PomodoroApplicationController: NSObject {
         fileManager: FileManager = .default,
         defaults: UserDefaults = .standard,
         refreshInterval: TimeInterval = 1,
-        notificationScheduler: ProductivityNotificationScheduler = .init()
+        notificationScheduler: ProductivityNotificationScheduler = .init(),
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
         self.notificationScheduler = notificationScheduler
+        fallbackRouter = fallbackPresenter.map {
+            ProductivityFallbackRouter(presenter: $0)
+        }
         self.refreshInterval = refreshInterval
         configurationStore = PomodoroConfigurationStore(defaults: defaults)
         let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
@@ -81,8 +86,10 @@ final class PomodoroApplicationController: NSObject {
         refreshTimer?.invalidate()
         refreshTimer = nil
     }
+}
 
-    private func configureMenuCallbacks() {
+private extension PomodoroApplicationController {
+    func configureMenuCallbacks() {
         menuController.onStartPomodoro = { [weak self] configuration in
             self?.startSession(configuration: configuration)
         }
@@ -103,13 +110,13 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func configureManagementCallbacks() {
+    func configureManagementCallbacks() {
         managementWindow?.onEditPomodoroSettings = { [weak self] configuration in
             self?.presentSettings(configuration: configuration)
         }
     }
 
-    private func configureCoordinatorCallbacks(
+    func configureCoordinatorCallbacks(
         _ coordinator: PomodoroCoordinator
     ) {
         coordinator.onChange = { [weak self] session in
@@ -122,8 +129,17 @@ final class PomodoroApplicationController: NSObject {
                 notifyReaction: !isReconcilingOnLaunch
             )
         }
+        coordinator.onPhaseCompleted = { [weak self] session, _ in
+            self?.fallbackRouter?.enqueue(
+                .pomodoroPhaseCompleted(phase: session.currentPhase)
+            )
+        }
         coordinator.onNotificationStatus = { [weak self] status in
-            self?.menuController.setProductivityNotificationStatus(status)
+            guard let self else {
+                return
+            }
+            fallbackRouter?.updateNotificationStatus(status)
+            menuController.setProductivityNotificationStatus(status)
             if status == .disabled {
                 NSLog("SchneeRunner Pomodoro notifications are disabled")
             }
@@ -139,7 +155,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func reconcileOnLaunch(
+    func reconcileOnLaunch(
         _ coordinator: PomodoroCoordinator
     ) {
         launchReconciliationTask?.cancel()
@@ -167,7 +183,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func startRefreshing() {
+    func startRefreshing() {
         guard refreshTimer == nil else {
             return
         }
@@ -182,7 +198,7 @@ final class PomodoroApplicationController: NSObject {
     }
 
     @objc
-    private func refreshTimerDidFire(_: Timer) {
+    func refreshTimerDidFire(_: Timer) {
         Task { @MainActor [weak self] in
             guard let self, let coordinator else {
                 return
@@ -195,7 +211,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func publishSession(
+    func publishSession(
         _ session: PomodoroSession?,
         now: Date,
         notifyReaction: Bool = true
@@ -206,7 +222,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func loadConfiguration() -> PomodoroConfiguration {
+    func loadConfiguration() -> PomodoroConfiguration {
         do {
             return try configurationStore.load()
         } catch {
@@ -215,7 +231,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func approvedDefaults() -> PomodoroConfiguration {
+    func approvedDefaults() -> PomodoroConfiguration {
         do {
             return try PomodoroConfiguration()
         } catch {
@@ -223,17 +239,17 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func setConfiguration(_ configuration: PomodoroConfiguration) {
+    func setConfiguration(_ configuration: PomodoroConfiguration) {
         self.configuration = configuration
         menuController.setPomodoroConfiguration(configuration)
         managementWindow?.setPomodoroConfiguration(configuration)
     }
 
-    private func presentSettings() {
+    func presentSettings() {
         presentSettings(configuration: configuration ?? loadConfiguration())
     }
 
-    private func presentSettings(configuration: PomodoroConfiguration) {
+    func presentSettings(configuration: PomodoroConfiguration) {
         guard let updated = settingsController.present(configuration: configuration) else {
             return
         }
@@ -246,7 +262,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func startSession(configuration: PomodoroConfiguration) {
+    func startSession(configuration: PomodoroConfiguration) {
         Task { @MainActor [weak self] in
             guard let self, let coordinator else {
                 return
@@ -262,7 +278,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func pauseSession() {
+    func pauseSession() {
         Task { @MainActor [weak self] in
             guard let self, let coordinator else {
                 return
@@ -275,7 +291,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func resumeSession() {
+    func resumeSession() {
         Task { @MainActor [weak self] in
             guard let self, let coordinator else {
                 return
@@ -288,7 +304,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func startCurrentPhase() {
+    func startCurrentPhase() {
         Task { @MainActor [weak self] in
             guard let self, let coordinator else {
                 return
@@ -301,7 +317,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func stopSession() {
+    func stopSession() {
         Task { @MainActor [weak self] in
             guard let self, let coordinator else {
                 return
@@ -314,7 +330,7 @@ final class PomodoroApplicationController: NSObject {
         }
     }
 
-    private func log(
+    func log(
         _ message: String,
         error: Error
     ) {
