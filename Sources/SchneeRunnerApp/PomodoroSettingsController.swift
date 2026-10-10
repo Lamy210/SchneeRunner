@@ -3,6 +3,12 @@ import SchneeRunnerCore
 
 @MainActor
 final class PomodoroSettingsController {
+    private let localization: AppLocalization
+
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+    }
+
     func makeConfiguration(
         focusMinutes: Double,
         shortBreakMinutes: Double,
@@ -35,7 +41,7 @@ final class PomodoroSettingsController {
             string: String(configuration.focusPhasesBeforeLongBreak)
         )
         let autoStartButton = NSButton(
-            checkboxWithTitle: "Automatically start the next phase",
+            checkboxWithTitle: localization.string("pomodoro.settings.autoStart"),
             target: nil,
             action: nil
         )
@@ -49,10 +55,12 @@ final class PomodoroSettingsController {
             autoStartButton: autoStartButton
         )
         let alert = NSAlert()
-        alert.messageText = "Pomodoro Settings"
-        alert.informativeText = "Configure focus and break durations in minutes."
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = localization.string("pomodoro.settings.title")
+        alert.informativeText = localization.string(
+            "pomodoro.settings.description"
+        )
+        alert.addButton(withTitle: localization.string("action.save"))
+        alert.addButton(withTitle: localization.string("action.cancel"))
         alert.accessoryView = form
 
         guard alert.runModal() == .alertFirstButtonReturn else {
@@ -98,10 +106,22 @@ private extension PomodoroSettingsController {
     ) -> NSView {
         let stack = NSStackView(
             views: [
-                labeled("Focus", control: focusField),
-                labeled("Short break", control: shortBreakField),
-                labeled("Long break", control: longBreakField),
-                labeled("Long break after", control: phaseCountField),
+                labeled(
+                    localization.string("pomodoro.settings.focusLabel"),
+                    control: focusField
+                ),
+                labeled(
+                    localization.string("pomodoro.settings.shortBreakLabel"),
+                    control: shortBreakField
+                ),
+                labeled(
+                    localization.string("pomodoro.settings.longBreakLabel"),
+                    control: longBreakField
+                ),
+                labeled(
+                    localization.string("pomodoro.settings.longBreakAfterLabel"),
+                    control: phaseCountField
+                ),
                 autoStartButton
             ]
         )
@@ -128,8 +148,12 @@ private extension PomodoroSettingsController {
     func presentValidationError() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Invalid Pomodoro Settings"
-        alert.informativeText = "Use positive durations and a valid focus phase count."
+        alert.messageText = localization.string(
+            "pomodoro.settings.invalidTitle"
+        )
+        alert.informativeText = localization.string(
+            "pomodoro.settings.invalidDetail"
+        )
         alert.runModal()
     }
 }
