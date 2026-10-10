@@ -57,22 +57,21 @@ final class AppKitProductivityFallbackPresenter: NSObject, ProductivityFallbackP
     ) -> (title: String, message: String) {
         switch event {
         case let .timerCompleted(title):
-            (
+            return (
                 localization.string("notification.timerFinished"),
                 title
             )
         case let .pomodoroPhaseCompleted(phase):
-            (
+            return (
                 localization.string("notification.pomodoroTitle"),
                 pomodoroCompletionMessage(for: phase)
             )
         case let .reminderDue(title, body):
             let reminderTitle = localization.string("notification.reminderDefault")
             if let body, !body.isEmpty {
-                (reminderTitle, "\(title)\n\(body)")
-            } else {
-                (reminderTitle, title)
+                return (reminderTitle, "\(title)\n\(body)")
             }
+            return (reminderTitle, title)
         }
     }
 
