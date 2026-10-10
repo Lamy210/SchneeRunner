@@ -3,7 +3,13 @@ import SchneeRunnerCore
 
 @MainActor
 final class AppKitProductivityFallbackPresenter: NSObject, ProductivityFallbackPresenting, NSWindowDelegate {
+    private let localization: AppLocalization
     private var panels: [NSPanel] = []
+
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        super.init()
+    }
 
     func present(_ event: ProductivityFallbackEvent) {
         let content = presentationContent(for: event)
@@ -46,19 +52,26 @@ final class AppKitProductivityFallbackPresenter: NSObject, ProductivityFallbackP
         panels.removeAll { $0 === panel }
     }
 
-    private func presentationContent(
+    func presentationContent(
         for event: ProductivityFallbackEvent
     ) -> (title: String, message: String) {
         switch event {
         case let .timerCompleted(title):
-            ("Timer finished", title)
+            (
+                localization.string("notification.timerFinished"),
+                title
+            )
         case let .pomodoroPhaseCompleted(phase):
-            ("Pomodoro", pomodoroCompletionMessage(for: phase))
+            (
+                localization.string("notification.pomodoroTitle"),
+                pomodoroCompletionMessage(for: phase)
+            )
         case let .reminderDue(title, body):
+            let reminderTitle = localization.string("notification.reminderDefault")
             if let body, !body.isEmpty {
-                ("Reminder", "\(title)\n\(body)")
+                (reminderTitle, "\(title)\n\(body)")
             } else {
-                ("Reminder", title)
+                (reminderTitle, title)
             }
         }
     }
@@ -66,11 +79,11 @@ final class AppKitProductivityFallbackPresenter: NSObject, ProductivityFallbackP
     private func pomodoroCompletionMessage(for phase: PomodoroPhase) -> String {
         switch phase {
         case .focus:
-            "Focus finished"
+            localization.string("notification.pomodoroFocusFinished")
         case .shortBreak:
-            "Short break finished"
+            localization.string("notification.pomodoroShortBreakFinished")
         case .longBreak:
-            "Long break finished"
+            localization.string("notification.pomodoroLongBreakFinished")
         }
     }
 }
