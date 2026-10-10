@@ -38,28 +38,33 @@ final class JapaneseGeneralPresentationTests: XCTestCase {
         XCTAssertTrue(titles.contains("再生速度"))
     }
 
-    func testJapaneseRecentCharacterEmptyAndUnavailableStates() {
+    func testJapaneseRecentCharacterEmptyAndUnavailableStates() throws {
         let controller = StatusMenuController(
             localization: AppLocalization(localeIdentifier: "ja")
         )
 
         controller.setRecentCharacters([])
-        var recentMenu = try? XCTUnwrap(
+        let recentMenu = try XCTUnwrap(
             controller.menu.items.first(where: { $0.title == "最近のキャラクター" })?.submenu
         )
-        XCTAssertEqual(recentMenu?.items.first?.title, "保存済みキャラクターはありません")
+        XCTAssertEqual(recentMenu.items.first?.title, "保存済みキャラクターはありません")
 
         controller.setRecentCharactersUnavailable()
-        recentMenu = controller.menu.items.first(where: { $0.title == "最近のキャラクター" })?.submenu
-        XCTAssertEqual(recentMenu?.items.first?.title, "キャラクターライブラリを利用できません")
+        let unavailableMenu = try XCTUnwrap(
+            controller.menu.items.first(where: { $0.title == "最近のキャラクター" })?.submenu
+        )
+        XCTAssertEqual(unavailableMenu.items.first?.title, "キャラクターライブラリを利用できません")
     }
 
     func testJapaneseRecentCharacterKindIsLocalizedWithoutChangingStoredProtocolValue() throws {
         let controller = StatusMenuController(
             localization: AppLocalization(localeIdentifier: "ja")
         )
+        let assetID = try XCTUnwrap(
+            UUID(uuidString: "11111111-2222-3333-4444-555555555555")
+        )
         let asset = StoredCharacterAsset(
-            id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
+            id: assetID,
             displayName: "Snow",
             kind: .characterPack,
             createdAt: Date(timeIntervalSince1970: 0)

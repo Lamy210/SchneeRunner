@@ -3,6 +3,12 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class CharacterImportPresenter {
+    private let localization: AppLocalization
+
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+    }
+
     func choosePNG(title: String) -> URL? {
         chooseFile(
             title: title,
@@ -13,7 +19,7 @@ final class CharacterImportPresenter {
     func choosePNGs(title: String) -> [URL]? {
         let panel = NSOpenPanel()
         panel.title = title
-        panel.prompt = "Load"
+        panel.prompt = localization.string("import.prompt.load")
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = true
         panel.allowedContentTypes = [.png]
@@ -54,7 +60,7 @@ final class CharacterImportPresenter {
     func chooseCharacterPack(title: String) -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
-        panel.prompt = "Load"
+        panel.prompt = localization.string("import.prompt.load")
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
@@ -70,8 +76,8 @@ final class CharacterImportPresenter {
         suggestedName: String
     ) -> URL? {
         chooseCharacterPackDestination(
-            title: "Build Character Pack",
-            prompt: "Build",
+            title: localization.string("characterPack.builder.title"),
+            prompt: localization.string("action.build"),
             suggestedName: suggestedName
         )
     }
@@ -80,8 +86,8 @@ final class CharacterImportPresenter {
         suggestedName: String
     ) -> URL? {
         chooseCharacterPackDestination(
-            title: "Export Character Pack",
-            prompt: "Export",
+            title: localization.string("characterPack.export.title"),
+            prompt: localization.string("action.export"),
             suggestedName: suggestedName
         )
     }
@@ -89,35 +95,35 @@ final class CharacterImportPresenter {
     func presentBuildSuccess(_ url: URL) {
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = "Character Pack built"
+        alert.messageText = localization.string("characterPack.build.success")
         alert.informativeText = url.path
         alert.runModal()
     }
 
     func presentBuildError(_ error: Error) {
         presentWarning(
-            title: "Could not build character pack",
+            title: localization.string("characterPack.build.error"),
             error: error
         )
     }
 
     func presentExportError(_ error: Error) {
         presentWarning(
-            title: "Could not export character pack",
+            title: localization.string("characterPack.export.error"),
             error: error
         )
     }
 
     func presentLoadError(_ error: Error) {
         presentWarning(
-            title: "Could not load animation",
+            title: localization.string("import.error.load"),
             error: error
         )
     }
 
     func presentPersistenceWarning(_ error: Error) {
         presentWarning(
-            title: "Character is running, but was not saved",
+            title: localization.string("import.warning.persistence"),
             error: error
         )
     }
@@ -159,7 +165,7 @@ final class CharacterImportPresenter {
     ) -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
-        panel.prompt = "Load"
+        panel.prompt = localization.string("import.prompt.load")
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = contentTypes

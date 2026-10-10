@@ -4,34 +4,57 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class CharacterPackBuilderSourcePicker {
+    private let localization: AppLocalization
+
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+    }
+
     func chooseSource(
         for state: CharacterState,
         kind: CharacterPackClipKind
     ) -> URL? {
+        let stateName = localization.characterState(state)
+
         switch kind {
         case .singleImage, .spriteSheet4x2:
             chooseFile(
-                title: "Choose PNG for \(state.displayName)",
+                title: localization.format(
+                    "characterPack.picker.pngTitle",
+                    stateName
+                ),
                 contentTypes: [.png]
             )
         case .gif:
             chooseFile(
-                title: "Choose GIF for \(state.displayName)",
+                title: localization.format(
+                    "characterPack.picker.gifTitle",
+                    stateName
+                ),
                 contentTypes: [.gif]
             )
         case .apng:
             chooseFile(
-                title: "Choose APNG for \(state.displayName)",
+                title: localization.format(
+                    "characterPack.picker.apngTitle",
+                    stateName
+                ),
                 contentTypes: apngContentTypes
             )
         case .webP:
             chooseFile(
-                title: "Choose WebP for \(state.displayName)",
+                title: localization.format(
+                    "characterPack.picker.webPTitle",
+                    stateName
+                ),
                 contentTypes: [.webP]
             )
         case .pngSequence:
             chooseDirectory(
-                title: "Choose PNG Sequence for \(state.displayName)"
+                title: localization.format(
+                    "characterPack.picker.pngSequenceTitle",
+                    stateName
+                )
             )
         }
     }
@@ -51,7 +74,7 @@ final class CharacterPackBuilderSourcePicker {
     ) -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
-        panel.prompt = "Choose"
+        panel.prompt = localization.string("action.choose")
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = contentTypes
@@ -68,7 +91,7 @@ final class CharacterPackBuilderSourcePicker {
     ) -> URL? {
         let panel = NSOpenPanel()
         panel.title = title
-        panel.prompt = "Choose"
+        panel.prompt = localization.string("action.choose")
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false

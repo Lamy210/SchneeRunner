@@ -39,16 +39,8 @@ final class StatusMenuController: NSObject {
     var onQuit: (() -> Void)?
 
     private let localization: AppLocalization
-    private let cpuUsageItem = NSMenuItem(
-        title: "CPU: sampling…",
-        action: nil,
-        keyEquivalent: ""
-    )
-    private let adaptiveSpeedItem = NSMenuItem(
-        title: "CPU Adaptive Speed",
-        action: nil,
-        keyEquivalent: ""
-    )
+    private let cpuUsageItem: NSMenuItem
+    private let adaptiveSpeedItem: NSMenuItem
     private let productivityNotificationStatusItem: NSMenuItem
     private let productivityCharacterReactionsItem: NSMenuItem
     private let recentCharactersMenu: NSMenu
@@ -58,14 +50,20 @@ final class StatusMenuController: NSObject {
     private let stateMenuController: CharacterStateMenuController
     private let desktopCharacterMenuController: DesktopCharacterMenuController
     private let launchAtLoginMenuController: LaunchAtLoginMenuController
-    private let exportCharacterPackItem = NSMenuItem(
-        title: "Export Current Character Pack…",
-        action: nil,
-        keyEquivalent: ""
-    )
+    private let exportCharacterPackItem: NSMenuItem
 
     init(localization: AppLocalization = .current) {
         self.localization = localization
+        cpuUsageItem = NSMenuItem(
+            title: localization.string("status.cpuSampling"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        adaptiveSpeedItem = NSMenuItem(
+            title: localization.string("status.cpuAdaptiveSpeed"),
+            action: nil,
+            keyEquivalent: ""
+        )
         productivityNotificationStatusItem = NSMenuItem(
             title: localization.string("status.productivityNotificationsDisabled"),
             action: nil,
@@ -85,6 +83,11 @@ final class StatusMenuController: NSObject {
         stateMenuController = CharacterStateMenuController(localization: localization)
         desktopCharacterMenuController = DesktopCharacterMenuController(localization: localization)
         launchAtLoginMenuController = LaunchAtLoginMenuController(localization: localization)
+        exportCharacterPackItem = NSMenuItem(
+            title: localization.string("characterPack.menu.exportCurrent"),
+            action: nil,
+            keyEquivalent: ""
+        )
         super.init()
         configureTimerCallbacks()
         configurePomodoroCallbacks()
@@ -266,7 +269,7 @@ private extension StatusMenuController {
 
     func addImportItems() {
         let singleImageItem = NSMenuItem(
-            title: "Load Single Image…",
+            title: localization.string("import.menu.singleImage"),
             action: #selector(loadSingleImage),
             keyEquivalent: "i"
         )
@@ -274,7 +277,7 @@ private extension StatusMenuController {
         menu.addItem(singleImageItem)
 
         let spriteSheetItem = NSMenuItem(
-            title: "Load 4x2 Sprite Sheet…",
+            title: localization.string("import.menu.spriteSheet4x2"),
             action: #selector(loadSpriteSheet),
             keyEquivalent: "o"
         )
@@ -282,7 +285,7 @@ private extension StatusMenuController {
         menu.addItem(spriteSheetItem)
 
         let sequenceItem = NSMenuItem(
-            title: "Load PNG Sequence…",
+            title: localization.string("import.menu.pngSequence"),
             action: #selector(loadPNGSequence),
             keyEquivalent: ""
         )
@@ -290,7 +293,7 @@ private extension StatusMenuController {
         menu.addItem(sequenceItem)
 
         let gifItem = NSMenuItem(
-            title: "Load GIF…",
+            title: localization.string("import.menu.gif"),
             action: #selector(loadGIF),
             keyEquivalent: ""
         )
@@ -298,7 +301,7 @@ private extension StatusMenuController {
         menu.addItem(gifItem)
 
         let apngItem = NSMenuItem(
-            title: "Load APNG…",
+            title: localization.string("import.menu.apng"),
             action: #selector(loadAPNG),
             keyEquivalent: ""
         )
@@ -306,7 +309,7 @@ private extension StatusMenuController {
         menu.addItem(apngItem)
 
         let webPItem = NSMenuItem(
-            title: "Load WebP…",
+            title: localization.string("import.menu.webP"),
             action: #selector(loadWebP),
             keyEquivalent: ""
         )
@@ -314,7 +317,7 @@ private extension StatusMenuController {
         menu.addItem(webPItem)
 
         let packItem = NSMenuItem(
-            title: "Load Character Pack…",
+            title: localization.string("import.menu.characterPack"),
             action: #selector(loadCharacterPack),
             keyEquivalent: ""
         )
@@ -322,7 +325,7 @@ private extension StatusMenuController {
         menu.addItem(packItem)
 
         let buildPackItem = NSMenuItem(
-            title: "Build Character Pack…",
+            title: localization.string("characterPack.menu.build"),
             action: #selector(buildCharacterPack),
             keyEquivalent: ""
         )
@@ -371,7 +374,8 @@ private extension StatusMenuController {
     }
 
     func addManualSpeedItem() {
-        let speedMenu = NSMenu(title: "Playback Speed")
+        let playbackSpeedTitle = localization.string("status.playbackSpeed")
+        let speedMenu = NSMenu(title: playbackSpeedTitle)
         let speeds = [
             (framesPerSecond: 6, title: "0.5×"),
             (framesPerSecond: 8, title: "0.67×"),
@@ -392,7 +396,7 @@ private extension StatusMenuController {
         }
 
         let rootItem = NSMenuItem(
-            title: "Playback Speed",
+            title: playbackSpeedTitle,
             action: nil,
             keyEquivalent: ""
         )
@@ -413,23 +417,9 @@ private extension StatusMenuController {
     func recentCharacterTitle(
         for asset: StoredCharacterAsset
     ) -> String {
-        let mode = switch asset.kind {
-        case .singleImage:
-            "Single Image"
-        case .spriteSheet4x2:
-            "4x2 Sprite"
-        case .pngSequence:
-            "PNG Sequence"
-        case .gif:
-            "GIF"
-        case .apng:
-            "APNG"
-        case .webP:
-            "WebP"
-        case .characterPack:
-            "Character Pack"
-        }
-
+        let mode = localization.string(
+            "characterKind.\(asset.kind.rawValue)"
+        )
         return "\(asset.displayName) · \(mode)"
     }
 
