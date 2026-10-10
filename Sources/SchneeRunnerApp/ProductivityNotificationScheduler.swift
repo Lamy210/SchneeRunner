@@ -232,9 +232,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
             self.request(for: snooze, now: now)
         }
         let scheduledRequests = reminderRequests + snoozeRequests
-        let desiredIdentifiers = Set(
-            scheduledRequests.map(\.identifier)
-        )
+        let desiredIdentifiers = Set(scheduledRequests.map(\.identifier))
         let pendingIdentifiers = await center.pendingIdentifiers()
         let obsoleteIdentifiers = Set(
             pendingIdentifiers.filter { identifier in
