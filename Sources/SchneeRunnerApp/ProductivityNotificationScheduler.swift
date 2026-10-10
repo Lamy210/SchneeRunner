@@ -221,12 +221,20 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
             return .disabled
         }
 
-        let requests = reminders.flatMap {
-            requests(for: $0, now: now, calendar: calendar)
-        } + snoozes.compactMap {
-            request(for: $0, now: now)
+        let reminderRequests: [ProductivityNotificationRequest] = reminders.flatMap { reminder in
+            self.reminderRequests(
+                for: reminder,
+                now: now,
+                calendar: calendar
+            )
         }
-        let desiredIdentifiers = Set(requests.map(\.identifier))
+        let snoozeRequests: [ProductivityNotificationRequest] = snoozes.compactMap { snooze in
+            self.request(for: snooze, now: now)
+        }
+        let scheduledRequests = reminderRequests + snoozeRequests
+        let desiredIdentifiers = Set(
+            scheduledRequests.map(\.identifier)
+        )
         let pendingIdentifiers = await center.pendingIdentifiers()
         let obsoleteIdentifiers = Set(
             pendingIdentifiers.filter { identifier in
@@ -239,7 +247,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
             center.removePending(identifiers: obsoleteIdentifiers)
         }
 
-        for request in requests {
+        for request in scheduledRequests {
             try await center.add(request)
         }
 
@@ -382,7 +390,7 @@ private extension ProductivityNotificationScheduler {
         )
     }
 
-    func requests(
+    func reminderRequests(
         for reminder: ProductivityReminder,
         now: Date,
         calendar: Calendar
