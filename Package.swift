@@ -6,7 +6,7 @@ let package = Package(
     name: "SchneeRunner",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v14),
+        .macOS(.v14)
     ],
     products: [
         .executable(
@@ -16,7 +16,7 @@ let package = Package(
         .executable(
             name: "schneerunnerctl",
             targets: ["SchneeRunnerCtl"]
-        ),
+        )
     ],
     targets: [
         .target(
@@ -28,7 +28,7 @@ let package = Package(
             resources: [
                 .copy("Resources/BuiltInCharacters"),
                 .process("Resources/en.lproj"),
-                .process("Resources/ja.lproj"),
+                .process("Resources/ja.lproj")
             ]
         ),
         .executableTarget(
@@ -42,6 +42,6 @@ let package = Package(
         .testTarget(
             name: "SchneeRunnerAppTests",
             dependencies: ["SchneeRunnerApp", "SchneeRunnerCore"]
-        ),
+        )
     ]
 )
