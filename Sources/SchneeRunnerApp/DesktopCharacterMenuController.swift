@@ -23,11 +23,7 @@ struct DesktopCharacterMenuConfiguration: Equatable {
 
 @MainActor
 final class DesktopCharacterMenuController: NSObject {
-    let item = NSMenuItem(
-        title: "Desktop Character",
-        action: nil,
-        keyEquivalent: ""
-    )
+    let item: NSMenuItem
 
     var onConfigurationChanged: ((DesktopCharacterMenuConfiguration) -> Void)?
     var onResetPlacement: (() -> Void)?
@@ -75,12 +71,18 @@ final class DesktopCharacterMenuController: NSObject {
     init(
         visibilityStore: DesktopCharacterVisibilityStore = .init(),
         movementSpeedStore: DesktopMotionSpeedPreferenceStore = .init(),
-        clickThroughStore: DesktopClickThroughStore = .init()
+        clickThroughStore: DesktopClickThroughStore = .init(),
+        localization: AppLocalization = .current
     ) {
         self.visibilityStore = visibilityStore
         self.movementSpeedStore = movementSpeedStore
         self.clickThroughStore = clickThroughStore
         movementSpeed = movementSpeedStore.preset()
+        item = NSMenuItem(
+            title: localization.string("desktop.root"),
+            action: nil,
+            keyEquivalent: ""
+        )
         let isVisible = visibilityStore.isVisible()
         let isClickThroughEnabled = clickThroughStore.isEnabled()
         super.init()
@@ -94,7 +96,7 @@ final class DesktopCharacterMenuController: NSObject {
         )
         configureResetPlacementItem()
 
-        let submenu = NSMenu(title: "Desktop Character")
+        let submenu = NSMenu(title: localization.string("desktop.root"))
         submenu.addItem(visibilityItem)
         submenu.addItem(autonomousMovementItem)
         submenu.addItem(movementSpeedItem)
