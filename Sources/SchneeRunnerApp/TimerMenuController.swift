@@ -4,7 +4,7 @@ import SchneeRunnerCore
 
 @MainActor
 final class TimerMenuController: NSObject {
-    let rootItem = NSMenuItem(title: "Timers", action: nil, keyEquivalent: "")
+    let rootItem: NSMenuItem
 
     var onStartPreset: ((TimeInterval) -> Void)?
     var onStartCustomTimer: (() -> Void)?
@@ -13,12 +13,19 @@ final class TimerMenuController: NSObject {
     var onResumeTimer: ((UUID) -> Void)?
     var onCancelTimer: ((UUID) -> Void)?
 
+    private let localization: AppLocalization
     private let menu = NSMenu()
     private let newTimerMenu = NSMenu()
     private var timers: [ProductivityCountdownTimer] = []
     private var now = Date()
 
-    override init() {
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        rootItem = NSMenuItem(
+            title: localization.string("menu.timers"),
+            action: nil,
+            keyEquivalent: ""
+        )
         super.init()
         rootItem.submenu = menu
         configureNewTimerMenu()
@@ -39,7 +46,10 @@ private extension TimerMenuController {
     func configureNewTimerMenu() {
         for minutes in [5, 10, 15, 25, 30, 60] {
             let item = NSMenuItem(
-                title: "\(minutes) min",
+                title: localization.string(
+                    "timer.presetMinutes",
+                    arguments: minutes
+                ),
                 action: #selector(startPreset(_:)),
                 keyEquivalent: ""
             )
@@ -48,7 +58,7 @@ private extension TimerMenuController {
             newTimerMenu.addItem(item)
         }
         let customItem = NSMenuItem(
-            title: "Custom…",
+            title: localization.string("timer.custom"),
             action: #selector(startCustomTimer(_:)),
             keyEquivalent: ""
         )
@@ -60,7 +70,7 @@ private extension TimerMenuController {
         menu.removeAllItems()
 
         let newTimerItem = NSMenuItem(
-            title: "New Timer",
+            title: localization.string("timer.new"),
             action: nil,
             keyEquivalent: ""
         )
@@ -68,7 +78,7 @@ private extension TimerMenuController {
         menu.addItem(newTimerItem)
 
         let manageItem = NSMenuItem(
-            title: "Manage Timers…",
+            title: localization.string("timer.manage"),
             action: #selector(manageTimers(_:)),
             keyEquivalent: ""
         )
@@ -81,7 +91,7 @@ private extension TimerMenuController {
         }
         guard !activeTimers.isEmpty else {
             let emptyItem = NSMenuItem(
-                title: "No active timers",
+                title: localization.string("timer.empty"),
                 action: nil,
                 keyEquivalent: ""
             )
@@ -108,7 +118,7 @@ private extension TimerMenuController {
         case .running:
             actions.addItem(
                 actionItem(
-                    title: "Pause",
+                    title: localization.string("action.pause"),
                     selector: #selector(pauseTimer(_:)),
                     timerID: timer.id
                 )
@@ -116,7 +126,7 @@ private extension TimerMenuController {
         case .paused:
             actions.addItem(
                 actionItem(
-                    title: "Resume",
+                    title: localization.string("action.resume"),
                     selector: #selector(resumeTimer(_:)),
                     timerID: timer.id
                 )
@@ -126,7 +136,7 @@ private extension TimerMenuController {
         }
         actions.addItem(
             actionItem(
-                title: "Cancel",
+                title: localization.string("action.cancel"),
                 selector: #selector(cancelTimer(_:)),
                 timerID: timer.id
             )
@@ -157,7 +167,11 @@ private extension TimerMenuController {
         let time = String(format: "%02.0f:%02.0f", minutes, remainder)
         switch timer.state {
         case .paused:
-            return "\(timer.title) · Paused \(time)"
+            return localization.string(
+                "timer.pausedFormat",
+                arguments: timer.title,
+                time
+            )
         case .running, .completed, .cancelled:
             return "\(timer.title) · \(time)"
         }
