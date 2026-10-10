@@ -44,11 +44,11 @@ final class UnsignedRuntimeParityTests: XCTestCase {
     }
 
     func testMissingBuiltInResourcesDoNotPreventMenuControllerStartup() {
-        let capabilities = RuntimeCapabilities(
+        let capabilities = RuntimeCapabilities.detect(
             bundleIdentifier: nil,
             bundleURL: URL(fileURLWithPath: "/tmp/SchneeRunner"),
-            resourceURL: nil,
-            systemNotificationsEnabled: false
+            notificationsEnabled: false,
+            resourceURL: nil
         )
 
         XCTAssertFalse(capabilities.bundledResourcesAvailable)
@@ -81,23 +81,10 @@ final class UnsignedRuntimeParityTests: XCTestCase {
         let suiteName = "UnsignedRuntimeParityTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
-        let menuController = StatusMenuController()
-        let presenter = RecordingUnsignedRuntimeFallbackPresenter()
-        let scheduler = ProductivityNotificationScheduler(
-            center: DisabledUnsignedRuntimeNotificationCenter()
-        )
-        let stateStore = ProductivityStateStore(
-            baseDirectory: baseDirectory,
-            fileManager: .default
-        )
         return UnsignedRuntimeFixture(
             baseDirectory: baseDirectory,
             suiteName: suiteName,
             defaults: defaults,
-            menuController: menuController,
-            presenter: presenter,
-            stateStore: stateStore,
-            scheduler: scheduler,
             calendar: try utcCalendar()
         )
     }
@@ -150,18 +137,25 @@ private final class UnsignedRuntimeFixture {
         baseDirectory: URL,
         suiteName: String,
         defaults: UserDefaults,
-        menuController: StatusMenuController,
-        presenter: RecordingUnsignedRuntimeFallbackPresenter,
-        stateStore: ProductivityStateStore,
-        scheduler: ProductivityNotificationScheduler,
         calendar: Calendar
     ) {
         self.baseDirectory = baseDirectory
         self.suiteName = suiteName
         self.defaults = defaults
+
+        let menuController = StatusMenuController()
+        let presenter = RecordingUnsignedRuntimeFallbackPresenter()
+        let scheduler = ProductivityNotificationScheduler(
+            center: DisabledUnsignedRuntimeNotificationCenter()
+        )
+        let stateStore = ProductivityStateStore(
+            baseDirectory: baseDirectory,
+            fileManager: .default
+        )
         self.menuController = menuController
         self.presenter = presenter
         self.stateStore = stateStore
+
         timerController = TimerApplicationController(
             menuController: menuController,
             baseDirectory: baseDirectory,
