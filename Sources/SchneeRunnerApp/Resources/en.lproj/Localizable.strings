@@ -52,6 +52,7 @@
 "reminder.editor.titlePlaceholder" = "Reminder title";
 "reminder.editor.bodyPlaceholder" = "Message (optional)";
 "reminder.editor.invalidTitle" = "Invalid Reminder";
+"reminder.editor.invalidDetail" = "Enter a title and a valid reminder schedule.";
 "reminder.form.title" = "Title";
 "reminder.form.message" = "Message";
 "reminder.form.schedule" = "Schedule";
