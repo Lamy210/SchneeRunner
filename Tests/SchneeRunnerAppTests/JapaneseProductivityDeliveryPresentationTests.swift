@@ -4,7 +4,7 @@ import SchneeRunnerCore
 import XCTest
 
 @MainActor
-final class JapaneseProductivityDeliveryPresentationTests: XCTestCase {
+final class JapaneseDeliveryPresentationTests: XCTestCase {
     private let localization = AppLocalization(localeIdentifier: "ja")
     private let now = Date(timeIntervalSince1970: 1_791_331_200)
 
