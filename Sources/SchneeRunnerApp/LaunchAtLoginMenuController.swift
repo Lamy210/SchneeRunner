@@ -98,7 +98,7 @@ final class LaunchAtLoginMenuController: NSObject {
             item.isEnabled = true
 
         case .requiresApproval:
-            item.title = "\(localization.string("launchAtLogin.title")) (Approval Required)"
+            item.title = localization.string("launchAtLogin.approvalRequired")
             item.state = .off
             item.isEnabled = true
 
@@ -144,7 +144,7 @@ final class LaunchAtLoginMenuController: NSObject {
     private func presentError(_ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not update Launch at Login"
+        alert.messageText = localization.string("launchAtLogin.error")
         alert.informativeText = error.localizedDescription
         alert.runModal()
     }

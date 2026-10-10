@@ -2,14 +2,14 @@ import AppKit
 import SchneeRunnerCore
 
 private extension DesktopMotionSpeedPreset {
-    var menuTitle: String {
+    func menuTitle(localization: AppLocalization) -> String {
         switch self {
         case .slow:
-            "Slow"
+            localization.string("desktop.speed.slow")
         case .normal:
-            "Normal"
+            localization.string("desktop.speed.normal")
         case .fast:
-            "Fast"
+            localization.string("desktop.speed.fast")
         }
     }
 }
@@ -66,6 +66,7 @@ final class DesktopCharacterMenuController: NSObject {
     private let visibilityStore: DesktopCharacterVisibilityStore
     private let movementSpeedStore: DesktopMotionSpeedPreferenceStore
     private let clickThroughStore: DesktopClickThroughStore
+    private let localization: AppLocalization
     private var movementSpeed: DesktopMotionSpeedPreset
 
     init(
@@ -77,6 +78,7 @@ final class DesktopCharacterMenuController: NSObject {
         self.visibilityStore = visibilityStore
         self.movementSpeedStore = movementSpeedStore
         self.clickThroughStore = clickThroughStore
+        self.localization = localization
         movementSpeed = movementSpeedStore.preset()
         item = NSMenuItem(
             title: localization.string("desktop.root"),
@@ -86,6 +88,12 @@ final class DesktopCharacterMenuController: NSObject {
         let isVisible = visibilityStore.isVisible()
         let isClickThroughEnabled = clickThroughStore.isEnabled()
         super.init()
+
+        visibilityItem.title = localization.string("desktop.show")
+        autonomousMovementItem.title = localization.string("desktop.moveAutomatically")
+        movementSpeedItem.title = localization.string("desktop.movementSpeed")
+        clickThroughItem.title = localization.string("desktop.clickThrough")
+        resetPlacementItem.title = localization.string("desktop.resetPlacement")
 
         configureVisibilityItem(isVisible: isVisible)
         configureAutonomousMovementItem(isVisible: isVisible)
@@ -120,11 +128,11 @@ final class DesktopCharacterMenuController: NSObject {
     }
 
     private func configureMovementSpeedItem(isVisible: Bool) {
-        let speedMenu = NSMenu(title: "Movement Speed")
+        let speedMenu = NSMenu(title: localization.string("desktop.movementSpeed"))
 
         for speed in DesktopMotionSpeedPreset.allCases {
             let speedItem = NSMenuItem(
-                title: speed.menuTitle,
+                title: speed.menuTitle(localization: localization),
                 action: #selector(selectMovementSpeed(_:)),
                 keyEquivalent: ""
             )
