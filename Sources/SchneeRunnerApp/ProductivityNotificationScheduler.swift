@@ -99,14 +99,22 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
     private static let pomodoroPrefix = "schneerunner.pomodoro."
 
     private let center: any ProductivityNotificationCenterClient
+    private let localization: AppLocalization
     private var authorizationRequestTask: Task<Bool, Error>?
 
-    convenience init() {
-        self.init(center: SystemProductivityNotificationClient())
+    convenience init(localization: AppLocalization = .current) {
+        self.init(
+            center: SystemProductivityNotificationClient(),
+            localization: localization
+        )
     }
 
-    init(center: any ProductivityNotificationCenterClient) {
+    init(
+        center: any ProductivityNotificationCenterClient,
+        localization: AppLocalization = .current
+    ) {
         self.center = center
+        self.localization = localization
     }
 
     static func timerIdentifier(for id: UUID) -> String {
@@ -149,7 +157,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
         }
 
         try await center.add(
-            Self.request(for: timer, now: now, deadline: deadline)
+            request(for: timer, now: now, deadline: deadline)
         )
         return .scheduled
     }
@@ -196,7 +204,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
                 continue
             }
             try await center.add(
-                Self.request(for: timer, now: now, deadline: deadline)
+                request(for: timer, now: now, deadline: deadline)
             )
         }
 
@@ -214,9 +222,9 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
         }
 
         let requests = reminders.flatMap {
-            Self.requests(for: $0, now: now, calendar: calendar)
+            requests(for: $0, now: now, calendar: calendar)
         } + snoozes.compactMap {
-            Self.request(for: $0, now: now)
+            request(for: $0, now: now)
         }
         let desiredIdentifiers = Set(requests.map(\.identifier))
         let pendingIdentifiers = await center.pendingIdentifiers()
@@ -256,7 +264,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
         }
 
         try await center.add(
-            Self.request(for: session, now: now, deadline: deadline)
+            request(for: session, now: now, deadline: deadline)
         )
         return .scheduled
     }
@@ -310,7 +318,7 @@ final class ProductivityNotificationScheduler: ProductivityNotificationSchedulin
 
         if let desired {
             try await center.add(
-                Self.request(
+                request(
                     for: desired.0,
                     now: now,
                     deadline: desired.1
@@ -361,20 +369,20 @@ private extension ProductivityNotificationScheduler {
             || identifier.hasPrefix(snoozePrefix)
     }
 
-    static func request(
+    func request(
         for timer: ProductivityCountdownTimer,
         now: Date,
         deadline: Date
     ) -> ProductivityNotificationRequest {
         ProductivityNotificationRequest(
-            identifier: timerIdentifier(for: timer.id),
+            identifier: Self.timerIdentifier(for: timer.id),
             title: timer.title,
-            body: "Timer finished",
+            body: localization.string("notification.timerFinished"),
             timeInterval: deadline.timeIntervalSince(now)
         )
     }
 
-    static func requests(
+    func requests(
         for reminder: ProductivityReminder,
         now: Date,
         calendar: Calendar
@@ -383,12 +391,13 @@ private extension ProductivityNotificationScheduler {
             return []
         }
 
-        let body = reminder.body ?? "Reminder"
+        let body = reminder.body
+            ?? localization.string("notification.reminderDefault")
         switch reminder.schedule {
         case let .once(date):
             return [
                 ProductivityNotificationRequest(
-                    identifier: reminderIdentifier(
+                    identifier: Self.reminderIdentifier(
                         for: reminder.id,
                         occurrenceKey: "once"
                     ),
@@ -400,7 +409,7 @@ private extension ProductivityNotificationScheduler {
         case let .daily(hour, minute):
             return [
                 ProductivityNotificationRequest(
-                    identifier: reminderIdentifier(
+                    identifier: Self.reminderIdentifier(
                         for: reminder.id,
                         occurrenceKey: "daily"
                     ),
@@ -418,7 +427,7 @@ private extension ProductivityNotificationScheduler {
                 .sorted { $0.rawValue < $1.rawValue }
                 .map { weekday in
                     ProductivityNotificationRequest(
-                        identifier: reminderIdentifier(
+                        identifier: Self.reminderIdentifier(
                             for: reminder.id,
                             occurrenceKey: "weekday.\(weekday.rawValue)"
                         ),
@@ -434,7 +443,7 @@ private extension ProductivityNotificationScheduler {
         }
     }
 
-    static func request(
+    func request(
         for snooze: ReminderSnooze,
         now: Date
     ) -> ProductivityNotificationRequest? {
@@ -443,25 +452,26 @@ private extension ProductivityNotificationScheduler {
         }
 
         return ProductivityNotificationRequest(
-            identifier: snoozeIdentifier(for: snooze.id),
+            identifier: Self.snoozeIdentifier(for: snooze.id),
             title: snooze.title,
-            body: snooze.body ?? "Reminder",
+            body: snooze.body
+                ?? localization.string("notification.reminderDefault"),
             trigger: .timeInterval(snooze.fireDate.timeIntervalSince(now))
         )
     }
 
-    static func request(
+    func request(
         for session: PomodoroSession,
         now: Date,
         deadline: Date
     ) -> ProductivityNotificationRequest {
         ProductivityNotificationRequest(
-            identifier: pomodoroIdentifier(
+            identifier: Self.pomodoroIdentifier(
                 for: session.id,
                 phase: session.currentPhase
             ),
-            title: "Pomodoro",
-            body: "\(phaseTitle(session.currentPhase)) finished",
+            title: localization.string("notification.pomodoroTitle"),
+            body: pomodoroCompletionBody(session.currentPhase),
             trigger: .timeInterval(deadline.timeIntervalSince(now))
         )
     }
@@ -470,14 +480,14 @@ private extension ProductivityNotificationScheduler {
         "\(pomodoroPrefix)\(id.uuidString.lowercased())."
     }
 
-    static func phaseTitle(_ phase: PomodoroPhase) -> String {
+    func pomodoroCompletionBody(_ phase: PomodoroPhase) -> String {
         switch phase {
         case .focus:
-            "Focus"
+            localization.string("notification.pomodoroFocusFinished")
         case .shortBreak:
-            "Short break"
+            localization.string("notification.pomodoroShortBreakFinished")
         case .longBreak:
-            "Long break"
+            localization.string("notification.pomodoroLongBreakFinished")
         }
     }
 }
