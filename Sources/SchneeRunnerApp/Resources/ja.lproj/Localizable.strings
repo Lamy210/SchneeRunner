@@ -1,0 +1,11 @@
+"menu.timers" = "タイマー";
+"timer.new" = "新しいタイマー";
+"action.pause" = "一時停止";
+"pomodoro.focus" = "集中";
+"reminder.root" = "リマインダー";
+"launchAtLogin.title" = "ログイン時に起動";
+"characterState.idle" = "待機";
+"characterState.walk" = "歩行";
+"characterState.run" = "走行";
+"characterState.dash" = "ダッシュ";
+"characterState.sprint" = "全力疾走";
