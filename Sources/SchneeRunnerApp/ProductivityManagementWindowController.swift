@@ -19,10 +19,16 @@ final class ProductivityManagementWindowController: NSObject, NSWindowDelegate {
     private(set) var pomodoroConfiguration: PomodoroConfiguration?
     private(set) var historyCount = 0
 
+    private let localization: AppLocalization
     private var timers: [ProductivityCountdownTimer] = []
     private var reminders: [ProductivityReminder] = []
     private var history = ProductivityHistory()
     private var panel: NSPanel?
+
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        super.init()
+    }
 
     func setTimers(_ timers: [ProductivityCountdownTimer]) {
         self.timers = timers
@@ -118,7 +124,7 @@ private extension ProductivityManagementWindowController {
             backing: .buffered,
             defer: false
         )
-        panel.title = "SchneeRunner Productivity"
+        panel.title = localization.string("management.window.title")
         panel.isReleasedWhenClosed = false
         panel.delegate = self
         return panel
@@ -172,13 +178,17 @@ private extension ProductivityManagementWindowController {
     }
 
     func addTimerSection(to stack: NSStackView) {
-        stack.addArrangedSubview(sectionTitle("Timers"))
+        stack.addArrangedSubview(
+            sectionTitle(localization.string("menu.timers"))
+        )
         let activeTimers = timers.filter {
             $0.state == .running || $0.state == .paused
         }
         guard !activeTimers.isEmpty else {
             stack.addArrangedSubview(
-                NSTextField(labelWithString: "No active timers")
+                NSTextField(
+                    labelWithString: localization.string("timer.empty")
+                )
             )
             return
         }
@@ -192,7 +202,9 @@ private extension ProductivityManagementWindowController {
         let label = NSTextField(labelWithString: timerStatus(timer))
         label.setContentHuggingPriority(.defaultLow, for: .horizontal)
 
-        let actionTitle = timer.state == .paused ? "Resume" : "Pause"
+        let actionTitle = timer.state == .paused
+            ? localization.string("action.resume")
+            : localization.string("action.pause")
         let action = timer.state == .paused
             ? #selector(resumeTimer(_:))
             : #selector(pauseTimer(_:))
@@ -202,7 +214,7 @@ private extension ProductivityManagementWindowController {
             id: timer.id
         )
         let cancelButton = timerButton(
-            title: "Cancel",
+            title: localization.string("action.cancel"),
             action: #selector(cancelTimer(_:)),
             id: timer.id
         )
@@ -227,18 +239,26 @@ private extension ProductivityManagementWindowController {
     }
 
     func timerStatus(_ timer: ProductivityCountdownTimer) -> String {
-        let state = timer.state == .paused ? "Paused" : "Running"
+        let stateKey = timer.state == .paused
+            ? "timer.state.paused"
+            : "timer.state.running"
+        let state = localization.string(stateKey)
         let seconds = max(0, timer.remaining(at: Date()).rounded(.down))
         let minutes = floor(seconds / 60)
         let remainder = seconds.truncatingRemainder(dividingBy: 60)
         let time = String(format: "%.0f:%02.0f", minutes, remainder)
-        return "\(timer.title) · \(state) · \(time)"
+        return localization.string(
+            "timer.management.statusFormat",
+            arguments: timer.title, state, time
+        )
     }
 
     func addReminderSection(to stack: NSStackView) {
-        stack.addArrangedSubview(sectionTitle("Reminders"))
+        stack.addArrangedSubview(
+            sectionTitle(localization.string("reminder.root"))
+        )
         let newButton = NSButton(
-            title: "New Reminder…",
+            title: localization.string("reminder.new"),
             target: self,
             action: #selector(newReminder)
         )
@@ -246,13 +266,20 @@ private extension ProductivityManagementWindowController {
 
         guard !reminders.isEmpty else {
             stack.addArrangedSubview(
-                NSTextField(labelWithString: "No reminders configured")
+                NSTextField(
+                    labelWithString: localization.string(
+                        "reminder.management.empty"
+                    )
+                )
             )
             return
         }
 
         for reminder in reminders {
-            let row = ReminderManagementRowView(reminder: reminder)
+            let row = ReminderManagementRowView(
+                reminder: reminder,
+                localization: localization
+            )
             row.onEdit = { [weak self] in
                 self?.requestEditReminder(id: reminder.id)
             }
@@ -276,10 +303,16 @@ private extension ProductivityManagementWindowController {
     }
 
     func addPomodoroSection(to stack: NSStackView) {
-        stack.addArrangedSubview(sectionTitle("Pomodoro"))
+        stack.addArrangedSubview(
+            sectionTitle(localization.string("pomodoro.root"))
+        )
         guard let configuration = pomodoroConfiguration else {
             stack.addArrangedSubview(
-                NSTextField(labelWithString: "Pomodoro settings unavailable")
+                NSTextField(
+                    labelWithString: localization.string(
+                        "pomodoro.management.unavailable"
+                    )
+                )
             )
             return
         }
@@ -287,10 +320,13 @@ private extension ProductivityManagementWindowController {
         let focusMinutes = Int(configuration.focusDuration / 60)
         let shortMinutes = Int(configuration.shortBreakDuration / 60)
         let longMinutes = Int(configuration.longBreakDuration / 60)
-        let summary = "Focus \(focusMinutes)m · Short \(shortMinutes)m · Long \(longMinutes)m"
+        let summary = localization.string(
+            "pomodoro.management.summaryFormat",
+            arguments: focusMinutes, shortMinutes, longMinutes
+        )
         stack.addArrangedSubview(NSTextField(labelWithString: summary))
         let editButton = NSButton(
-            title: "Edit Settings…",
+            title: localization.string("pomodoro.management.edit"),
             target: self,
             action: #selector(editPomodoroSettings)
         )
@@ -298,11 +334,17 @@ private extension ProductivityManagementWindowController {
     }
 
     func addHistorySection(to stack: NSStackView) {
-        stack.addArrangedSubview(sectionTitle("Recent History"))
+        stack.addArrangedSubview(
+            sectionTitle(localization.string("management.history.title"))
+        )
         let entries = history.entries.suffix(20).reversed()
         guard !entries.isEmpty else {
             stack.addArrangedSubview(
-                NSTextField(labelWithString: "No productivity history yet")
+                NSTextField(
+                    labelWithString: localization.string(
+                        "management.history.empty"
+                    )
+                )
             )
             return
         }
