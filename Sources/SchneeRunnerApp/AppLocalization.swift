@@ -45,8 +45,7 @@ struct AppLocalization {
 
     private func localizedString(forKey key: String) -> String {
         if let localeIdentifier,
-           let selectedBundle = localizedBundle(for: localeIdentifier)
-        {
+           let selectedBundle = localizedBundle(for: localeIdentifier) {
             let localized = selectedBundle.localizedString(
                 forKey: key,
                 value: key,
