@@ -51,13 +51,13 @@ final class StatusMenuController: NSObject {
     )
     private let productivityNotificationStatusItem: NSMenuItem
     private let productivityCharacterReactionsItem: NSMenuItem
-    private let recentCharactersMenu = NSMenu(title: "Recent Characters")
+    private let recentCharactersMenu: NSMenu
     private let timerMenuController: TimerMenuController
     private let pomodoroMenuController: PomodoroMenuController
     private let reminderMenuController: ReminderMenuController
-    private let stateMenuController = CharacterStateMenuController()
-    private let desktopCharacterMenuController = DesktopCharacterMenuController()
-    private let launchAtLoginMenuController = LaunchAtLoginMenuController()
+    private let stateMenuController: CharacterStateMenuController
+    private let desktopCharacterMenuController: DesktopCharacterMenuController
+    private let launchAtLoginMenuController: LaunchAtLoginMenuController
     private let exportCharacterPackItem = NSMenuItem(
         title: "Export Current Character Pack…",
         action: nil,
@@ -76,9 +76,15 @@ final class StatusMenuController: NSObject {
             action: nil,
             keyEquivalent: ""
         )
+        recentCharactersMenu = NSMenu(
+            title: localization.string("recentCharacters.root")
+        )
         timerMenuController = TimerMenuController(localization: localization)
         pomodoroMenuController = PomodoroMenuController(localization: localization)
         reminderMenuController = ReminderMenuController(localization: localization)
+        stateMenuController = CharacterStateMenuController(localization: localization)
+        desktopCharacterMenuController = DesktopCharacterMenuController(localization: localization)
+        launchAtLoginMenuController = LaunchAtLoginMenuController(localization: localization)
         super.init()
         configureTimerCallbacks()
         configurePomodoroCallbacks()
@@ -156,7 +162,9 @@ final class StatusMenuController: NSObject {
         recentCharactersMenu.removeAllItems()
 
         guard !assets.isEmpty else {
-            addDisabledRecentItem(title: "No saved characters")
+            addDisabledRecentItem(
+                title: localization.string("recentCharacters.empty")
+            )
             return
         }
 
@@ -174,7 +182,9 @@ final class StatusMenuController: NSObject {
 
     func setRecentCharactersUnavailable() {
         recentCharactersMenu.removeAllItems()
-        addDisabledRecentItem(title: "Character library unavailable")
+        addDisabledRecentItem(
+            title: localization.string("recentCharacters.unavailable")
+        )
     }
 
     func setCharacterPackExportEnabled(_ isEnabled: Bool) {
@@ -329,7 +339,7 @@ private extension StatusMenuController {
 
     func addRecentCharactersItem() {
         let item = NSMenuItem(
-            title: "Recent Characters",
+            title: localization.string("recentCharacters.root"),
             action: nil,
             keyEquivalent: ""
         )
@@ -392,7 +402,7 @@ private extension StatusMenuController {
 
     func addQuitItem() {
         let item = NSMenuItem(
-            title: "Quit SchneeRunner",
+            title: localization.string("application.quit"),
             action: #selector(quitApplication),
             keyEquivalent: "q"
         )
