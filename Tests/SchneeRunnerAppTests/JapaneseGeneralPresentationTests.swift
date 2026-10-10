@@ -53,4 +53,66 @@ final class JapaneseGeneralPresentationTests: XCTestCase {
         XCTAssertEqual(CharacterState.idle.rawValue, "idle")
         XCTAssertEqual(CharacterState.run.rawValue, "run")
     }
+
+    func testJapaneseDesktopCharacterMenuLocalizesActionsAndSpeedPresets() throws {
+        let controller = StatusMenuController(
+            localization: AppLocalization(localeIdentifier: "ja")
+        )
+        let desktopMenu = try XCTUnwrap(
+            controller.menu.items.first(where: { $0.title == "デスクトップキャラクター" })?.submenu
+        )
+
+        XCTAssertNotNil(desktopMenu.item(withTitle: "デスクトップに表示"))
+        XCTAssertNotNil(desktopMenu.item(withTitle: "自動で移動"))
+        XCTAssertNotNil(desktopMenu.item(withTitle: "クリックを透過"))
+        XCTAssertNotNil(desktopMenu.item(withTitle: "位置とサイズをリセット"))
+
+        let speedMenu = try XCTUnwrap(
+            desktopMenu.item(withTitle: "移動速度")?.submenu
+        )
+        XCTAssertNotNil(speedMenu.item(withTitle: "遅い"))
+        XCTAssertNotNil(speedMenu.item(withTitle: "標準"))
+        XCTAssertNotNil(speedMenu.item(withTitle: "速い"))
+    }
+
+    func testJapaneseLaunchAtLoginLocalizesApprovalAndUnavailableStates() {
+        let localization = AppLocalization(localeIdentifier: "ja")
+
+        let approvalController = LaunchAtLoginMenuController(
+            service: JapaneseLaunchAtLoginService(status: .requiresApproval),
+            isAvailable: true,
+            localization: localization
+        )
+        XCTAssertEqual(
+            approvalController.item.title,
+            "ログイン時に起動（承認が必要）"
+        )
+
+        let unavailableController = LaunchAtLoginMenuController(
+            service: JapaneseLaunchAtLoginService(status: .notRegistered),
+            isAvailable: false,
+            localization: localization
+        )
+        XCTAssertEqual(
+            unavailableController.item.title,
+            "ログイン時に起動（利用不可）"
+        )
+    }
+}
+
+@MainActor
+private final class JapaneseLaunchAtLoginService: LaunchAtLoginServicing {
+    var status: LaunchAtLoginServiceStatus {
+        storedStatus
+    }
+
+    private let storedStatus: LaunchAtLoginServiceStatus
+
+    init(status: LaunchAtLoginServiceStatus) {
+        storedStatus = status
+    }
+
+    func register() throws {}
+    func unregister() throws {}
+    func openSystemSettingsLoginItems() {}
 }
