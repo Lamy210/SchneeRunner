@@ -92,6 +92,7 @@
 "characterState.automatic" = "Automatic";
 "desktop.root" = "Desktop Character";
 "launchAtLogin.title" = "Launch at Login";
+"launchAtLogin.unavailable" = "Launch at Login (Unavailable)";
 "application.quit" = "Quit SchneeRunner";
 "characterState.idle" = "Idle";
 "characterState.walk" = "Walk";
