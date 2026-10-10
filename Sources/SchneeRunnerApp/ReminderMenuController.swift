@@ -4,21 +4,26 @@ import SchneeRunnerCore
 
 @MainActor
 final class ReminderMenuController: NSObject {
-    let rootItem = NSMenuItem(
-        title: "Reminders",
-        action: nil,
-        keyEquivalent: ""
-    )
+    let rootItem: NSMenuItem
 
     var onNewReminder: (() -> Void)?
     var onManageReminders: (() -> Void)?
 
-    private let menu = NSMenu(title: "Reminders")
+    private let localization: AppLocalization
+    private let menu: NSMenu
     private var reminders: [ProductivityReminder] = []
     private var now = Date()
     private var calendar = Calendar.current
 
-    override init() {
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        let rootTitle = localization.string("reminder.root")
+        rootItem = NSMenuItem(
+            title: rootTitle,
+            action: nil,
+            keyEquivalent: ""
+        )
+        menu = NSMenu(title: rootTitle)
         super.init()
         rootItem.submenu = menu
         rebuild()
@@ -40,11 +45,11 @@ final class ReminderMenuController: NSObject {
         addSummaryItem()
         menu.addItem(.separator())
         addActionItem(
-            title: "New Reminder…",
+            title: localization.string("reminder.new"),
             action: #selector(newReminder)
         )
         addActionItem(
-            title: "Manage Reminders…",
+            title: localization.string("reminder.manage"),
             action: #selector(manageReminders)
         )
     }
@@ -52,7 +57,7 @@ final class ReminderMenuController: NSObject {
     private func addSummaryItem() {
         guard let next = nextReminder() else {
             let item = NSMenuItem(
-                title: "No upcoming reminders",
+                title: localization.string("reminder.empty"),
                 action: nil,
                 keyEquivalent: ""
             )
@@ -66,7 +71,11 @@ final class ReminderMenuController: NSObject {
         formatter.timeStyle = .short
         formatter.calendar = calendar
         let item = NSMenuItem(
-            title: "Next: \(next.reminder.title) · \(formatter.string(from: next.date))",
+            title: localization.string(
+                "reminder.nextFormat",
+                arguments: next.reminder.title,
+                formatter.string(from: next.date)
+            ),
             action: nil,
             keyEquivalent: ""
         )
@@ -74,10 +83,7 @@ final class ReminderMenuController: NSObject {
         menu.addItem(item)
     }
 
-    private func nextReminder() -> (
-        reminder: ProductivityReminder,
-        date: Date
-    )? {
+    private func nextReminder() -> (reminder: ProductivityReminder, date: Date)? {
         reminders.compactMap { reminder in
             guard let date = reminder.nextOccurrence(
                 after: now,

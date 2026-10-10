@@ -32,4 +32,17 @@ final class CharacterStateStatusFormatterTests: XCTestCase {
             "Walk"
         )
     }
+
+    func testJapaneseStatusUsesLocalizedStateNames() {
+        let localization = AppLocalization(localeIdentifier: "ja")
+
+        XCTAssertEqual(
+            CharacterStateStatusFormatter.label(
+                requestedState: .sprint,
+                resolvedState: .run,
+                localization: localization
+            ),
+            "全力疾走 → 走行"
+        )
+    }
 }

@@ -1,9 +1,10 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.1
 
 import PackageDescription
 
 let package = Package(
     name: "SchneeRunner",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],
@@ -25,7 +26,9 @@ let package = Package(
             name: "SchneeRunnerApp",
             dependencies: ["SchneeRunnerCore"],
             resources: [
-                .copy("Resources/BuiltInCharacters")
+                .copy("Resources/BuiltInCharacters"),
+                .process("Resources/en.lproj"),
+                .process("Resources/ja.lproj")
             ]
         ),
         .executableTarget(
@@ -38,10 +41,7 @@ let package = Package(
         ),
         .testTarget(
             name: "SchneeRunnerAppTests",
-            dependencies: [
-                "SchneeRunnerApp",
-                "SchneeRunnerCore"
-            ]
+            dependencies: ["SchneeRunnerApp", "SchneeRunnerCore"]
         )
     ]
 )

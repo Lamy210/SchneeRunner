@@ -13,7 +13,7 @@ final class ReminderApplicationController {
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: any ReminderNotificationScheduling
-    private let editor = ReminderEditorController()
+    private let editor: ReminderEditorController
     private let managementWindow: ProductivityManagementWindowController
     private let calendar: Calendar
     private let fallbackScheduler: InProcessReminderScheduler?
@@ -25,17 +25,21 @@ final class ReminderApplicationController {
         menuController: StatusMenuController,
         baseDirectory: URL? = nil,
         fileManager: FileManager = .default,
-        notificationScheduler: any ReminderNotificationScheduling = ProductivityNotificationScheduler(),
+        notificationScheduler: (any ReminderNotificationScheduling)? = nil,
         calendar: Calendar = .current,
         managementWindow: ProductivityManagementWindowController? = nil,
         fallbackPresenter: (any ProductivityFallbackPresenting)? = nil,
         fallbackDeliveryDefaults: UserDefaults = .standard,
-        fallbackRefreshInterval: TimeInterval = 1
+        fallbackRefreshInterval: TimeInterval = 1,
+        localization: AppLocalization = .current
     ) {
         self.menuController = menuController
         self.notificationScheduler = notificationScheduler
+            ?? ProductivityNotificationScheduler(localization: localization)
         self.calendar = calendar
-        self.managementWindow = managementWindow ?? ProductivityManagementWindowController()
+        self.managementWindow = managementWindow
+            ?? ProductivityManagementWindowController(localization: localization)
+        editor = ReminderEditorController(localization: localization)
 
         let applicationSupportDirectory = baseDirectory ?? fileManager.urls(
             for: .applicationSupportDirectory,

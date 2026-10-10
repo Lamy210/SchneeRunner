@@ -19,26 +19,31 @@ final class CharacterPackClipRowView: NSView {
         CharacterPackClipKind
     ) -> Void)?
 
+    private let localization: AppLocalization
     private let kindPopUp = NSPopUpButton(
         frame: .zero,
         pullsDown: false
     )
-    private let sourceLabel = NSTextField(labelWithString: "No source selected")
+    private let sourceLabel = NSTextField(labelWithString: "")
     private let chooseButton = NSButton(
-        title: "Choose…",
+        title: "",
         target: nil,
         action: nil
     )
     private let clearButton = NSButton(
-        title: "Clear",
+        title: "",
         target: nil,
         action: nil
     )
 
     private(set) var sourceURL: URL?
 
-    init(state: CharacterState) {
+    init(
+        state: CharacterState,
+        localization: AppLocalization = .current
+    ) {
         self.state = state
+        self.localization = localization
         super.init(frame: .zero)
         configureView()
     }
@@ -68,7 +73,9 @@ final class CharacterPackClipRowView: NSView {
             sourceLabel.toolTip = url.path
             clearButton.isEnabled = true
         } else {
-            sourceLabel.stringValue = "No source selected"
+            sourceLabel.stringValue = localization.string(
+                "characterPack.builder.noSource"
+            )
             sourceLabel.toolTip = nil
             clearButton.isEnabled = false
         }
@@ -89,7 +96,7 @@ final class CharacterPackClipRowView: NSView {
         translatesAutoresizingMaskIntoConstraints = false
 
         let stateLabel = NSTextField(
-            labelWithString: state.displayName
+            labelWithString: localization.characterState(state)
         )
         stateLabel.font = .systemFont(
             ofSize: NSFont.systemFontSize,
@@ -98,18 +105,29 @@ final class CharacterPackClipRowView: NSView {
 
         for kind in Self.clipKinds {
             kindPopUp.addItem(
-                withTitle: Self.title(for: kind)
+                withTitle: localization.string(
+                    "characterKind.\(kind.rawValue)"
+                )
             )
         }
         kindPopUp.target = self
         kindPopUp.action = #selector(kindChanged)
 
+        sourceLabel.stringValue = localization.string(
+            "characterPack.builder.noSource"
+        )
         sourceLabel.lineBreakMode = .byTruncatingMiddle
         sourceLabel.textColor = .secondaryLabelColor
 
+        chooseButton.title = localization.string(
+            "characterPack.builder.choose"
+        )
         chooseButton.target = self
         chooseButton.action = #selector(chooseSource)
 
+        clearButton.title = localization.string(
+            "characterPack.builder.clear"
+        )
         clearButton.target = self
         clearButton.action = #selector(clearSource)
         clearButton.isEnabled = false
@@ -141,25 +159,6 @@ final class CharacterPackClipRowView: NSView {
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
             heightAnchor.constraint(greaterThanOrEqualToConstant: 28)
         ])
-    }
-
-    private static func title(
-        for kind: CharacterPackClipKind
-    ) -> String {
-        switch kind {
-        case .singleImage:
-            "Single Image"
-        case .spriteSheet4x2:
-            "4x2 Sprite"
-        case .pngSequence:
-            "PNG Sequence"
-        case .gif:
-            "GIF"
-        case .apng:
-            "APNG"
-        case .webP:
-            "WebP"
-        }
     }
 
     @objc

@@ -25,6 +25,12 @@ final class ReminderEditorController {
         let view: NSView
     }
 
+    private let localization: AppLocalization
+
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+    }
+
     func makeRequest(
         title: String,
         body: String?,
@@ -57,8 +63,11 @@ final class ReminderEditorController {
             now: now,
             calendar: calendar
         )
+        let titleKey = reminder == nil
+            ? "reminder.editor.newTitle"
+            : "reminder.editor.editTitle"
         let alert = makeAlert(
-            title: reminder == nil ? "New Reminder" : "Edit Reminder",
+            title: localization.string(titleKey),
             form: form
         )
 
@@ -87,9 +96,9 @@ private extension ReminderEditorController {
     ) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = title
-        alert.informativeText = "Choose when SchneeRunner should notify you."
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
+        alert.informativeText = localization.string("reminder.editor.prompt")
+        alert.addButton(withTitle: localization.string("action.save"))
+        alert.addButton(withTitle: localization.string("action.cancel"))
         alert.accessoryView = form.view
         return alert
     }
@@ -100,12 +109,22 @@ private extension ReminderEditorController {
         calendar: Calendar
     ) -> Form {
         let titleField = NSTextField(string: reminder?.title ?? "")
-        titleField.placeholderString = "Reminder title"
+        titleField.placeholderString = localization.string(
+            "reminder.editor.titlePlaceholder"
+        )
         let bodyField = NSTextField(string: reminder?.body ?? "")
-        bodyField.placeholderString = "Optional message"
+        bodyField.placeholderString = localization.string(
+            "reminder.editor.bodyPlaceholder"
+        )
 
         let schedulePopUp = NSPopUpButton(frame: .zero, pullsDown: false)
-        schedulePopUp.addItems(withTitles: ["Once", "Daily", "Weekdays"])
+        schedulePopUp.addItems(
+            withTitles: [
+                localization.string("reminder.schedule.once"),
+                localization.string("reminder.schedule.daily"),
+                localization.string("reminder.schedule.weekdays")
+            ]
+        )
 
         let datePicker = NSDatePicker()
         datePicker.datePickerElements = [.yearMonthDay, .hourMinute]
@@ -117,7 +136,7 @@ private extension ReminderEditorController {
         )
 
         let enabledButton = NSButton(
-            checkboxWithTitle: "Enabled",
+            checkboxWithTitle: localization.string("reminder.enabled"),
             target: nil,
             action: nil
         )
@@ -164,11 +183,26 @@ private extension ReminderEditorController {
 
         let stack = NSStackView(
             views: [
-                labeled("Title", control: titleField),
-                labeled("Message", control: bodyField),
-                labeled("Schedule", control: schedulePopUp),
-                labeled("Date / Time", control: datePicker),
-                labeled("Weekdays", control: weekdayStack),
+                labeled(
+                    localization.string("reminder.form.title"),
+                    control: titleField
+                ),
+                labeled(
+                    localization.string("reminder.form.message"),
+                    control: bodyField
+                ),
+                labeled(
+                    localization.string("reminder.form.schedule"),
+                    control: schedulePopUp
+                ),
+                labeled(
+                    localization.string("reminder.form.dateTime"),
+                    control: datePicker
+                ),
+                labeled(
+                    localization.string("reminder.form.weekdays"),
+                    control: weekdayStack
+                ),
                 enabledButton
             ]
         )
@@ -283,22 +317,30 @@ private extension ReminderEditorController {
     }
 
     func shortTitle(for weekday: Weekday) -> String {
-        switch weekday {
-        case .sunday: "Sun"
-        case .monday: "Mon"
-        case .tuesday: "Tue"
-        case .wednesday: "Wed"
-        case .thursday: "Thu"
-        case .friday: "Fri"
-        case .saturday: "Sat"
+        let key = switch weekday {
+        case .sunday:
+            "weekday.sun.short"
+        case .monday:
+            "weekday.mon.short"
+        case .tuesday:
+            "weekday.tue.short"
+        case .wednesday:
+            "weekday.wed.short"
+        case .thursday:
+            "weekday.thu.short"
+        case .friday:
+            "weekday.fri.short"
+        case .saturday:
+            "weekday.sat.short"
         }
+        return localization.string(key)
     }
 
-    func presentValidationError(_ error: Error) {
+    func presentValidationError(_: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Invalid Reminder"
-        alert.informativeText = String(describing: error)
+        alert.messageText = localization.string("reminder.editor.invalidTitle")
+        alert.informativeText = localization.string("reminder.editor.invalidDetail")
         alert.runModal()
     }
 }

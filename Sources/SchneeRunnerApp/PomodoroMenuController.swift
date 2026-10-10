@@ -4,11 +4,7 @@ import SchneeRunnerCore
 
 @MainActor
 final class PomodoroMenuController: NSObject {
-    let rootItem = NSMenuItem(
-        title: "Pomodoro",
-        action: nil,
-        keyEquivalent: ""
-    )
+    let rootItem: NSMenuItem
 
     var onStart: ((PomodoroConfiguration) -> Void)?
     var onPause: (() -> Void)?
@@ -17,12 +13,21 @@ final class PomodoroMenuController: NSObject {
     var onStop: (() -> Void)?
     var onSettings: (() -> Void)?
 
-    private let menu = NSMenu(title: "Pomodoro")
+    private let localization: AppLocalization
+    private let menu: NSMenu
     private var session: PomodoroSession?
     private var configuration: PomodoroConfiguration? = try? PomodoroConfiguration()
     private var now = Date()
 
-    override init() {
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        let rootTitle = localization.string("pomodoro.root")
+        rootItem = NSMenuItem(
+            title: rootTitle,
+            action: nil,
+            keyEquivalent: ""
+        )
+        menu = NSMenu(title: rootTitle)
         super.init()
         rootItem.submenu = menu
         rebuild()
@@ -68,25 +73,27 @@ final class PomodoroMenuController: NSObject {
         switch session.state {
         case .running:
             addActionItem(
-                title: "Pause",
+                title: localization.string("action.pause"),
                 action: #selector(pause)
             )
         case .paused:
             addActionItem(
-                title: "Resume",
+                title: localization.string("action.resume"),
                 action: #selector(resume)
             )
         case .waiting:
             addActionItem(
-                title: session.currentPhase == .focus
-                    ? "Start Focus"
-                    : "Start Break",
+                title: localization.string(
+                    session.currentPhase == .focus
+                        ? "pomodoro.startFocus"
+                        : "pomodoro.startBreak"
+                ),
                 action: #selector(startCurrentPhase)
             )
         }
 
         addActionItem(
-            title: "Stop",
+            title: localization.string("action.stop"),
             action: #selector(stop)
         )
         addSettingsItem()
@@ -94,7 +101,7 @@ final class PomodoroMenuController: NSObject {
 
     private func addStartItem() {
         addActionItem(
-            title: "Start Pomodoro",
+            title: localization.string("pomodoro.start"),
             action: #selector(startDefault)
         )
     }
@@ -102,7 +109,7 @@ final class PomodoroMenuController: NSObject {
     private func addSettingsItem() {
         menu.addItem(.separator())
         addActionItem(
-            title: "Settings…",
+            title: localization.string("pomodoro.settings"),
             action: #selector(openSettings)
         )
     }
@@ -127,20 +134,27 @@ final class PomodoroMenuController: NSObject {
         case .running:
             return "\(phase) · \(format(session.remaining(at: now)))"
         case .paused:
-            return "\(phase) · Paused \(format(session.remaining(at: now)))"
+            return localization.string(
+                "pomodoro.pausedFormat",
+                arguments: phase,
+                format(session.remaining(at: now))
+            )
         case .waiting:
-            return "\(phase) · Ready"
+            return localization.string(
+                "pomodoro.readyFormat",
+                arguments: phase
+            )
         }
     }
 
     private func phaseTitle(_ phase: PomodoroPhase) -> String {
         switch phase {
         case .focus:
-            "Focus"
+            localization.string("pomodoro.focus")
         case .shortBreak:
-            "Short Break"
+            localization.string("pomodoro.shortBreak")
         case .longBreak:
-            "Long Break"
+            localization.string("pomodoro.longBreak")
         }
     }
 
