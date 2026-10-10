@@ -85,7 +85,14 @@
 "notification.pomodoroLongBreakFinished" = "長い休憩が終了しました";
 "status.productivityNotificationsDisabled" = "生産性通知: 無効";
 "status.productivityCharacterReactions" = "生産性キャラクター連動";
+"recentCharacters.root" = "最近のキャラクター";
+"recentCharacters.empty" = "保存済みキャラクターはありません";
+"recentCharacters.unavailable" = "キャラクターライブラリを利用できません";
+"characterState.root" = "キャラクター状態";
+"characterState.automatic" = "自動";
+"desktop.root" = "デスクトップキャラクター";
 "launchAtLogin.title" = "ログイン時に起動";
+"application.quit" = "SchneeRunnerを終了";
 "characterState.idle" = "待機";
 "characterState.walk" = "歩行";
 "characterState.run" = "走行";
