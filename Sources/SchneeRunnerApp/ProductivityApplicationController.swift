@@ -10,6 +10,21 @@ final class ProductivityApplicationController {
     private let reactionCoordinator: ProductivityCharacterStateCoordinator
     private let notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor
 
+    convenience init(
+        menuController: StatusMenuController,
+        characterStateCoordinator: CharacterStateCoordinator
+    ) {
+        self.init(
+            menuController: menuController,
+            characterStateCoordinator: characterStateCoordinator,
+            reactionStore: ProductivityCharacterReactionStore(),
+            notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor(),
+            notificationScheduler: nil,
+            fallbackPresenter: nil,
+            localization: .current
+        )
+    }
+
     init(
         menuController: StatusMenuController,
         characterStateCoordinator: CharacterStateCoordinator,
