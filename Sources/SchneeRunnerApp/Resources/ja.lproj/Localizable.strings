@@ -92,6 +92,7 @@
 "characterState.automatic" = "自動";
 "desktop.root" = "デスクトップキャラクター";
 "launchAtLogin.title" = "ログイン時に起動";
+"launchAtLogin.unavailable" = "ログイン時に起動（利用不可）";
 "application.quit" = "SchneeRunnerを終了";
 "characterState.idle" = "待機";
 "characterState.walk" = "歩行";
