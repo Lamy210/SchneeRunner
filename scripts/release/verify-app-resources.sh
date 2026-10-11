@@ -18,7 +18,7 @@ if [[ ! -d "${RESOURCE_BUNDLE}" || -L "${RESOURCE_BUNDLE}" ]]; then
   exit 1
 fi
 
-bundle_count="$(find "${RESOURCE_ROOT}" -mindepth 1 -maxdepth 1 -type d -name "${RESOURCE_BUNDLE_NAME}" -print | wc -l | tr -d ' ')"
+bundle_count="$(find "${RESOURCE_ROOT}" -type d -name "${RESOURCE_BUNDLE_NAME}" -print | wc -l | tr -d ' ')"
 if [[ "${bundle_count}" != "1" ]]; then
   echo "Expected exactly one SwiftPM app resource bundle, found ${bundle_count}." >&2
   exit 1
@@ -35,7 +35,6 @@ for frame in 1 2 3 4; do
     echo "Bundled character frame is missing or invalid: ${frame_path}" >&2
     exit 1
   fi
-
 done
 
 for locale in en ja; do
