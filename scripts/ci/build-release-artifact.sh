@@ -9,6 +9,7 @@ readonly OUTPUT_APP="build/${APP_NAME}.app"
 readonly SWIFTPM_RESOURCE_BUNDLE_NAME="SchneeRunner_SchneeRunnerApp.bundle"
 readonly APP_RESOURCE_BUNDLE="${OUTPUT_APP}/Contents/Resources/${SWIFTPM_RESOURCE_BUNDLE_NAME}"
 readonly BUILT_IN_CHARACTER_DESTINATION="${APP_RESOURCE_BUNDLE}/BuiltInCharacters/YukihanaLamy"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 release_version="${RELEASE_VERSION:-}"
 if [[ -z "${release_version}" ]]; then
@@ -51,6 +52,9 @@ mkdir -p \
 cp "${executable}" "${OUTPUT_APP}/Contents/MacOS/${PRODUCT_NAME}"
 chmod 0755 "${OUTPUT_APP}/Contents/MacOS/${PRODUCT_NAME}"
 cp -R "${resource_bundle}" "${OUTPUT_APP}/Contents/Resources/"
+
+APP_PATH="${OUTPUT_APP}" \
+  bash "${SCRIPT_DIR}/../release/verify-app-resources.sh"
 
 if [[ ! -d "${BUILT_IN_CHARACTER_DESTINATION}" || -L "${BUILT_IN_CHARACTER_DESTINATION}" ]]; then
   echo "Bundled character resource directory is missing after packaging: ${BUILT_IN_CHARACTER_DESTINATION}" >&2
