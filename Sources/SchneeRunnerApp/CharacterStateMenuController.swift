@@ -3,23 +3,28 @@ import SchneeRunnerCore
 
 @MainActor
 final class CharacterStateMenuController: NSObject {
-    let rootItem = NSMenuItem(
-        title: "Character State",
-        action: nil,
-        keyEquivalent: ""
-    )
+    let rootItem: NSMenuItem
 
     var onSelection: ((CharacterState?) -> Void)?
 
-    private let stateMenu = NSMenu(title: "Character State")
-    private let automaticItem = NSMenuItem(
-        title: "Automatic",
-        action: nil,
-        keyEquivalent: ""
-    )
+    private let localization: AppLocalization
+    private let stateMenu: NSMenu
+    private let automaticItem: NSMenuItem
     private var stateItems: [CharacterState: NSMenuItem] = [:]
 
-    override init() {
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        rootItem = NSMenuItem(
+            title: localization.string("characterState.root"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        stateMenu = NSMenu(title: localization.string("characterState.root"))
+        automaticItem = NSMenuItem(
+            title: localization.string("characterState.automatic"),
+            action: nil,
+            keyEquivalent: ""
+        )
         super.init()
         configureMenu()
         setSelection(nil)
@@ -41,7 +46,7 @@ final class CharacterStateMenuController: NSObject {
 
         for state in CharacterState.allCases {
             let item = NSMenuItem(
-                title: state.displayName,
+                title: localization.characterState(state),
                 action: #selector(selectState(_:)),
                 keyEquivalent: ""
             )

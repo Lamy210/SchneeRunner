@@ -10,18 +10,36 @@ final class ProductivityApplicationController {
     private let reactionCoordinator: ProductivityCharacterStateCoordinator
     private let notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor
 
+    convenience init(
+        menuController: StatusMenuController,
+        characterStateCoordinator: CharacterStateCoordinator
+    ) {
+        self.init(
+            menuController: menuController,
+            characterStateCoordinator: characterStateCoordinator,
+            reactionStore: ProductivityCharacterReactionStore(),
+            notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor(),
+            notificationScheduler: nil,
+            fallbackPresenter: nil,
+            localization: .current
+        )
+    }
+
     init(
         menuController: StatusMenuController,
         characterStateCoordinator: CharacterStateCoordinator,
         reactionStore: ProductivityCharacterReactionStore = .init(),
         notificationDeliveryMonitor: ProductivityNotificationDeliveryMonitor = .init(),
         notificationScheduler: ProductivityNotificationScheduler? = nil,
-        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil,
+        localization: AppLocalization = .current
     ) {
         LaunchTrace.emit("ProductivityApplicationController init begin")
         self.menuController = menuController
         self.notificationDeliveryMonitor = notificationDeliveryMonitor
-        let managementWindow = ProductivityManagementWindowController()
+        let managementWindow = ProductivityManagementWindowController(
+            localization: localization
+        )
         self.managementWindow = managementWindow
         let reactionCoordinator = ProductivityCharacterStateCoordinator(
             characterStateCoordinator: characterStateCoordinator,
@@ -29,27 +47,32 @@ final class ProductivityApplicationController {
         )
         self.reactionCoordinator = reactionCoordinator
         LaunchTrace.emit("ProductivityApplicationController before notification scheduler")
-        let notificationScheduler = notificationScheduler ?? ProductivityNotificationScheduler()
-        let fallbackPresenter = fallbackPresenter ?? AppKitProductivityFallbackPresenter()
+        let notificationScheduler = notificationScheduler
+            ?? ProductivityNotificationScheduler(localization: localization)
+        let fallbackPresenter = fallbackPresenter
+            ?? AppKitProductivityFallbackPresenter(localization: localization)
         LaunchTrace.emit("ProductivityApplicationController after notification scheduler")
 
         timerController = TimerApplicationController(
             menuController: menuController,
             managementWindow: managementWindow,
             notificationScheduler: notificationScheduler,
-            fallbackPresenter: fallbackPresenter
+            fallbackPresenter: fallbackPresenter,
+            localization: localization
         )
         pomodoroController = PomodoroApplicationController(
             menuController: menuController,
             managementWindow: managementWindow,
             notificationScheduler: notificationScheduler,
-            fallbackPresenter: fallbackPresenter
+            fallbackPresenter: fallbackPresenter,
+            localization: localization
         )
         reminderController = ReminderApplicationController(
             menuController: menuController,
             notificationScheduler: notificationScheduler,
             managementWindow: managementWindow,
-            fallbackPresenter: fallbackPresenter
+            fallbackPresenter: fallbackPresenter,
+            localization: localization
         )
 
         timerController.onTimersChanged = { [weak reactionCoordinator] timers, now in

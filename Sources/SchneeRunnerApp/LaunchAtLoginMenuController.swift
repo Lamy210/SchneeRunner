@@ -54,21 +54,25 @@ final class SystemLaunchAtLoginService: LaunchAtLoginServicing {
 
 @MainActor
 final class LaunchAtLoginMenuController: NSObject {
-    let item = NSMenuItem(
-        title: "Launch at Login",
-        action: nil,
-        keyEquivalent: ""
-    )
+    let item: NSMenuItem
 
     private let service: any LaunchAtLoginServicing
     private let isAvailable: Bool
+    private let localization: AppLocalization
 
     init(
         service: any LaunchAtLoginServicing = SystemLaunchAtLoginService(),
-        isAvailable: Bool = RuntimeCapabilities.current.launchAtLoginAvailable
+        isAvailable: Bool = RuntimeCapabilities.current.launchAtLoginAvailable,
+        localization: AppLocalization = .current
     ) {
         self.service = service
         self.isAvailable = isAvailable
+        self.localization = localization
+        item = NSMenuItem(
+            title: localization.string("launchAtLogin.title"),
+            action: nil,
+            keyEquivalent: ""
+        )
         super.init()
 
         item.target = self
@@ -84,17 +88,17 @@ final class LaunchAtLoginMenuController: NSObject {
 
         switch service.status {
         case .enabled:
-            item.title = "Launch at Login"
+            item.title = localization.string("launchAtLogin.title")
             item.state = .on
             item.isEnabled = true
 
         case .notRegistered:
-            item.title = "Launch at Login"
+            item.title = localization.string("launchAtLogin.title")
             item.state = .off
             item.isEnabled = true
 
         case .requiresApproval:
-            item.title = "Launch at Login (Approval Required)"
+            item.title = localization.string("launchAtLogin.approvalRequired")
             item.state = .off
             item.isEnabled = true
 
@@ -132,7 +136,7 @@ final class LaunchAtLoginMenuController: NSObject {
     }
 
     private func setUnavailable() {
-        item.title = "Launch at Login (Unavailable)"
+        item.title = localization.string("launchAtLogin.unavailable")
         item.state = .off
         item.isEnabled = false
     }
@@ -140,7 +144,7 @@ final class LaunchAtLoginMenuController: NSObject {
     private func presentError(_ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not update Launch at Login"
+        alert.messageText = localization.string("launchAtLogin.error")
         alert.informativeText = error.localizedDescription
         alert.runModal()
     }

@@ -8,15 +8,20 @@ final class ReminderManagementRowView: NSStackView {
     var onSetEnabled: ((Bool) -> Void)?
     var onSnooze: ((ReminderSnoozeDuration) -> Void)?
 
+    private let localization: AppLocalization
     private let enabledButton: NSButton
     private let snoozePopUp = NSPopUpButton(
         frame: .zero,
         pullsDown: false
     )
 
-    init(reminder: ProductivityReminder) {
+    init(
+        reminder: ProductivityReminder,
+        localization: AppLocalization = .current
+    ) {
+        self.localization = localization
         enabledButton = NSButton(
-            checkboxWithTitle: "Enabled",
+            checkboxWithTitle: localization.string("reminder.enabled"),
             target: nil,
             action: nil
         )
@@ -41,13 +46,13 @@ final class ReminderManagementRowView: NSStackView {
 
         addArrangedSubview(
             actionButton(
-                title: "Edit",
+                title: localization.string("reminder.management.edit"),
                 action: #selector(edit)
             )
         )
         addArrangedSubview(
             actionButton(
-                title: "Delete",
+                title: localization.string("reminder.management.delete"),
                 action: #selector(deleteReminder)
             )
         )
@@ -61,10 +66,15 @@ final class ReminderManagementRowView: NSStackView {
 
 private extension ReminderManagementRowView {
     func configureSnoozePopUp() {
-        snoozePopUp.addItem(withTitle: "Snooze…")
+        snoozePopUp.addItem(
+            withTitle: localization.string("reminder.management.snooze")
+        )
         for duration in ReminderSnoozeDuration.allCases {
             let item = NSMenuItem(
-                title: "\(duration.rawValue) min",
+                title: localization.string(
+                    "duration.minutesFormat",
+                    arguments: duration.rawValue
+                ),
                 action: nil,
                 keyEquivalent: ""
             )

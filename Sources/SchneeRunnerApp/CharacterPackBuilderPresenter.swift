@@ -3,13 +3,22 @@ import SchneeRunnerCore
 
 @MainActor
 final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
-    private let sourcePicker = CharacterPackBuilderSourcePicker()
+    private let localization: AppLocalization
+    private let sourcePicker: CharacterPackBuilderSourcePicker
 
     private var panel: NSPanel?
     private var nameField: NSTextField?
     private var defaultStatePopUp: NSPopUpButton?
     private var rows: [CharacterState: CharacterPackClipRowView] = [:]
     private var result: CharacterPackBuildRequest?
+
+    init(localization: AppLocalization = .current) {
+        self.localization = localization
+        sourcePicker = CharacterPackBuilderSourcePicker(
+            localization: localization
+        )
+        super.init()
+    }
 
     func chooseBuildRequest() -> CharacterPackBuildRequest? {
         result = nil
@@ -44,7 +53,7 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.title = "Build Character Pack"
+        panel.title = localization.string("characterPack.builder.title")
         panel.isReleasedWhenClosed = false
         panel.delegate = self
         return panel
@@ -68,7 +77,8 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
 
         for state in CharacterState.allCases {
             let row = CharacterPackClipRowView(
-                state: state
+                state: state,
+                localization: localization
             )
             row.onChooseSource = { [weak self] state, kind in
                 self?.chooseSource(
@@ -109,9 +119,13 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
     }
 
     private func makeNameRow() -> NSView {
-        let label = formLabel("Name")
+        let label = formLabel(
+            localization.string("characterPack.builder.name")
+        )
         let field = NSTextField(string: "My Runner")
-        field.placeholderString = "Character Pack name"
+        field.placeholderString = localization.string(
+            "characterPack.builder.namePlaceholder"
+        )
         nameField = field
 
         let stack = NSStackView(
@@ -126,15 +140,17 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
     }
 
     private func makeDefaultStateRow() -> NSView {
-        let label = formLabel("Default State")
+        let label = formLabel(
+            localization.string("characterPack.builder.defaultState")
+        )
         let popUp = NSPopUpButton(
             frame: .zero,
             pullsDown: false
         )
         popUp.addItems(
-            withTitles: CharacterState.allCases.map(
-                \.displayName
-            )
+            withTitles: CharacterState.allCases.map {
+                localization.characterState($0)
+            }
         )
         if let runIndex = CharacterState.allCases.firstIndex(
             of: .run
@@ -158,14 +174,14 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
         let spacer = NSView()
 
         let cancelButton = NSButton(
-            title: "Cancel",
+            title: localization.string("action.cancel"),
             target: self,
             action: #selector(cancel)
         )
         cancelButton.keyEquivalent = "\u{1B}"
 
         let buildButton = NSButton(
-            title: "Build…",
+            title: localization.string("characterPack.builder.build"),
             target: self,
             action: #selector(build)
         )
@@ -228,7 +244,7 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
         }
         guard !name.isEmpty, !clips.isEmpty else {
             presentValidationWarning(
-                "Enter a pack name and choose at least one clip."
+                localization.string("characterPack.builder.validation.nameAndClip")
             )
             return nil
         }
@@ -244,7 +260,7 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
         ]
         guard clips.contains(where: { $0.state == defaultState }) else {
             presentValidationWarning(
-                "Choose a clip for the selected default state."
+                localization.string("characterPack.builder.validation.defaultClip")
             )
             return nil
         }
@@ -259,7 +275,7 @@ final class CharacterPackBuilderPresenter: NSObject, NSWindowDelegate {
     private func presentValidationWarning(_ message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Character Pack is incomplete"
+        alert.messageText = localization.string("characterPack.builder.incomplete")
         alert.informativeText = message
         alert.runModal()
     }

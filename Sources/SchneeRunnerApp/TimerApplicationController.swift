@@ -12,6 +12,7 @@ final class TimerApplicationController {
     private let historyStore: ProductivityHistoryStore
     private let notificationScheduler: ProductivityNotificationScheduler
     private let fallbackRouter: ProductivityFallbackRouter?
+    private let localization: AppLocalization
     private var coordinator: TimerCoordinator?
     private var launchReconciliationTask: Task<Void, Never>?
     private var isReconcilingOnLaunch = false
@@ -21,12 +22,15 @@ final class TimerApplicationController {
         managementWindow: ProductivityManagementWindowController? = nil,
         baseDirectory: URL? = nil,
         fileManager: FileManager = .default,
-        notificationScheduler: ProductivityNotificationScheduler = .init(),
-        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil
+        notificationScheduler: ProductivityNotificationScheduler? = nil,
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil,
+        localization: AppLocalization = .current
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
+        self.localization = localization
         self.notificationScheduler = notificationScheduler
+            ?? ProductivityNotificationScheduler(localization: localization)
         fallbackRouter = fallbackPresenter.map {
             ProductivityFallbackRouter(presenter: $0)
         }
@@ -215,20 +219,25 @@ final class TimerApplicationController {
     private func startPresetTimer(duration: TimeInterval) {
         let minutes = max(1, Int(duration / 60))
         startTimer(
-            title: "\(minutes) min Timer",
+            title: localization.string(
+                "timer.presetTitleFormat",
+                arguments: minutes
+            ),
             duration: duration
         )
     }
 
     private func startCustomTimer() {
         let alert = NSAlert()
-        alert.messageText = "New Timer"
-        alert.informativeText = "Enter a duration in minutes."
-        alert.addButton(withTitle: "Start")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = localization.string("timer.dialog.title")
+        alert.informativeText = localization.string("timer.dialog.prompt")
+        alert.addButton(withTitle: localization.string("action.start"))
+        alert.addButton(withTitle: localization.string("action.cancel"))
 
         let minutesField = NSTextField(string: "25")
-        minutesField.placeholderString = "Minutes"
+        minutesField.placeholderString = localization.string(
+            "timer.dialog.minutesPlaceholder"
+        )
         minutesField.frame = NSRect(x: 0, y: 0, width: 240, height: 24)
         alert.accessoryView = minutesField
 
@@ -242,7 +251,7 @@ final class TimerApplicationController {
         }
 
         startTimer(
-            title: "Timer",
+            title: localization.string("timer.defaultTitle"),
             duration: minutes * 60
         )
     }

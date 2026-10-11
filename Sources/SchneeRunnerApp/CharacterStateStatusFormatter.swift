@@ -3,15 +3,17 @@ import SchneeRunnerCore
 enum CharacterStateStatusFormatter {
     static func label(
         requestedState: CharacterState,
-        resolvedState: CharacterState?
+        resolvedState: CharacterState?,
+        localization: AppLocalization = .current
     ) -> String {
+        let requestedLabel = localization.characterState(requestedState)
         guard
             let resolvedState,
             resolvedState != requestedState
         else {
-            return requestedState.displayName
+            return requestedLabel
         }
 
-        return "\(requestedState.displayName) → \(resolvedState.displayName)"
+        return "\(requestedLabel) → \(localization.characterState(resolvedState))"
     }
 }

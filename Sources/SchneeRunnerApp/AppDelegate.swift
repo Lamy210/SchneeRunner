@@ -7,9 +7,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let cpuMonitor = CPUMonitor()
     private let characterLibrary = CharacterLibraryController()
     private let frameRendererCoordinator = CharacterFrameRendererCoordinator()
-    private let importPresenter = CharacterImportPresenter()
-    private let packBuilderPresenter = CharacterPackBuilderPresenter()
-    private let menuController = StatusMenuController()
+    private let localization = AppLocalization.current
+    private lazy var importPresenter = CharacterImportPresenter(localization: localization)
+    private lazy var packBuilderPresenter = CharacterPackBuilderPresenter(localization: localization)
+    private lazy var menuController = StatusMenuController(localization: localization)
 
     private lazy var characterPlaybackController = CharacterPlaybackController(animationController: animationController)
     private lazy var characterStateCoordinator = CharacterStateCoordinator(
@@ -74,17 +75,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureMenuCallbacks() {
+        let singleImageTitle = localization.string("import.panel.singleImage")
+        let spriteSheetTitle = localization.string("import.panel.spriteSheet4x2")
         menuController.onLoadSingleImage = { [weak self] in
-            self?.loadImportedCharacter(
-                kind: .singleImage,
-                panelTitle: "Choose an Image"
-            )
+            self?.loadImportedCharacter(kind: .singleImage, panelTitle: singleImageTitle)
         }
         menuController.onLoadSpriteSheet = { [weak self] in
-            self?.loadImportedCharacter(
-                kind: .spriteSheet4x2,
-                panelTitle: "Choose a 4x2 Sprite Sheet"
-            )
+            self?.loadImportedCharacter(kind: .spriteSheet4x2, panelTitle: spriteSheetTitle)
         }
         menuController.onLoadPNGSequence = { [weak self] in
             self?.loadPNGSequence()
@@ -219,7 +216,7 @@ private extension AppDelegate {
 
     func loadPNGSequence() {
         guard let urls = importPresenter.choosePNGs(
-            title: "Choose PNG Sequence Frames"
+            title: localization.string("import.panel.pngSequence")
         ) else {
             return
         }
@@ -247,7 +244,7 @@ private extension AppDelegate {
 
     func loadGIF() {
         guard let url = importPresenter.chooseGIF(
-            title: "Choose an Animated GIF"
+            title: localization.string("import.panel.gif")
         ) else {
             return
         }
@@ -279,11 +276,11 @@ private extension AppDelegate {
         let url = switch format {
         case .apng:
             importPresenter.chooseAPNG(
-                title: "Choose an Animated PNG"
+                title: localization.string("import.panel.apng")
             )
         case .webP:
             importPresenter.chooseWebP(
-                title: "Choose an Animated WebP"
+                title: localization.string("import.panel.webP")
             )
         }
 
@@ -316,7 +313,7 @@ private extension AppDelegate {
 
     func loadCharacterPack() {
         guard let url = importPresenter.chooseCharacterPack(
-            title: "Choose a .schneerunner Character Pack"
+            title: localization.string("import.panel.characterPack")
         ) else {
             return
         }

@@ -10,7 +10,7 @@ final class PomodoroApplicationController: NSObject {
     private let stateStore: ProductivityStateStore
     private let historyStore: ProductivityHistoryStore
     private let configurationStore: PomodoroConfigurationStore
-    private let settingsController = PomodoroSettingsController()
+    private let settingsController: PomodoroSettingsController
     private let notificationScheduler: ProductivityNotificationScheduler
     private let fallbackRouter: ProductivityFallbackRouter?
     private let refreshInterval: TimeInterval
@@ -27,12 +27,15 @@ final class PomodoroApplicationController: NSObject {
         fileManager: FileManager = .default,
         defaults: UserDefaults = .standard,
         refreshInterval: TimeInterval = 1,
-        notificationScheduler: ProductivityNotificationScheduler = .init(),
-        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil
+        notificationScheduler: ProductivityNotificationScheduler? = nil,
+        fallbackPresenter: (any ProductivityFallbackPresenting)? = nil,
+        localization: AppLocalization = .current
     ) {
         self.menuController = menuController
         self.managementWindow = managementWindow
         self.notificationScheduler = notificationScheduler
+            ?? ProductivityNotificationScheduler(localization: localization)
+        settingsController = PomodoroSettingsController(localization: localization)
         fallbackRouter = fallbackPresenter.map {
             ProductivityFallbackRouter(presenter: $0)
         }
