@@ -89,6 +89,9 @@
 "status.productivityNotificationsDisabled" = "生産性通知: 無効";
 "status.productivityCharacterReactions" = "生産性キャラクター連動";
 "status.cpuSampling" = "CPU: 計測中…";
+"status.cpuUnavailable" = "CPU: 利用不可";
+"status.cpuUtilizationFormat" = "CPU: %d%%";
+"status.manualPlaybackFormat" = "手動 %@";
 "status.cpuAdaptiveSpeed" = "CPU適応速度";
 "status.playbackSpeed" = "再生速度";
 "recentCharacters.root" = "最近のキャラクター";
