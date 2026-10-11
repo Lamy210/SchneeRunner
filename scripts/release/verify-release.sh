@@ -16,22 +16,10 @@ esac
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESOURCE_RELATIVE_DIR="Contents/Resources/SchneeRunner_SchneeRunnerApp.bundle/BuiltInCharacters/YukihanaLamy"
 
-verify_bundled_character() {
+verify_app_resources() {
   local app_path="$1"
-  local resource_dir="${app_path}/${RESOURCE_RELATIVE_DIR}"
-  if [[ ! -d "${resource_dir}" || -L "${resource_dir}" ]]; then
-    echo "Bundled character resource directory is missing or invalid: ${resource_dir}" >&2
-    exit 1
-  fi
-
-  local frame
-  for frame in 1 2 3 4; do
-    local frame_path="${resource_dir}/walk_${frame}.png"
-    if [[ ! -f "${frame_path}" || -L "${frame_path}" || ! -s "${frame_path}" ]]; then
-      echo "Bundled character frame is missing or invalid: ${frame_path}" >&2
-      exit 1
-    fi
-  done
+  APP_PATH="${app_path}" \
+    bash "${SCRIPT_DIR}/verify-app-resources.sh"
 }
 
 if [[ ! -d "${APP_PATH}" ]]; then
@@ -49,7 +37,7 @@ executable_name="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${pli
 APP_PATH="${APP_PATH}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
-verify_bundled_character "${APP_PATH}"
+verify_app_resources "${APP_PATH}"
 APP_PATH="${APP_PATH}" \
   bash "${SCRIPT_DIR}/smoke-launch-app.sh"
 
@@ -96,7 +84,7 @@ fi
 APP_PATH="${mounted_app}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
-verify_bundled_character "${mounted_app}"
+verify_app_resources "${mounted_app}"
 APP_PATH="${mounted_app}" \
   bash "${SCRIPT_DIR}/smoke-launch-app.sh"
 for frame in 1 2 3 4; do
