@@ -20,6 +20,14 @@ Requirements: **macOS 14 or later**.
 
 **v0.1.1 is intentionally published unsigned and not notarized.** Before publication, the release pipeline still verifies the DMG structure, bundled application executable, bundled four-frame default character, SHA-256 checksum, release provenance, and trusted source binding. Because the app is not Developer ID signed or Apple-notarized, macOS Gatekeeper may still report a downloaded or quarantined copy as **damaged** or refuse to open it. Developer ID signing and Apple notarization are required to remove that trust warning reliably; DMG integrity verification alone cannot replace those trust checks.
 
+## Localization and unsigned runtime limitations
+
+SchneeRunner provides **English and Japanese** UI. The app follows the **macOS language** selection for SchneeRunner; there is currently no in-app language picker. English is used as the fallback when a localized string is unavailable.
+
+The current bootstrap distribution remains unsigned and not notarized, so the Gatekeeper warning described above still applies. Packaged unsigned builds also disable the system-notification delivery path used by the signed runtime. Timer, Pomodoro, and Reminder domain state still runs locally and completion or due events use an **in-process fallback while SchneeRunner is running**. Delivery **cannot be guaranteed while the app is not running** when the system notification path is unavailable.
+
+Developer ID signing and Apple notarization are not part of the current localization and unsigned release-hardening change.
+
 ## Status
 
 Early proof of concept.
