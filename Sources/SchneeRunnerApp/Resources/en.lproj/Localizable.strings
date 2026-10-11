@@ -89,6 +89,9 @@
 "status.productivityNotificationsDisabled" = "Productivity Notifications: Disabled";
 "status.productivityCharacterReactions" = "Productivity Character Reactions";
 "status.cpuSampling" = "CPU: sampling…";
+"status.cpuUnavailable" = "CPU: unavailable";
+"status.cpuUtilizationFormat" = "CPU: %d%%";
+"status.manualPlaybackFormat" = "Manual %@";
 "status.cpuAdaptiveSpeed" = "CPU Adaptive Speed";
 "status.playbackSpeed" = "Playback Speed";
 "recentCharacters.root" = "Recent Characters";
