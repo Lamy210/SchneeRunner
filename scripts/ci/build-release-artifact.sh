@@ -9,7 +9,8 @@ readonly OUTPUT_APP="build/${APP_NAME}.app"
 readonly SWIFTPM_RESOURCE_BUNDLE_NAME="SchneeRunner_SchneeRunnerApp.bundle"
 readonly APP_RESOURCE_BUNDLE="${OUTPUT_APP}/Contents/Resources/${SWIFTPM_RESOURCE_BUNDLE_NAME}"
 readonly BUILT_IN_CHARACTER_DESTINATION="${APP_RESOURCE_BUNDLE}/BuiltInCharacters/YukihanaLamy"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 
 release_version="${RELEASE_VERSION:-}"
 if [[ -z "${release_version}" ]]; then
