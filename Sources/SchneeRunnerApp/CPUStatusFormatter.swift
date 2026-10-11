@@ -13,20 +13,25 @@ enum CPUStatusFormatter {
         requestedState: CharacterState,
         resolvedState: CharacterState?,
         playbackRate: Double,
-        isAdaptiveSpeedEnabled: Bool
+        isAdaptiveSpeedEnabled: Bool,
+        localization: AppLocalization = .current
     ) -> String {
         let cpuLabel = switch status {
         case .sampling:
-            "CPU: sampling…"
+            localization.string("status.cpuSampling")
         case .unavailable:
-            "CPU: unavailable"
+            localization.string("status.cpuUnavailable")
         case let .utilization(value):
-            "CPU: \(Int((value * 100).rounded()))%"
+            localization.string(
+                "status.cpuUtilizationFormat",
+                arguments: Int((value * 100).rounded())
+            )
         }
 
         let stateLabel = CharacterStateStatusFormatter.label(
             requestedState: requestedState,
-            resolvedState: resolvedState
+            resolvedState: resolvedState,
+            localization: localization
         )
         let playbackRateLabel = String(
             format: "%.2g×",
@@ -34,7 +39,10 @@ enum CPUStatusFormatter {
         )
         let playbackLabel = isAdaptiveSpeedEnabled
             ? playbackRateLabel
-            : "Manual \(playbackRateLabel)"
+            : localization.string(
+                "status.manualPlaybackFormat",
+                arguments: playbackRateLabel
+            )
 
         return "\(cpuLabel) · \(stateLabel) · \(playbackLabel)"
     }
