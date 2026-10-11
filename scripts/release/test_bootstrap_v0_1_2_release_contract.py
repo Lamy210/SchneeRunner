@@ -14,6 +14,9 @@ RELEASE_NOTES = REPO_ROOT / "docs/releases/v0.1.2.md"
 PUBLISHER = REPO_ROOT / "scripts/release/publish-bootstrap-release.sh"
 WRITER = REPO_ROOT / "scripts/release/write-bootstrap-release-provenance.py"
 VERIFIER = REPO_ROOT / "scripts/release/verify-bootstrap-release-provenance.py"
+RESOURCE_VERIFIER = REPO_ROOT / "scripts/release/verify-app-resources.sh"
+BUILD_ARTIFACT = REPO_ROOT / "scripts/ci/build-release-artifact.sh"
+RELEASE_VERIFIER = REPO_ROOT / "scripts/release/verify-release.sh"
 
 
 class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
@@ -44,12 +47,53 @@ class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
         self.assertIn("RELEASE_SIGNED: false", text)
         self.assertIn(
             "SchneeRunnerSystemNotificationsEnabled",
-            (REPO_ROOT / "scripts/ci/build-release-artifact.sh").read_text(encoding="utf-8"),
+            BUILD_ARTIFACT.read_text(encoding="utf-8"),
         )
         self.assertIn(
             'bash "${SCRIPT_DIR}/smoke-launch-app.sh"',
-            (REPO_ROOT / "scripts/release/verify-release.sh").read_text(encoding="utf-8"),
+            RELEASE_VERIFIER.read_text(encoding="utf-8"),
         )
+
+    def test_release_scripts_use_shared_packaged_resource_verifier(self) -> None:
+        self.assertTrue(
+            RESOURCE_VERIFIER.is_file(),
+            f"missing packaged resource verifier: {RESOURCE_VERIFIER}",
+        )
+        self.assertIn(
+            "verify-app-resources.sh",
+            BUILD_ARTIFACT.read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            "verify-app-resources.sh",
+            RELEASE_VERIFIER.read_text(encoding="utf-8"),
+        )
+
+    def test_packaged_resource_verifier_requires_both_localizations(self) -> None:
+        self.assertTrue(
+            RESOURCE_VERIFIER.is_file(),
+            f"missing packaged resource verifier: {RESOURCE_VERIFIER}",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            app = self._make_resource_fixture(Path(temp_dir))
+
+            complete = self._run_resource_verifier(app)
+            self.assertEqual(complete.returncode, 0, complete.stderr)
+
+            japanese = (
+                app
+                / "Contents/Resources/SchneeRunner_SchneeRunnerApp.bundle"
+                / "ja.lproj/Localizable.strings"
+            )
+            japanese.unlink()
+            missing_japanese = self._run_resource_verifier(app)
+            self.assertNotEqual(missing_japanese.returncode, 0)
+
+            japanese.parent.mkdir(parents=True, exist_ok=True)
+            japanese.write_text('"probe" = "日本語";\n', encoding="utf-8")
+            english = japanese.parent.parent / "en.lproj/Localizable.strings"
+            english.unlink()
+            missing_english = self._run_resource_verifier(app)
+            self.assertNotEqual(missing_english.returncode, 0)
 
     def test_workflow_does_not_require_apple_credentials(self) -> None:
         text = self.workflow_text()
@@ -151,6 +195,28 @@ class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
         self.assertIn("unsigned", text)
         self.assertIn("not notarized", text)
         self.assertIn("launch", text)
+
+    def _make_resource_fixture(self, root: Path) -> Path:
+        app = root / "SchneeRunner.app"
+        bundle = app / "Contents/Resources/SchneeRunner_SchneeRunnerApp.bundle"
+        character = bundle / "BuiltInCharacters/YukihanaLamy"
+        character.mkdir(parents=True)
+        for frame in range(1, 5):
+            (character / f"walk_{frame}.png").write_bytes(b"png-fixture\n")
+        for locale, value in (("en", "English"), ("ja", "日本語")):
+            localization = bundle / f"{locale}.lproj/Localizable.strings"
+            localization.parent.mkdir(parents=True)
+            localization.write_text(f'"probe" = "{value}";\n', encoding="utf-8")
+        return app
+
+    def _run_resource_verifier(self, app: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(RESOURCE_VERIFIER)],
+            env={"APP_PATH": str(app)},
+            text=True,
+            capture_output=True,
+            check=False,
+        )
 
 
 if __name__ == "__main__":
