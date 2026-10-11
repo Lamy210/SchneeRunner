@@ -11,6 +11,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO_ROOT / ".github/workflows/bootstrap-v0.1.2-release.yml"
 RELEASE_NOTES = REPO_ROOT / "docs/releases/v0.1.2.md"
+README = REPO_ROOT / "README.md"
 PUBLISHER = REPO_ROOT / "scripts/release/publish-bootstrap-release.sh"
 WRITER = REPO_ROOT / "scripts/release/write-bootstrap-release-provenance.py"
 VERIFIER = REPO_ROOT / "scripts/release/verify-bootstrap-release-provenance.py"
@@ -94,6 +95,15 @@ class BootstrapV012UnsignedReleaseContractTests(unittest.TestCase):
             english.unlink()
             missing_english = self._run_resource_verifier(app)
             self.assertNotEqual(missing_english.returncode, 0)
+
+    def test_readme_documents_localization_and_unsigned_runtime_limits(self) -> None:
+        text = README.read_text(encoding="utf-8").lower()
+        self.assertIn("english and japanese", text)
+        self.assertIn("macos language", text)
+        self.assertIn("in-process fallback", text)
+        self.assertIn("while schneerunner is running", text)
+        self.assertIn("cannot be guaranteed while the app is not running", text)
+        self.assertIn("developer id signing and apple notarization are not part", text)
 
     def test_workflow_does_not_require_apple_credentials(self) -> None:
         text = self.workflow_text()
