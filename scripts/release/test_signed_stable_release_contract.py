@@ -10,6 +10,8 @@ PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"
 REUSABLE_RELEASE = REPO_ROOT / ".github/workflows/reusable-macos-release.yml"
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
 RELEASE_DOC = REPO_ROOT / "docs/RELEASE.md"
+SETUP_DOC = REPO_ROOT / "docs/SETUP.md"
+SECRETS_DOC = REPO_ROOT / "docs/SECRETS.md"
 BOOTSTRAP_WORKFLOWS = (
     REPO_ROOT / ".github/workflows/bootstrap-v0.1.0-release.yml",
     REPO_ROOT / ".github/workflows/bootstrap-v0.1.1-release.yml",
@@ -107,6 +109,20 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         )
         self.assertNotIn('if [[ "${SIGN_RELEASE}" != "true" ]]; then', policy)
 
+    def test_reusable_policy_rejects_signed_mode_without_signing_identity(self) -> None:
+        text = REUSABLE_RELEASE.read_text(encoding="utf-8")
+        policy = job_block(text, "policy")
+
+        self.assertIn("SIGNING_IDENTITY: ${{ inputs.signing_identity }}", policy)
+        self.assertIn(
+            '[[ "${SIGN_RELEASE}" == "true" && -z "${SIGNING_IDENTITY//[[:space:]]/}" ]]',
+            policy,
+        )
+        self.assertIn(
+            "Signed release execution requires a non-blank signing identity.",
+            policy,
+        )
+
     def test_reusable_release_keeps_unsigned_artifact_verification_available(self) -> None:
         text = VERIFY_RELEASE.read_text(encoding="utf-8")
         self.assertIn('RELEASE_SIGNED="${RELEASE_SIGNED:-true}"', text)
@@ -123,6 +139,15 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertIn("notarized and stapled", text)
         self.assertIn("signed verification", text)
         self.assertIn("secret-free policy job", text)
+
+    def test_signing_identity_is_documented_as_repository_level_variable(self) -> None:
+        setup = SETUP_DOC.read_text(encoding="utf-8")
+        secrets = SECRETS_DOC.read_text(encoding="utf-8")
+
+        self.assertIn("repository-level GitHub Actions variable", setup)
+        self.assertNotIn("trusted repository/environment configuration", setup)
+        self.assertIn("repository-level Actions variable", secrets)
+        self.assertIn("publisher validation job does not enter the `release` Environment", secrets)
 
     def test_historical_bootstrap_publishers_are_retired(self) -> None:
         for workflow in BOOTSTRAP_WORKFLOWS:
