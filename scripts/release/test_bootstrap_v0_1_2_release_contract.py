@@ -10,6 +10,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RELEASE_NOTES = REPO_ROOT / "docs/releases/v0.1.2.md"
+README = REPO_ROOT / "README.md"
 PUBLISHER = REPO_ROOT / "scripts/release/publish-bootstrap-release.sh"
 WRITER = REPO_ROOT / "scripts/release/write-bootstrap-release-provenance.py"
 VERIFIER = REPO_ROOT / "scripts/release/verify-bootstrap-release-provenance.py"
@@ -147,6 +148,12 @@ class V012HistoricalDistributionContractTests(unittest.TestCase):
         self.assertIn("unsigned", text)
         self.assertIn("not notarized", text)
         self.assertIn("launch", text)
+
+    def test_readme_distinguishes_published_v0_1_2_from_future_signed_releases(self) -> None:
+        text = README.read_text(encoding="utf-8").lower()
+        self.assertIn("v0.1.2 remains unsigned and not notarized", text)
+        self.assertIn("future stable releases require developer id signing and apple notarization", text)
+        self.assertIn("no signed replacement has been published yet", text)
 
     def _make_resource_fixture(self, root: Path) -> Path:
         app = root / "SchneeRunner.app"
