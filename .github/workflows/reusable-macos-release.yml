@@ -87,8 +87,28 @@ on:
 permissions: {}
 
 jobs:
+  policy:
+    name: Validate release publication policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    env:
+      SIGN_RELEASE: ${{ inputs.sign_release }}
+      PUBLISH_GITHUB_RELEASE: ${{ inputs.publish_github_release }}
+
+    steps:
+      - name: Reject unsigned public release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${PUBLISH_GITHUB_RELEASE}" == "true" && "${SIGN_RELEASE}" != "true" ]]; then
+            echo "Stable GitHub Release publication requires Developer ID signing and notarization." >&2
+            exit 1
+          fi
+
   release:
     name: Sign and notarize validated release
+    needs: policy
     runs-on: macos-latest
     timeout-minutes: 30
     environment: release
