@@ -31,14 +31,13 @@ class GovernanceAuditWorkflowContractTests(unittest.TestCase):
     def test_workflow_runs_all_four_doctors_for_current_repository(self) -> None:
         text = self.workflow_text()
         for command in (
-            "bash scripts/ci/audit-live-main-ruleset.sh",
-            "bash scripts/ci/audit-live-main-rules.sh",
-            "bash scripts/ci/audit-live-release-tag-ruleset.sh",
-            "bash scripts/ci/audit-live-repository-settings.sh",
+            'bash scripts/ci/audit-live-main-ruleset.sh "${{ github.repository }}"',
+            'bash scripts/ci/audit-live-main-rules.sh "${{ github.repository }}"',
+            'bash scripts/ci/audit-live-release-tag-ruleset.sh "${{ github.repository }}"',
+            'bash scripts/ci/audit-live-repository-settings.sh "${{ github.repository }}"',
         ):
             with self.subTest(command=command):
                 self.assertIn(command, text)
-        self.assertGreaterEqual(text.count("${{ github.repository }}"), 4)
         self.assertIn("GH_TOKEN: ${{ github.token }}", text)
 
     def test_each_doctor_runs_even_after_an_earlier_failure(self) -> None:
