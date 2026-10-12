@@ -7,9 +7,9 @@ SchneeRunner currently has a two-stage macOS release architecture:
 1. `Release Build` builds and tests an unsigned application without release secrets and hands off a provenance-bound archive.
 2. `Release Publisher` validates that handoff on the trusted default branch and calls the reusable macOS release workflow.
 
-The release pipeline already contains strong source/artifact identity checks, immutable handoff validation, launch smoke testing for the packaged `.app` and DMG payload, signing/notarization support, and post-build release verification.
+The pipeline already has source/artifact identity checks, immutable handoff validation, packaged `.app` and mounted-DMG launch smoke testing, signing/notarization support, and post-build release verification.
 
-However, the normal publisher currently calls the reusable workflow with:
+The remaining release blocker is that the normal publisher currently uses:
 
 ```yaml
 sign_release: false
@@ -18,12 +18,9 @@ publish_github_release: true
 
 Repository contract tests intentionally pin that unsigned stable-publication behavior. Historical bootstrap workflows for v0.1.0, v0.1.1, and v0.1.2 also contain dedicated unsigned publication paths.
 
-Issue #142 originally covered two separate release blockers:
+Issue #142 originally covered both packaged startup correctness and public-distribution trust. The v0.1.2 work addressed startup correctness and added launch smoke tests, but normal stable releases remain unsigned and unnotarized.
 
-- packaged startup/runtime failure, now addressed by the v0.1.2 launch-safety work and packaged-app launch smoke tests;
-- public-distribution trust, which remains unresolved because normal stable releases are still unsigned and unnotarized.
-
-The remaining design problem is therefore not how to build unsigned artifacts. It is how to make the trust boundary explicit: unsigned artifacts are valid intermediate CI/test artifacts, but they must not be promoted to a normal stable GitHub Release.
+The design problem is therefore not how to build unsigned artifacts. It is how to make the trust boundary explicit: unsigned artifacts are valid intermediate CI/test artifacts, but they must not be promoted to a normal stable GitHub Release.
 
 ## Decision
 
@@ -33,16 +30,16 @@ The unsigned build stage remains unchanged and secret-free. The trusted publishe
 
 Unsigned artifacts remain useful for CI, runtime proof, debugging, and development/test distribution inside Actions artifacts. They are not stable public release payloads.
 
-Historical unsigned GitHub Releases v0.1.0, v0.1.1, and v0.1.2 remain immutable historical records. This change does not replace, delete, or silently rewrite those releases.
+Historical unsigned GitHub Releases v0.1.0, v0.1.1, and v0.1.2 remain immutable historical records. This change does not replace, delete, or rewrite those releases or tags.
 
 ## Goals
 
 1. Preserve the existing secret-free unsigned `Release Build` stage.
 2. Require Developer ID signing and Apple notarization for all future normal stable GitHub Releases.
 3. Fail early when the trusted publisher is missing required signing configuration.
-4. Add defense in depth so the reusable release workflow itself rejects `publish_github_release=true` with `sign_release=false`.
-5. Retire historical bootstrap workflows as publication entry points without altering already-published releases or tags.
-6. Reverse the existing regression tests that currently require unsigned stable publication.
+4. Add defense in depth so the reusable release workflow rejects `publish_github_release=true` with `sign_release=false` before entering the protected release environment.
+5. Remove the historical v0.1.0/v0.1.1/v0.1.2 bootstrap workflows as executable publication entry points without altering their already-published releases or tags.
+6. Reverse existing regression tests that currently require unsigned stable publication.
 7. Add repository-level contract tests preventing a future caller from reintroducing an unsigned stable release path.
 8. Update release/setup/secrets documentation to distinguish unsigned CI artifacts from production releases.
 9. Keep Issue #142 open until an actual newly signed/notarized patch release is published and its trust verification succeeds.
@@ -51,12 +48,12 @@ Historical unsigned GitHub Releases v0.1.0, v0.1.1, and v0.1.2 remain immutable 
 
 - Do not add Apple credentials to the untrusted/tag-triggered `Release Build` workflow.
 - Do not expose signing secrets to pull-request, tag-build, or arbitrary branch contexts.
-- Do not redesign the existing artifact provenance or source-binding architecture.
-- Do not replace the existing packaged-app launch smoke tests.
+- Do not redesign artifact provenance or source-binding architecture.
+- Do not replace packaged-app launch smoke tests.
 - Do not delete or mutate v0.1.0, v0.1.1, or v0.1.2 releases/tags.
 - Do not automatically create or purchase a Developer ID certificate.
 - Do not close Issue #142 merely because the code-side release gate lands.
-- Do not introduce a general release-channel framework unless required by the signed-stable policy.
+- Do not add a prerelease channel or general release-channel framework.
 
 ## Alternatives considered
 
@@ -68,25 +65,23 @@ Advantages:
 
 - matches the remaining acceptance intent of Issue #142;
 - creates a simple trust invariant;
-- preserves the current secure two-stage release architecture;
-- removes ambiguity for users downloading a stable release;
+- preserves the secure two-stage release architecture;
+- removes ambiguity for stable-release users;
 - avoids teaching users to bypass Gatekeeper for normal releases.
 
-Trade-off: stable publication is blocked until repository/environment signing configuration exists.
+Trade-off: stable publication is intentionally blocked until repository/environment signing configuration exists.
 
 ### B. Allow unsigned prereleases
 
 Unsigned builds could be uploaded as GitHub prereleases while stable releases require signing.
 
-This keeps public test distribution convenient but expands the release-channel state machine and weakens the simple invariant. It is not needed for the current goal because Actions artifacts already serve development/test distribution.
-
-Rejected for this change.
+Rejected. Actions artifacts already serve development/test distribution, and an extra release channel would add unnecessary policy complexity.
 
 ### C. Documentation only
 
-Keep current workflows and merely document that unsigned releases may trigger Gatekeeper warnings.
+Keep current workflows and merely document Gatekeeper warnings.
 
-Rejected because the repository currently has executable workflow and test contracts that positively preserve unsigned stable publication. Documentation cannot enforce the required boundary.
+Rejected because executable workflow and test contracts currently preserve unsigned stable publication. Documentation cannot enforce the boundary.
 
 ## Architecture
 
@@ -106,52 +101,58 @@ Release Build
    |
    v
 Release Publisher: validate
-  - run from trusted default-branch control code
-  - resolve exact upstream build artifact
+  - trusted default-branch control code
+  - resolve exact upstream artifact
   - verify repository/source/tag/artifact identity
-  - verify signing configuration is present
+  - verify non-secret signing identity configuration
   - re-handoff validated artifact
    |
    v
-Reusable macOS Release
-  - reject public publication when sign_release=false
+Reusable macOS Release: policy
+  - secret-free
+  - no protected release environment
+  - reject publish=true + sign=false
+   |
+   v
+Reusable macOS Release: release
+  - protected release environment
   - import Developer ID certificate
   - sign app
   - build/sign DMG
   - notarize and staple
-  - verify release / Gatekeeper-relevant trust state
-  - upload verified release artifact
+  - verify signed release
+  - upload exact verified artifact
    |
    v
 Publish job
   - reverify exact signer-produced artifact
-  - create GitHub Release from verified signed payload
+  - create GitHub Release
 ```
 
-No signing secret crosses into the `Release Build` stage.
+No signing secret crosses into `Release Build`, repository-specific publisher validation, or the reusable policy job.
 
 ## Stable publication invariant
 
-The repository SHALL enforce this invariant:
+The repository SHALL enforce:
 
 ```text
 publish stable GitHub Release => sign_release == true
 ```
 
-For the SchneeRunner normal publisher specifically:
+For the SchneeRunner normal publisher:
 
 ```text
 sign_release == true
-signing_identity == repository/environment configured MACOS_SIGNING_IDENTITY
+signing_identity == vars.MACOS_SIGNING_IDENTITY
 publish_github_release == true
 ```
 
-The invariant is enforced at two independent layers:
+The invariant is enforced independently at two layers:
 
-1. the repository-specific `release-publisher.yml` selects signed mode and validates its required configuration;
-2. the generic reusable macOS release workflow refuses public publication in unsigned mode.
+1. `release-publisher.yml` selects signed mode and validates the required signing identity configuration;
+2. `reusable-macos-release.yml` has a secret-free policy job that rejects public publication in unsigned mode.
 
-The second layer prevents a future repository caller from bypassing the first by calling the reusable workflow directly with an unsafe input combination.
+The reusable policy job prevents a future caller from bypassing the repository-specific publisher.
 
 ## Release Publisher changes
 
@@ -165,19 +166,17 @@ signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}
 publish_github_release: true
 ```
 
-The existing empty signing identity / unsigned configuration SHALL be removed.
+The current unsigned/empty-signing-identity configuration SHALL be removed.
 
-### Early configuration gate
+### Early signing-identity gate
 
-The publisher SHALL fail during its secret-free validation phase if the required non-secret signing identity configuration is absent or blank.
+The existing secret-free `validate` job SHALL reject a missing or blank `MACOS_SIGNING_IDENTITY` before invoking the reusable privileged workflow.
 
-The check belongs before the privileged reusable workflow so configuration mistakes fail quickly and do not consume the signing environment unnecessarily.
+The gate checks only non-secret configuration. Certificate material and App Store Connect credentials remain confined to the existing protected `release` environment.
 
-The gate SHALL validate only non-secret configuration. Certificate material and App Store Connect credentials remain accessible only in the existing `release` Environment / privileged release workflow.
+### Required configuration
 
-### Required secrets/configuration
-
-The existing release implementation expects the privileged workflow to access:
+The privileged release path already expects these secrets:
 
 - `MACOS_CERTIFICATE_P12_BASE64`
 - `MACOS_CERTIFICATE_PASSWORD`
@@ -185,60 +184,68 @@ The existing release implementation expects the privileged workflow to access:
 - `APP_STORE_CONNECT_KEY_ID`
 - `APP_STORE_CONNECT_ISSUER_ID`
 
-and a non-secret signing identity variable:
+The non-secret signing identity is:
 
 - `MACOS_SIGNING_IDENTITY`
 
-This change does not move those credentials into source code or unprivileged jobs.
+This change does not move any credential into source code or unprivileged jobs.
 
-## Reusable macOS release gate
+## Reusable macOS release policy job
 
-`reusable-macos-release.yml` SHALL contain a fail-closed contract check before any publication-capable work:
+`reusable-macos-release.yml` SHALL add a dedicated secret-free `policy` job.
 
-- if `publish_github_release` is true and `sign_release` is false, fail;
-- signed-but-artifact-only operation may remain allowed;
-- unsigned artifact-only operation may remain allowed for tests or development callers when `publish_github_release` is false.
+The job SHALL:
 
-This preserves reusability while making the public publication trust boundary unambiguous.
+- run without the protected `release` environment;
+- require no signing/notarization secrets;
+- fail when `publish_github_release == true && sign_release == false`;
+- succeed for signed publication;
+- continue to permit unsigned artifact-only execution when `publish_github_release == false`.
 
-The guard SHALL not rely solely on conditional skipping of the publish job. It must produce an explicit failure for the unsafe input combination so a misconfigured caller is visible rather than silently succeeding without publication.
+The existing privileged `release` job SHALL depend on `policy` and SHALL not start when policy validation fails.
+
+This placement is deliberate: an unsafe caller must fail before the workflow enters the release environment or makes signing secrets available to a job.
+
+The guard must produce an explicit failure. Silently skipping publication is not sufficient because a misconfigured caller should be visible in CI.
 
 ## Signing and notarization flow
 
 The existing privileged sequence remains authoritative:
 
-1. validate the exact publisher-owned handoff artifact;
-2. extract and revalidate the application bundle;
-3. rebind tag/source immediately before secrets are used;
+1. verify exact publisher-owned handoff artifact;
+2. extract and revalidate application metadata;
+3. rebind tag/source before secrets;
 4. import Developer ID certificate;
-5. sign the `.app`;
-6. create the DMG;
-7. sign the DMG;
+5. sign `.app`;
+6. create DMG;
+7. sign DMG;
 8. notarize and staple;
 9. run `verify-release.sh` with signed mode enabled;
 10. write final release provenance;
-11. upload the exact verified artifact;
+11. upload exact verified artifact;
 12. publish only that verified artifact.
 
 No new signing implementation is introduced unless existing scripts prove insufficient during implementation.
 
-## Historical bootstrap workflows
+## Historical bootstrap workflow retirement
 
-The dedicated workflows for v0.1.0, v0.1.1, and v0.1.2 were temporary release bootstrap mechanisms. They currently encode unsigned public publication and therefore conflict with the new stable-publication invariant if left runnable.
+The following temporary bootstrap workflow files SHALL be deleted:
 
-They SHALL be retired as publication entry points.
+- `.github/workflows/bootstrap-v0.1.0-release.yml`
+- `.github/workflows/bootstrap-v0.1.1-release.yml`
+- `.github/workflows/bootstrap-v0.1.2-release.yml`
 
-Preferred retirement behavior:
+Git history and release documentation preserve how those historical releases were produced. Keeping executable bootstrap publishers is unnecessary and would leave an alternate unsigned stable-publication surface.
 
-- remove automatic triggers that could publish;
-- remove or disable manual publication execution;
-- keep enough source/history/documentation to explain how the historical releases were produced;
-- do not delete existing GitHub Releases or tags;
-- do not attempt to republish historical versions as signed builds.
+Deletion SHALL NOT:
 
-Implementation may either delete obsolete workflow files or convert them to inert historical documentation, whichever produces the clearest repository state while preserving useful historical context. The implementation plan must choose one strategy and add regression tests for it.
+- delete or modify the existing v0.1.0/v0.1.1/v0.1.2 tags;
+- delete or modify their GitHub Releases or assets;
+- republish those versions as signed replacements.
 
-A retired bootstrap workflow must not retain a `contents: write` path capable of creating a GitHub Release.
+Historical bootstrap helper code may remain when still used by tests/history tooling, but no live workflow with `contents: write` may remain capable of recreating those unsigned releases.
+
+Tests that exist only to enforce executable bootstrap workflow structure SHALL be removed or rewritten as historical-data tests if they still protect useful immutable facts.
 
 ## Existing unsigned artifact paths
 
@@ -247,51 +254,54 @@ Unsigned artifacts remain first-class internal build products:
 - `unsigned-macos-app.tar.gz` remains the Release Build handoff;
 - runtime proof and artifact identity validators may continue to refer to unsigned source archives;
 - release provenance continues to bind the unsigned input archive before privileged transformation;
-- CI may launch-smoke unsigned packaged applications where that is part of runtime correctness testing.
+- CI may launch-smoke unsigned packaged applications where needed for runtime correctness.
 
 The policy concerns **promotion**, not creation.
 
-Tests must therefore avoid broadly banning the string `unsigned` or banning unsigned artifact creation. They must specifically ban **unsigned stable GitHub publication**.
+Tests must not broadly ban the string `unsigned` or unsigned artifact creation. They must specifically prohibit unsigned stable GitHub publication.
 
 ## Contract test changes
 
 ### Reverse obsolete unsigned-publication assertions
 
-Tests such as:
+Tests including:
 
 - `scripts/release/test_unsigned_release_workflow_contract.py`
 - `scripts/release/test_v0_1_1_distribution_contract.py`
 
-currently assert that the normal publisher uses `sign_release: false` and `publish_github_release: true`.
+currently assert that the normal publisher uses `sign_release: false` with public publication.
 
-Those assertions SHALL be replaced with the signed-stable contract:
+Those assertions SHALL be replaced by the signed-stable contract:
 
 - normal publisher selects `sign_release: true`;
-- normal publisher passes `signing_identity` from the expected trusted variable;
-- normal publisher still requests public GitHub Release publication;
-- missing signing identity is rejected before entering the privileged release workflow.
+- normal publisher passes `signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}`;
+- normal publisher still requests GitHub Release publication;
+- publisher validation rejects blank signing identity before the reusable workflow is called.
 
-Historical-version-specific tests that no longer describe current production behavior should either be narrowed to immutable historical facts or retired.
+Historical-version-specific assertions that only preserve the obsolete executable publication path SHALL be removed or narrowed to immutable historical release facts.
 
-### Reusable workflow contract tests
+### Reusable workflow policy tests
 
 Add coverage proving:
 
-- `publish_github_release=true` + `sign_release=false` is rejected;
-- unsigned artifact-only execution with publication disabled remains possible if the reusable workflow continues to support it;
-- signed publication path retains certificate import, app signing, DMG signing, notarization/stapling, verification, and final artifact handoff.
+- `publish_github_release=true` + `sign_release=false` fails in the policy job;
+- the privileged release job depends on successful policy validation;
+- policy validation itself does not use the `release` environment or signing secrets;
+- unsigned artifact-only execution with publication disabled remains permitted;
+- signed publication retains certificate import, app signing, DMG signing, notarization/stapling, verification, and final artifact handoff.
 
-### Repository-wide publication-path regression
+### Repository-wide publication regression
 
-Add a focused test that inspects release workflow entry points and prevents a future workflow from restoring an unsigned stable-publication path.
+Add a focused contract test for release workflow entry points.
 
-The test SHOULD reason about workflow semantics rather than simply grep for `sign_release: false`, because unsigned artifact-only workflows remain valid.
+It SHALL verify:
 
-At minimum it must cover:
+- normal stable publisher selects signed mode;
+- reusable publication rejects unsigned public publication;
+- the three historical bootstrap workflow files no longer exist;
+- no replacement bootstrap publisher with an unsigned `contents: write` release path is introduced by this change.
 
-- the normal release publisher;
-- reusable stable publication semantics;
-- historical bootstrap workflows after retirement.
+The test should reason about relevant release workflows rather than banning every `sign_release: false` occurrence, because unsigned artifact-only execution remains valid.
 
 ## Error handling
 
@@ -304,87 +314,93 @@ The release pipeline SHALL fail closed on:
 - signing failure;
 - notarization failure;
 - stapling failure;
-- release verification failure;
-- source/tag/artifact identity drift;
-- attempt to use a retired bootstrap workflow for publication.
+- signed release verification failure;
+- source/tag/artifact identity drift.
 
-A failed signing/notarization run must leave the GitHub Release unpublished. Existing artifact immutability/source-binding guarantees remain in force.
+A failed policy/signing/notarization/verification run must leave the GitHub Release unpublished. Existing source/artifact immutability guarantees remain in force.
 
 ## Security boundary
 
-The security model remains intentionally asymmetric:
-
 ### Unprivileged build plane
 
-- triggered by stable tag input;
+- stable tag input;
 - no signing secrets;
 - no repository contents write permission;
 - produces unsigned artifact + provenance only.
 
-### Trusted publication plane
+### Trusted validation and policy plane
 
-- control code comes from trusted default-branch publisher state;
-- revalidates source/tag/artifact identity before secrets;
-- uses the protected `release` environment;
+- trusted default-branch control code;
+- revalidates source/tag/artifact identity;
+- validates non-secret signing identity configuration;
+- reusable policy job validates safe input combination;
+- no protected release environment;
+- no signing/notarization secrets.
+
+### Privileged release plane
+
+- starts only after policy succeeds;
+- uses protected `release` environment;
 - reads signing/notarization secrets only when needed;
-- receives contents write permission only in the final publication job;
-- may publish only a verified signed/notarized artifact.
+- signs, notarizes, staples, and verifies;
+- final publication job receives contents write permission;
+- publishes only the exact verified signed artifact.
 
-No broad personal access token, permanent bypass actor, or signing secret is added to repository source.
+No broad PAT, permanent bypass actor, or signing secret is added to repository source.
 
 ## Documentation changes
 
 ### `docs/RELEASE.md`
 
-Clarify the production contract:
+Clarify that:
 
 - Release Build always creates an unsigned intermediate artifact;
 - stable public release requires Developer ID signing + notarization;
-- unsigned Actions artifacts are development/test artifacts, not normal release downloads;
-- publication does not begin until signing configuration exists.
+- unsigned Actions artifacts are development/test artifacts;
+- publication remains blocked until signing configuration exists.
 
 ### `docs/SETUP.md`
 
-Make signing configuration an explicit prerequisite for the first production release. Separate CI artifact verification from production publication readiness.
+Make signing configuration an explicit prerequisite for production publication, separate from ordinary CI artifact validation.
 
 ### `docs/SECRETS.md`
 
-Document which values are secrets versus repository/environment variables, and preserve the trust-boundary explanation showing that tag-build jobs cannot access signing credentials.
+Document secret values versus the non-secret signing identity variable and preserve the trust-boundary explanation showing that tag-build jobs cannot access release credentials.
 
-### release history / README
+### README / release history
 
-Existing v0.1.2 documentation must continue to state accurately that v0.1.2 was unsigned/unnotarized. Do not rewrite historical truth to imply otherwise.
+Keep v0.1.2 historical documentation accurate: it was unsigned and unnotarized. Do not rewrite historical releases as if they were signed.
 
 ## Issue #142 lifecycle
 
-Landing this design and its implementation advances Issue #142 but does not complete it.
+Landing the code-side policy gate advances Issue #142 but does not complete it.
 
 Issue #142 may be closed only after operational evidence exists for a later immutable patch release that:
 
-1. was produced by the signed stable publisher;
+1. was produced by the normal signed stable publisher;
 2. used Developer ID signing;
 3. completed Apple notarization and stapling;
-4. passed the repository release verifier in signed mode;
-5. passed the packaged `.app` and mounted-DMG launch smoke tests;
+4. passed repository release verification in signed mode;
+5. passed packaged `.app` and mounted-DMG launch smoke tests;
 6. was published as a new immutable GitHub Release rather than replacing v0.1.2;
-7. is accepted by the expected Gatekeeper validation path without relying on the manual unsigned-build override.
+7. passes the expected Gatekeeper validation path without the manual unsigned-build override.
 
-If credentials are not yet configured, the correct state is a blocked production release, not fallback to unsigned stable publication.
+If credentials are not configured, the correct result is a blocked production release, not fallback to unsigned stable publication.
 
 ## Migration sequence
 
-1. Land contract tests that describe signed-stable behavior and initially fail against the current workflows.
-2. Change the normal publisher to signed mode and require the trusted signing identity variable.
-3. Add the reusable-workflow publication guard.
-4. Retire historical unsigned bootstrap publication entry points.
-5. Update docs and operator setup requirements.
-6. Run repository Quality / workflow security / release isolation / release contract tests.
-7. Configure the `release` environment and repository/environment variable outside source control.
+1. Change contract tests to the signed-stable expectations and observe the intended RED failures.
+2. Add publisher signing-identity validation and switch the normal publisher to signed mode.
+3. Add the secret-free reusable policy job and make privileged release depend on it.
+4. Delete the three historical bootstrap workflow files and update affected tests.
+5. Update release/setup/secrets documentation.
+6. Run Quality, workflow security, release isolation, artifact/provenance, and launch-smoke contract suites.
+7. Configure `MACOS_SIGNING_IDENTITY` plus release-environment secrets outside source control.
 8. Publish a new patch release through the normal signed path.
-9. Verify notarization/stapling/Gatekeeper evidence.
+9. Verify signing/notarization/stapling/Gatekeeper evidence.
 10. Only then close Issue #142.
 
-Steps 7-10 are operational rollout and are not prerequisites for merging the code-side policy gate, but stable release publication will intentionally remain blocked until they are complete.
+Steps 7-10 are operational rollout and are not prerequisites for merging the code-side policy gate. Stable publication is intentionally blocked until they are complete.
 
 ## Testing strategy
 
@@ -392,33 +408,36 @@ Implementation SHALL use TDD for contract changes.
 
 Expected layers:
 
-1. Python/unit workflow-contract tests for input combinations and required workflow text/semantics.
-2. `actionlint` for workflow syntax and expression correctness.
-3. `zizmor` / existing GitHub Actions security checks.
-4. ShellCheck/shfmt for any modified shell helpers.
-5. existing release isolation tests to ensure secrets remain confined to the trusted publication plane.
-6. existing artifact identity/provenance suites.
-7. existing packaged-app launch smoke contract.
+1. Python/unit workflow-contract tests for publisher and reusable policy semantics.
+2. tests for removal of historical bootstrap workflow entry points.
+3. `actionlint` for workflow syntax and expressions.
+4. `zizmor` / existing Actions security checks.
+5. ShellCheck/shfmt for modified shell helpers, if any.
+6. release isolation tests proving secrets remain confined to the privileged plane.
+7. artifact identity/provenance suites.
+8. packaged-app launch smoke contract.
 
-Where tests currently encode unsigned normal publication, first change them to the new contract and observe the intended RED state before modifying the workflows.
+Where tests currently encode unsigned normal publication, change them first and confirm the expected RED state before modifying workflows.
 
 ## Acceptance criteria
 
-The implementation is complete on the code side when all of the following are true:
+The code-side implementation is complete when:
 
 - `Release Build` still produces unsigned, provenance-bound artifacts without release secrets;
-- the normal `Release Publisher` cannot publish without signed mode;
-- the normal publisher consumes `MACOS_SIGNING_IDENTITY` from trusted configuration;
-- blank/missing signing identity causes an early failure;
-- `reusable-macos-release.yml` explicitly rejects unsigned public GitHub Release publication;
-- unsigned artifact-only usage remains available only where publication is disabled;
-- historical bootstrap workflows can no longer create new unsigned stable GitHub Releases;
+- normal `Release Publisher` selects signed mode;
+- normal publisher consumes `MACOS_SIGNING_IDENTITY` from trusted configuration;
+- blank/missing signing identity fails before the reusable privileged workflow starts;
+- reusable macOS release has a secret-free policy job;
+- policy explicitly rejects unsigned public GitHub Release publication;
+- privileged release depends on successful policy validation;
+- unsigned artifact-only usage remains available when publication is disabled;
+- v0.1.0/v0.1.1/v0.1.2 bootstrap workflow files are deleted;
 - no existing historical release/tag is changed;
-- regression tests prevent restoration of the old unsigned stable-publication contract;
+- regression tests prevent restoration of unsigned stable publication;
 - workflow security, Quality, release isolation, and relevant release tests pass;
 - documentation clearly distinguishes unsigned CI artifacts from signed production releases;
-- Issue #142 remains open until a later signed/notarized release provides runtime and Gatekeeper evidence.
+- Issue #142 remains open until a later signed/notarized release provides operational trust evidence.
 
 ## Scope boundary
 
-This design is intentionally limited to release trust and publication policy. It does not redesign application features, packaging layout, source provenance, Rulesets, repository merge settings, or the existing notification/runtime fix.
+This design is limited to release trust and publication policy. It does not redesign application features, packaging layout, source provenance, Rulesets, repository merge settings, or the existing notification/runtime fix.
