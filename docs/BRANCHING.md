@@ -117,7 +117,13 @@ The template's recommended merge policy is:
 - rebase merge: disabled
 - delete head branches after merge: enabled
 
-These are repository settings, not properties of the workflow files. A template consumer should configure or import them during repository bootstrap and verify them with a future template doctor command.
+These are repository settings, not Ruleset fields or workflow properties. Configure them deliberately during repository bootstrap, then verify the live values with the read-only doctor:
+
+```bash
+bash scripts/ci/audit-live-repository-settings.sh owner/repo
+```
+
+The doctor detects drift only. It does not change GitHub Settings and does not require an Administration token. If it fails, review the reported fields, correct the repository settings through an authorized administrator path, and rerun the audit.
 
 ## Merge queue
 
