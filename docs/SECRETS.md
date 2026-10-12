@@ -40,7 +40,7 @@ permissions:
 
 It has no Environment and no secrets. It resolves one exact upstream workflow run/artifact, validates provenance/tag/source/history/digests/archive/app metadata, and creates a new validator-owned handoff artifact inside the publisher run.
 
-For stable publication it also requires the trusted non-secret variable `MACOS_SIGNING_IDENTITY` to contain a non-whitespace Developer ID Application identity before the reusable privileged workflow is invoked. This check does not expose certificate material or notarization credentials.
+For stable publication it also requires the trusted non-secret repository-level Actions variable `MACOS_SIGNING_IDENTITY` to contain a non-whitespace Developer ID Application identity before the reusable privileged workflow is invoked. The publisher validation job does not enter the `release` Environment, so an Environment-level variable is not visible at this gate. This check does not expose certificate material or notarization credentials.
 
 ### 3. Reusable publication policy gate
 
@@ -97,7 +97,7 @@ Safe to commit:
 
 Prefer GitHub Actions variables when appropriate:
 
-- `MACOS_SIGNING_IDENTITY` — full Developer ID Application identity selected by the trusted publisher
+- `MACOS_SIGNING_IDENTITY` — repository-level Actions variable containing the full Developer ID Application identity selected by the trusted publisher
 - Apple Team ID
 - App Store Connect issuer/key identifiers when policy permits
 - Homebrew tap repository name
