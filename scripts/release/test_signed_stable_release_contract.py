@@ -86,6 +86,21 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertIn("needs: policy", release)
         self.assertEqual(1, text.count("environment: release"))
 
+    def test_reusable_policy_rejects_only_unsigned_publication(self) -> None:
+        text = REUSABLE_RELEASE.read_text(encoding="utf-8")
+        policy = job_block(text, "policy")
+
+        self.assertIn("SIGN_RELEASE: ${{ inputs.sign_release }}", policy)
+        self.assertIn(
+            "PUBLISH_GITHUB_RELEASE: ${{ inputs.publish_github_release }}",
+            policy,
+        )
+        self.assertIn(
+            '[[ "${PUBLISH_GITHUB_RELEASE}" == "true" && "${SIGN_RELEASE}" != "true" ]]',
+            policy,
+        )
+        self.assertNotIn('if [[ "${SIGN_RELEASE}" != "true" ]]; then', policy)
+
     def test_reusable_release_keeps_unsigned_artifact_verification_available(self) -> None:
         text = VERIFY_RELEASE.read_text(encoding="utf-8")
         self.assertIn('RELEASE_SIGNED="${RELEASE_SIGNED:-true}"', text)
