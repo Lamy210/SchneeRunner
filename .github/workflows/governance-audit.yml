@@ -25,13 +25,21 @@ jobs:
           persist-credentials: false
 
       - name: Audit live Solo default-branch Ruleset
+        if: ${{ always() }}
         shell: bash
         run: bash scripts/ci/audit-live-main-ruleset.sh "${{ github.repository }}"
 
       - name: Audit effective default-branch rules
+        if: ${{ always() }}
         shell: bash
         run: bash scripts/ci/audit-live-main-rules.sh "${{ github.repository }}"
 
       - name: Audit live immutable release-tag Ruleset
+        if: ${{ always() }}
         shell: bash
         run: bash scripts/ci/audit-live-release-tag-ruleset.sh "${{ github.repository }}"
+
+      - name: Audit live repository merge settings
+        if: ${{ always() }}
+        shell: bash
+        run: bash scripts/ci/audit-live-repository-settings.sh "${{ github.repository }}"
