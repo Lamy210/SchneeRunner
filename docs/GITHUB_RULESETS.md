@@ -334,15 +334,38 @@ The repository Ruleset API can list/filter tag-targeting Rulesets and fetch indi
 
 Do not replace the disposable runtime proof with this configuration audit.
 
+## Read-only repository merge-settings doctor
+
+Repository-level merge capabilities are separate from Ruleset configuration and effective branch rules. Audit those settings directly with:
+
+```bash
+bash scripts/ci/audit-live-repository-settings.sh owner/repo
+```
+
+The doctor performs a read-only repository metadata request and requires this exact Solo merge policy:
+
+```text
+allow_squash_merge     = true
+allow_merge_commit     = false
+allow_rebase_merge     = false
+delete_branch_on_merge = true
+```
+
+It validates the returned repository identity and fails closed on missing or non-boolean policy fields. Multiple valid policy mismatches are reported together so an administrator can correct the complete drift set in one pass.
+
+This command is an observer, not a reconciler. It never changes GitHub Settings, never needs a repository Administration token, and must not be extended with write methods merely to make the audit green. A failure means the live repository settings must be reviewed and deliberately remediated through an authorized administrator path.
+
 ### Run the same audit from GitHub Actions
 
 After `.github/workflows/governance-audit.yml` has landed on the repository default branch, operators can run **Governance Audit** manually from the Actions tab.
 
-The workflow is intentionally `workflow_dispatch`-only. It does not run on pull requests, pushes, or schedules, and it grants only `contents: read`. Checkout credentials are not persisted. The audit uses the ephemeral `github.token` only for read-only GitHub API calls made by the main-Ruleset, effective-main, and release-tag doctors.
+The workflow is intentionally `workflow_dispatch`-only. It does not run on pull requests, pushes, or schedules, and it grants only `contents: read`. Checkout credentials are not persisted. The audit uses the ephemeral `github.token` only for read-only GitHub API calls made by the main-Ruleset, effective-main, release-tag, and repository merge-settings doctors.
 
-A failed manual run is actionable evidence of live-policy drift. For example, if a legacy overlapping Ruleset still requires one approval, the workflow should fail until that Ruleset is disabled/replaced. Do not weaken the checked-in Solo profile or the auditor merely to make this workflow green.
+The four doctor steps use `if: ${{ always() }}` so a drift failure on one surface does not prevent the remaining surfaces from being inspected. The workflow does not use `continue-on-error`; if any doctor detects drift, the overall job remains failed.
 
-The workflow is a verification surface, not an administration surface: it never imports, updates, disables, or deletes Rulesets.
+A failed manual run is actionable evidence of live-policy drift. For example, if a legacy overlapping Ruleset still requires one approval, or repository merge settings still allow merge commits or rebase merges, the workflow should fail until that live state is deliberately corrected. Do not weaken the checked-in Solo profile or the auditors merely to make this workflow green.
+
+The workflow is a verification surface, not an administration surface: it never imports, updates, disables, deletes, or reconciles GitHub repository settings or Rulesets.
 
 ## Smoke verification after import
 
@@ -377,9 +400,10 @@ After live import, additionally run:
 bash scripts/ci/audit-live-main-ruleset.sh owner/repo
 bash scripts/ci/audit-live-main-rules.sh owner/repo
 bash scripts/ci/audit-live-release-tag-ruleset.sh owner/repo
+bash scripts/ci/audit-live-repository-settings.sh owner/repo
 ```
 
-Once the manual workflow is present on the default branch, run **Actions → Governance Audit → Run workflow** as the hosted equivalent and require it to pass before treating the live default-branch policy as verified.
+Once the manual workflow is present on the default branch, run **Actions → Governance Audit → Run workflow** as the hosted equivalent and require it to pass before treating the live default-branch policy and repository merge settings as verified.
 
 The validator rejects policy weakening, noncanonical state, or lockout regressions such as:
 
