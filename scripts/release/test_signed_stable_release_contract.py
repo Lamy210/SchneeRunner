@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"
 REUSABLE_RELEASE = REPO_ROOT / ".github/workflows/reusable-macos-release.yml"
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
+RELEASE_DOC = REPO_ROOT / "docs/RELEASE.md"
 BOOTSTRAP_WORKFLOWS = (
     REPO_ROOT / ".github/workflows/bootstrap-v0.1.0-release.yml",
     REPO_ROOT / ".github/workflows/bootstrap-v0.1.1-release.yml",
@@ -111,6 +112,17 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertIn('RELEASE_SIGNED="${RELEASE_SIGNED:-true}"', text)
         self.assertIn('if [[ "${RELEASE_SIGNED}" == "true" ]]; then', text)
         self.assertIn('hdiutil verify "${DMG_PATH}"', text)
+
+    def test_release_documentation_states_signed_stable_promotion_contract(self) -> None:
+        text = RELEASE_DOC.read_text(encoding="utf-8")
+
+        self.assertIn("## Signed stable publication contract", text)
+        self.assertIn("unsigned intermediate artifact", text)
+        self.assertIn("must not be promoted to a stable GitHub Release", text)
+        self.assertIn("Developer ID signed", text)
+        self.assertIn("notarized and stapled", text)
+        self.assertIn("signed verification", text)
+        self.assertIn("secret-free policy job", text)
 
     def test_historical_bootstrap_publishers_are_retired(self) -> None:
         for workflow in BOOTSTRAP_WORKFLOWS:
