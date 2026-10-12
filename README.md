@@ -24,6 +24,14 @@ Requirements: **macOS 14 or later**.
 
 Future stable releases require Developer ID signing and Apple notarization. The repository now blocks unsigned stable GitHub Release publication, but **no signed replacement has been published yet**. Until a later signed/notarized release is published, v0.1.2 remains subject to the Gatekeeper limitations described above.
 
+### Opening the historical unsigned v0.1.2 build
+
+Prefer a later signed/notarized release when one is available. If you intentionally use v0.1.2, only override Gatekeeper after confirming the DMG came from this repository's trusted GitHub Release and has not been tampered with. Apple warns that software which has not been signed and notarized can expose your Mac and personal information to malware.
+
+After you have tried to open `SchneeRunner.app`, open **System Settings > Privacy & Security**, scroll to the Security section, and use **Open Anyway** only if you trust this copy. Confirm the follow-up **Open** prompt. Do not override a warning that says the app will damage your computer or when you cannot establish that the download is trusted.
+
+See Apple's current guidance: https://support.apple.com/102445
+
 ## Localization and unsigned runtime limitations
 
 SchneeRunner provides **English and Japanese** UI. The app follows the **macOS language** selection for SchneeRunner; there is currently no in-app language picker. English is used as the fallback when a localized string is unavailable.
