@@ -9,6 +9,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"
 REUSABLE_RELEASE = REPO_ROOT / ".github/workflows/reusable-macos-release.yml"
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
+BOOTSTRAP_WORKFLOWS = (
+    REPO_ROOT / ".github/workflows/bootstrap-v0.1.0-release.yml",
+    REPO_ROOT / ".github/workflows/bootstrap-v0.1.1-release.yml",
+    REPO_ROOT / ".github/workflows/bootstrap-v0.1.2-release.yml",
+)
 
 
 def job_block(text: str, job_id: str) -> str:
@@ -106,6 +111,22 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertIn('RELEASE_SIGNED="${RELEASE_SIGNED:-true}"', text)
         self.assertIn('if [[ "${RELEASE_SIGNED}" == "true" ]]; then', text)
         self.assertIn('hdiutil verify "${DMG_PATH}"', text)
+
+    def test_historical_bootstrap_publishers_are_retired(self) -> None:
+        for workflow in BOOTSTRAP_WORKFLOWS:
+            with self.subTest(workflow=workflow.name):
+                self.assertFalse(workflow.exists(), f"retired workflow still exists: {workflow}")
+
+        workflows_dir = REPO_ROOT / ".github/workflows"
+        for workflow in workflows_dir.glob("*.yml"):
+            text = workflow.read_text(encoding="utf-8")
+            with self.subTest(workflow=workflow.name):
+                self.assertFalse(
+                    "sign_release: false" in text
+                    and "publish_github_release: true" in text,
+                    f"unsigned public release path found in {workflow}",
+                )
+                self.assertNotIn("publish-bootstrap-release.sh publish", text)
 
 
 if __name__ == "__main__":
