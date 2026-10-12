@@ -10,14 +10,8 @@ from scripts.release.test_bootstrap_release_provenance import (
 from scripts.release.test_bootstrap_release_publisher import (
     BootstrapReleasePublisherTests,
 )
-from scripts.release.test_bootstrap_v0_1_0_release_contract import (
-    BootstrapV010ReleaseContractTests,
-)
-from scripts.release.test_bootstrap_v0_1_1_release_contract import (
-    BootstrapV011SignedReleaseContractTests,
-)
 from scripts.release.test_bootstrap_v0_1_2_release_contract import (
-    BootstrapV012UnsignedReleaseContractTests,
+    V012HistoricalDistributionContractTests,
 )
 from scripts.release.test_packaged_app_launch_smoke_contract import (
     PackagedAppLaunchSmokeContractTests,
