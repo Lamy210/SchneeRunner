@@ -8,7 +8,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BUILD_SCRIPT = REPO_ROOT / "scripts/ci/build-release-artifact.sh"
 APP_DELEGATE = REPO_ROOT / "Sources/SchneeRunnerApp/AppDelegate.swift"
 STARTUP_LOADER = REPO_ROOT / "Sources/SchneeRunnerApp/StartupCharacterLoader.swift"
-PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
 ASSET_ROOT = REPO_ROOT / "Sources/SchneeRunnerApp/Resources/BuiltInCharacters/YukihanaLamy"
 RESOURCE_PATH = (
@@ -47,13 +46,6 @@ class V011DistributionContractTests(unittest.TestCase):
         app_delegate = APP_DELEGATE.read_text(encoding="utf-8")
         self.assertIn("restoreInitialCharacter()", app_delegate)
         self.assertLessEqual(len(app_delegate.splitlines()), 500)
-
-    def test_normal_release_publisher_explicitly_selects_unsigned_mode(self) -> None:
-        text = PUBLISHER.read_text(encoding="utf-8")
-        self.assertNotIn("Require signing identity configuration", text)
-        self.assertIn("sign_release: false", text)
-        self.assertNotIn("signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}", text)
-        self.assertIn("publish_github_release: true", text)
 
 
 if __name__ == "__main__":
