@@ -155,6 +155,15 @@ class V012HistoricalDistributionContractTests(unittest.TestCase):
         self.assertIn("future stable releases require developer id signing and apple notarization", text)
         self.assertIn("no signed replacement has been published yet", text)
 
+    def test_historical_unsigned_open_anyway_guidance_is_explicit_and_official(self) -> None:
+        for path in (README, RELEASE_NOTES):
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8").lower()
+                self.assertIn("open anyway", text)
+                self.assertIn("privacy & security", text)
+                self.assertIn("support.apple.com/102445", text)
+                self.assertIn("trusted", text)
+
     def _make_resource_fixture(self, root: Path) -> Path:
         app = root / "SchneeRunner.app"
         bundle = app / "Contents/Resources/SchneeRunner_SchneeRunnerApp.bundle"
