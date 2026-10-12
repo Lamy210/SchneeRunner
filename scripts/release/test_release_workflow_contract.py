@@ -22,8 +22,8 @@ from scripts.release.test_bootstrap_v0_1_2_release_contract import (
 from scripts.release.test_packaged_app_launch_smoke_contract import (
     PackagedAppLaunchSmokeContractTests,
 )
-from scripts.release.test_unsigned_release_workflow_contract import (
-    UnsignedReleaseWorkflowContractTests,
+from scripts.release.test_signed_stable_release_contract import (
+    SignedStableReleaseContractTests,
 )
 from scripts.release.test_v0_1_1_distribution_contract import (
     V011DistributionContractTests,
