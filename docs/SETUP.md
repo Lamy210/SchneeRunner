@@ -105,13 +105,13 @@ The proof first dispatches the secret-free workflow from the default branch and 
 
 Stable GitHub Release publication is **signed-stable only**. The unprivileged Release Build still produces an unsigned application artifact for provenance validation, CI, and development use, but the normal publisher must not promote an unsigned artifact to a stable GitHub Release.
 
-Create the following GitHub Actions variable in trusted repository/environment configuration:
+Create the following repository-level GitHub Actions variable:
 
 ```text
 MACOS_SIGNING_IDENTITY
 ```
 
-Set it to the full Developer ID Application signing identity used by `codesign`. This value is configuration rather than secret key material, but the normal publisher requires it to be non-empty before the privileged release workflow is invoked.
+Set it to the full Developer ID Application signing identity used by `codesign`. This value is configuration rather than secret key material, but the normal publisher requires it to be non-empty before the privileged release workflow is invoked. Do not configure this value only as a `release` Environment variable: the secret-free publisher validation job runs before that Environment is entered and therefore cannot read Environment-level variables.
 
 Add the following secrets to the `release` Environment:
 
