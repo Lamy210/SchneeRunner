@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+from tempfile import TemporaryDirectory
 import unittest
 
 
@@ -41,6 +42,10 @@ def step_block(text: str, step_name: str) -> str:
         return text[start:]
     end = start + len(marker) + match.start()
     return text[start:end]
+
+
+def release_workflow_files(workflows_dir: Path) -> tuple[Path, ...]:
+    return tuple(sorted(workflows_dir.glob("*.yml")))
 
 
 class SignedStableReleaseContractTests(unittest.TestCase):
@@ -149,13 +154,25 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertIn("repository-level Actions variable", secrets)
         self.assertIn("publisher validation job does not enter the `release` Environment", secrets)
 
+    def test_release_workflow_scan_covers_all_supported_extensions(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            workflows_dir = Path(temp_dir)
+            (workflows_dir / "release-a.yml").write_text("name: a\n", encoding="utf-8")
+            (workflows_dir / "release-b.yaml").write_text("name: b\n", encoding="utf-8")
+            (workflows_dir / "README.md").write_text("ignore\n", encoding="utf-8")
+
+            self.assertEqual(
+                {"release-a.yml", "release-b.yaml"},
+                {path.name for path in release_workflow_files(workflows_dir)},
+            )
+
     def test_historical_bootstrap_publishers_are_retired(self) -> None:
         for workflow in BOOTSTRAP_WORKFLOWS:
             with self.subTest(workflow=workflow.name):
                 self.assertFalse(workflow.exists(), f"retired workflow still exists: {workflow}")
 
         workflows_dir = REPO_ROOT / ".github/workflows"
-        for workflow in workflows_dir.glob("*.yml"):
+        for workflow in release_workflow_files(workflows_dir):
             text = workflow.read_text(encoding="utf-8")
             with self.subTest(workflow=workflow.name):
                 self.assertFalse(
