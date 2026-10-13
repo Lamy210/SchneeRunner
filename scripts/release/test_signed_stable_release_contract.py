@@ -45,7 +45,13 @@ def step_block(text: str, step_name: str) -> str:
 
 
 def release_workflow_files(workflows_dir: Path) -> tuple[Path, ...]:
-    return tuple(sorted(workflows_dir.glob("*.yml")))
+    return tuple(
+        sorted(
+            path
+            for path in workflows_dir.iterdir()
+            if path.is_file() and path.suffix in {".yml", ".yaml"}
+        )
+    )
 
 
 class SignedStableReleaseContractTests(unittest.TestCase):
