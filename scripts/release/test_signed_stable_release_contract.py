@@ -159,7 +159,8 @@ class SignedStableReleaseContractTests(unittest.TestCase):
     def test_imported_certificate_identity_must_match_configured_identity_before_signing(self) -> None:
         text = REUSABLE_RELEASE.read_text(encoding="utf-8")
         binding = step_block(text, "Verify imported signing identity")
-        signing = step_block(text, "Sign application")
+        app_signing = step_block(text, "Sign application")
+        dmg_signing = step_block(text, "Sign DMG")
 
         self.assertTrue(binding, "missing imported signing identity binding step")
         self.assertIn(
@@ -177,11 +178,12 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertIn("Configured signing identity does not match imported certificate identity.", binding)
         self.assertLess(text.index("- name: Import Developer ID certificate"), text.index("- name: Verify imported signing identity"))
         self.assertLess(text.index("- name: Verify imported signing identity"), text.index("- name: Sign application"))
-        self.assertIn(
-            "SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}",
-            signing,
-        )
-        self.assertNotIn("SIGNING_IDENTITY: ${{ inputs.signing_identity }}", signing)
+        for signing in (app_signing, dmg_signing):
+            self.assertIn(
+                "SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}",
+                signing,
+            )
+            self.assertNotIn("SIGNING_IDENTITY: ${{ inputs.signing_identity }}", signing)
 
     def test_reusable_release_keeps_unsigned_artifact_verification_available(self) -> None:
         text = VERIFY_RELEASE.read_text(encoding="utf-8")
@@ -208,6 +210,8 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertNotIn("trusted repository/environment configuration", setup)
         self.assertIn("repository-level Actions variable", secrets)
         self.assertIn("publisher validation job does not enter the `release` Environment", secrets)
+        self.assertIn("must exactly match the Developer ID Application identity in the imported certificate", setup)
+        self.assertIn("must exactly match the Developer ID Application identity imported from the certificate", secrets)
 
     def test_release_workflow_scan_covers_all_supported_extensions(self) -> None:
         with TemporaryDirectory() as temp_dir:
