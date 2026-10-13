@@ -156,6 +156,33 @@ class SignedStableReleaseContractTests(unittest.TestCase):
             policy,
         )
 
+    def test_imported_certificate_identity_must_match_configured_identity_before_signing(self) -> None:
+        text = REUSABLE_RELEASE.read_text(encoding="utf-8")
+        binding = step_block(text, "Verify imported signing identity")
+        signing = step_block(text, "Sign application")
+
+        self.assertTrue(binding, "missing imported signing identity binding step")
+        self.assertIn(
+            "EXPECTED_SIGNING_IDENTITY: ${{ inputs.signing_identity }}",
+            binding,
+        )
+        self.assertIn(
+            "IMPORTED_SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}",
+            binding,
+        )
+        self.assertIn(
+            '[[ "${IMPORTED_SIGNING_IDENTITY}" != "${EXPECTED_SIGNING_IDENTITY}" ]]',
+            binding,
+        )
+        self.assertIn("Configured signing identity does not match imported certificate identity.", binding)
+        self.assertLess(text.index("- name: Import Developer ID certificate"), text.index("- name: Verify imported signing identity"))
+        self.assertLess(text.index("- name: Verify imported signing identity"), text.index("- name: Sign application"))
+        self.assertIn(
+            "SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}",
+            signing,
+        )
+        self.assertNotIn("SIGNING_IDENTITY: ${{ inputs.signing_identity }}", signing)
+
     def test_reusable_release_keeps_unsigned_artifact_verification_available(self) -> None:
         text = VERIFY_RELEASE.read_text(encoding="utf-8")
         self.assertIn('RELEASE_SIGNED="${RELEASE_SIGNED:-true}"', text)
