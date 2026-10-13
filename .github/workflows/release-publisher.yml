@@ -45,6 +45,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Require signing identity configuration
+        shell: bash
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MACOS_SIGNING_IDENTITY//[[:space:]]/}" ]]; then
+            echo "MACOS_SIGNING_IDENTITY is required for stable release publication." >&2
+            exit 1
+          fi
+
       - name: Resolve exact triggering build artifact
         shell: bash
         env:
@@ -211,6 +222,7 @@ jobs:
       app_path: SchneeRunner.app
       bundle_id: io.github.Lamy210.SchneeRunner
       dmg_name: SchneeRunner-${{ needs.validate.outputs.source_version }}.dmg
-      sign_release: false
+      sign_release: true
+      signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}
       entitlements_path: ""
       publish_github_release: true

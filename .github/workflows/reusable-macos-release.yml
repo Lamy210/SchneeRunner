@@ -87,8 +87,33 @@ on:
 permissions: {}
 
 jobs:
+  policy:
+    name: Validate release publication policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    env:
+      SIGN_RELEASE: ${{ inputs.sign_release }}
+      SIGNING_IDENTITY: ${{ inputs.signing_identity }}
+      PUBLISH_GITHUB_RELEASE: ${{ inputs.publish_github_release }}
+
+    steps:
+      - name: Reject unsafe release configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${SIGN_RELEASE}" == "true" && -z "${SIGNING_IDENTITY//[[:space:]]/}" ]]; then
+            echo "Signed release execution requires a non-blank signing identity." >&2
+            exit 1
+          fi
+          if [[ "${PUBLISH_GITHUB_RELEASE}" == "true" && "${SIGN_RELEASE}" != "true" ]]; then
+            echo "Stable GitHub Release publication requires Developer ID signing and notarization." >&2
+            exit 1
+          fi
+
   release:
     name: Sign and notarize validated release
+    needs: policy
     runs-on: macos-latest
     timeout-minutes: 30
     environment: release

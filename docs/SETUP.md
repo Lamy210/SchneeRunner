@@ -101,7 +101,17 @@ bash scripts/release/prove-release-environment-policy.sh \
 
 The proof first dispatches the secret-free workflow from the default branch and requires the `release` Environment job to succeed. It then creates a temporary branch and arbitrary tag at the same commit and requires those two Environment jobs to be denied while their non-Environment baseline jobs still succeed. This positive control prevents an accidentally deny-all Environment from producing a false pass. Temporary refs are removed afterward. The script refuses the current `GITHUB_REPOSITORY`, so do not weaken that guardrail to test the production repository.
 
-## 6. Release secrets
+## 6. Release signing configuration
+
+Stable GitHub Release publication is **signed-stable only**. The unprivileged Release Build still produces an unsigned application artifact for provenance validation, CI, and development use, but the normal publisher must not promote an unsigned artifact to a stable GitHub Release.
+
+Create the following repository-level GitHub Actions variable:
+
+```text
+MACOS_SIGNING_IDENTITY
+```
+
+Set it to the full Developer ID Application signing identity used by `codesign`. This value is configuration rather than secret key material, but the normal publisher requires it to be non-empty before the privileged release workflow is invoked. Do not configure this value only as a `release` Environment variable: the secret-free publisher validation job runs before that Environment is entered and therefore cannot read Environment-level variables.
 
 Add the following secrets to the `release` Environment:
 
@@ -114,6 +124,8 @@ APP_STORE_CONNECT_ISSUER_ID
 ```
 
 The reusable release job reads these names directly after entering the protected `release` Environment. Do not duplicate them as repository-level secrets and do not attempt to pass them through `workflow_call`.
+
+If the signing identity, certificate, or notarization credentials are not configured, the correct state is a blocked production release. Do **not** switch the stable publisher back to unsigned mode as a fallback.
 
 Do not add Apple release credentials to workflows triggered by untrusted pull requests.
 
@@ -232,6 +244,8 @@ After creating a project from the template, replace project-specific placeholder
 Before the first production release, run a controlled test release and verify all of the following end to end:
 
 - unsigned application artifact is produced without release secrets
+- publisher rejects a missing or whitespace-only `MACOS_SIGNING_IDENTITY`
+- unsigned public publication is rejected before the protected `release` Environment is entered
 - release job can access the `release` Environment only from the intended default-branch publisher path
 - a feature branch or pull-request ref cannot enter the `release` Environment
 - Developer ID certificate imports into the temporary keychain
@@ -243,4 +257,4 @@ Before the first production release, run a controlled test release and verify al
 - checksum asset is published
 - Homebrew tap PR is generated with the expected version and SHA-256
 
-Do not treat the first real user-facing release as the integration test for signing credentials or the Homebrew path.
+Do not treat the first real user-facing release as the integration test for signing credentials or the Homebrew path. If any signing/notarization prerequisite is unavailable, keep stable publication blocked rather than falling back to an unsigned GitHub Release.

@@ -8,7 +8,9 @@ The core rule is:
 
 > Build application-controlled source without release secrets. Validate its exact provenance and artifact identity in a separate secret-free publisher job. Only the trusted default-branch publisher may enter the protected release Environment.
 
-## Three release trust zones
+Stable GitHub Release publication is fail-closed: public stable publication requires signed mode and Apple notarization. Unsigned application artifacts remain valid intermediate CI/test inputs, but they are not a fallback production release path.
+
+## Release trust zones
 
 ### 1. Tag-triggered Release Build
 
@@ -38,11 +40,26 @@ permissions:
 
 It has no Environment and no secrets. It resolves one exact upstream workflow run/artifact, validates provenance/tag/source/history/digests/archive/app metadata, and creates a new validator-owned handoff artifact inside the publisher run.
 
-### 3. Privileged signing/publication
+For stable publication it also requires the trusted non-secret repository-level Actions variable `MACOS_SIGNING_IDENTITY` to contain a non-whitespace Developer ID Application identity before the reusable privileged workflow is invoked. The publisher validation job does not enter the `release` Environment, so an Environment-level variable is not visible at this gate. This check does not expose certificate material or notarization credentials.
+
+### 3. Reusable publication policy gate
+
+Before the protected release Environment is entered, `reusable-macos-release.yml` runs a secret-free policy job. It has no Apple secrets and no `environment: release` declaration.
+
+The policy rejects this unsafe combination explicitly:
+
+```text
+publish_github_release=true
+sign_release=false
+```
+
+Unsigned artifact-only execution may remain valid when `publish_github_release=false`. The policy protects promotion to a public stable GitHub Release; it does not ban creation or verification of unsigned intermediate artifacts.
+
+### 4. Privileged signing/publication
 
 Inside the called `reusable-macos-release.yml`, signing and repository publication are separate jobs.
 
-The signing/notarization job declares:
+The signing/notarization job depends on successful policy validation and declares:
 
 ```yaml
 environment: release
@@ -63,7 +80,7 @@ permissions:
 
 The publisher caller deliberately does **not** use `secrets: inherit` and does not map Apple secrets through `workflow_call`.
 
-## Secret classes
+## Configuration classes
 
 ### Public configuration
 
@@ -80,11 +97,12 @@ Safe to commit:
 
 Prefer GitHub Actions variables when appropriate:
 
+- `MACOS_SIGNING_IDENTITY` — repository-level Actions variable containing the full Developer ID Application identity selected by the trusted publisher
 - Apple Team ID
 - App Store Connect issuer/key identifiers when policy permits
 - Homebrew tap repository name
 
-Treat these as metadata, not authentication material.
+Treat these as metadata, not authentication material. `MACOS_SIGNING_IDENTITY` is required by the normal stable publisher even though the certificate/private key remains secret.
 
 ### Secrets
 
@@ -97,9 +115,9 @@ Store only in GitHub Secrets / protected Environments:
 
 ## Required `release` Environment
 
-Create a GitHub Environment named exactly `release` and place all Apple signing/notarization secrets there. The reusable macOS release workflow declares `environment: release`; no upstream tag-build or publisher-validation job does.
+Create a GitHub Environment named exactly `release` and place all Apple signing/notarization secrets there. The reusable macOS release signing job declares `environment: release`; no upstream tag-build, publisher-validation, or reusable policy job does.
 
-Where account features permit, add deployment protection/reviewer requirements and restrict deployments to the intended release policy. Environment protection is an additional control, not a replacement for publisher provenance validation.
+Where account features permit, add deployment protection/reviewer requirements and restrict deployments to the intended release policy. Environment protection is an additional control, not a replacement for publisher provenance validation or the signed-stable policy gate.
 
 ## Required Apple secret names
 
@@ -115,6 +133,8 @@ Do not also create repository-level copies of these Apple release credentials. K
 
 Do not use broad names such as `PASSWORD`, `KEY`, or `TOKEN` when a narrower name is possible.
 
+If `MACOS_SIGNING_IDENTITY` or any required signing/notarization credential is unavailable, stable release publication must remain blocked. Do not disable signing or publish an unsigned stable release to work around missing configuration.
+
 ## Why the caller does not pass Apple secrets
 
 GitHub reusable workflows can use an Environment declared in the called job. This template uses that boundary intentionally.
@@ -127,7 +147,7 @@ secrets: inherit
 
 and it does not map Apple secret names explicitly.
 
-The Apple secrets are resolved only when the called job enters `environment: release`. This keeps unrelated repository/organization secrets out of the privileged workflow interface and prevents the secret-free validation job from gaining access to them.
+The Apple secrets are resolved only when the called signing job enters `environment: release`. The preceding reusable policy job and repository-specific publisher validation remain secret-free. This keeps unrelated repository/organization secrets out of the privileged workflow interface and prevents the secret-free validation path from gaining access to them.
 
 ## GitHub Actions permissions
 
@@ -137,11 +157,12 @@ Expected release permissions are:
 
 - Release Build: `contents: read`
 - Publisher validation: `actions: read`, `contents: read`
+- Reusable publication policy: no Environment, no Apple secrets, no repository write permission
 - Signing/notarization: `actions: read`, `contents: read`, protected `release` Environment
 - GitHub Release publication: `actions: read`, `contents: write`, no Apple Environment/secrets
 - Homebrew updater: source repository read access plus one narrow named tap credential
 
-Do not grant release write permission to the tag build, validation job, or Apple-signing job.
+Do not grant release write permission to the tag build, validation job, policy job, or Apple-signing job.
 
 ## Fork pull requests
 

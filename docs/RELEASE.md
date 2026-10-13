@@ -6,6 +6,14 @@ The template uses a **two-stage workflow with three trust zones**. The applicati
 
 A release tag chooses the application source to build. It must **not** choose the code that receives Apple credentials or repository write permission.
 
+## Signed stable publication contract
+
+`Release Build` intentionally produces an unsigned intermediate artifact without Apple release secrets. That artifact is valid for CI, provenance validation, runtime proof, and development/testing, but it must not be promoted to a stable GitHub Release.
+
+Normal stable publication is fail-closed. Before publication, the application must be Developer ID signed, the DMG must be signed, notarized and stapled, and signed verification must succeed. Only the resulting verified release artifact may cross the separate GitHub publication boundary. Unsigned Actions artifacts are development/test artifacts rather than normal stable downloads.
+
+Before the protected `release` Environment is entered, `reusable-macos-release.yml` runs a secret-free policy job. It rejects `publish_github_release=true` when `sign_release=false`, so missing signing configuration blocks production publication instead of falling back to an unsigned stable release.
+
 ### Zone A: unprivileged tag build
 
 `release-build.yml` runs on a stable `vX.Y.Z` tag push and has no release credentials, no `release` Environment, and no repository write permission.
@@ -128,6 +136,10 @@ Release Publisher / validate (current default-branch control code)
   | validated-release-input-<run-id>-<run-attempt>
   |   - unsigned-macos-app.tar.gz
   |   - validated-release-metadata.json
+  v
+Reusable macOS Release / policy (secret-free, no release Environment)
+  |
+  | reject unsigned public stable publication
   v
 Reusable macOS Release / sign (environment: release, contents: read)
   |
