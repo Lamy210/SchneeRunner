@@ -111,7 +111,7 @@ Create the following repository-level GitHub Actions variable:
 MACOS_SIGNING_IDENTITY
 ```
 
-Set it to the full Developer ID Application signing identity used by `codesign`. This value is configuration rather than secret key material, but the normal publisher requires it to be non-empty before the privileged release workflow is invoked. Do not configure this value only as a `release` Environment variable: the secret-free publisher validation job runs before that Environment is entered and therefore cannot read Environment-level variables.
+Set it to the full Developer ID Application signing identity used by `codesign`. It must exactly match the Developer ID Application identity in the imported certificate. The privileged release job verifies that binding immediately after certificate import, then uses the imported identity for both application and DMG signing. This value is configuration rather than secret key material, but the normal publisher requires it to be non-empty before the privileged release workflow is invoked. Do not configure this value only as a `release` Environment variable: the secret-free publisher validation job runs before that Environment is entered and therefore cannot read Environment-level variables.
 
 Add the following secrets to the `release` Environment:
 
@@ -249,6 +249,7 @@ Before the first production release, run a controlled test release and verify al
 - release job can access the `release` Environment only from the intended default-branch publisher path
 - a feature branch or pull-request ref cannot enter the `release` Environment
 - Developer ID certificate imports into the temporary keychain
+- configured signing identity exactly matches the imported Developer ID certificate identity
 - app signature validates
 - DMG builds and validates
 - Apple notarization reaches `Accepted`

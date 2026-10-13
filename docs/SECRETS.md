@@ -42,6 +42,8 @@ It has no Environment and no secrets. It resolves one exact upstream workflow ru
 
 For stable publication it also requires the trusted non-secret repository-level Actions variable `MACOS_SIGNING_IDENTITY` to contain a non-whitespace Developer ID Application identity before the reusable privileged workflow is invoked. The publisher validation job does not enter the `release` Environment, so an Environment-level variable is not visible at this gate. This check does not expose certificate material or notarization credentials.
 
+That configured value must exactly match the Developer ID Application identity imported from the certificate. The privileged signing job verifies the exact match immediately after import and then signs the application and DMG with the imported identity output rather than trusting the configuration string a second time.
+
 ### 3. Reusable publication policy gate
 
 Before the protected release Environment is entered, `reusable-macos-release.yml` runs a secret-free policy job. It has no Apple secrets and no `environment: release` declaration.
@@ -194,6 +196,8 @@ The secret-free validator then re-handoffs only the validated archive plus valid
 ## Certificate handling
 
 The release scripts create a temporary keychain, import the certificate, use it for signing, then delete the keychain in an `always()` cleanup step. Do not install release certificates into the login keychain on a shared or self-hosted runner.
+
+After import, the workflow extracts the single Developer ID Application identity from the temporary keychain and requires it to match `MACOS_SIGNING_IDENTITY` exactly. Application and DMG signing use that imported identity output. A mismatch blocks the release before any signing operation.
 
 Prefer ephemeral GitHub-hosted macOS runners unless a self-hosted signing runner has been intentionally hardened.
 
