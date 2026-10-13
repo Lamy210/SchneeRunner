@@ -49,6 +49,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Require signing identity configuration
+        shell: bash
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MACOS_SIGNING_IDENTITY//[[:space:]]/}" ]]; then
+            echo "MACOS_SIGNING_IDENTITY is required for stable release publication." >&2
+            exit 1
+          fi
+
       - name: Resolve exact triggering build artifact
         shell: bash
         env:
@@ -214,7 +225,8 @@ jobs:
       app_path: MyApp.app
       bundle_id: com.example.MyApp
       dmg_name: MyApp-${{ needs.validate.outputs.source_version }}.dmg
-      signing_identity: "Developer ID Application: Example Developer (TEAMID)"
+      sign_release: true
+      signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}
       entitlements_path: ""
       publish_github_release: true
 
