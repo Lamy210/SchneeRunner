@@ -18,6 +18,21 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
         self.assertIn('APP_PATH="${APP_PATH}"', text)
         self.assertIn('APP_PATH="${mounted_app}"', text)
 
+    def test_signed_mounted_app_passes_gatekeeper_before_launch_smoke(self) -> None:
+        text = VERIFY_RELEASE.read_text(encoding="utf-8")
+        mounted_start = text.index('mounted_app="${MOUNT_POINT}/${APP_BASENAME}"')
+        mounted_section = text[mounted_start:]
+
+        codesign = 'codesign --verify --deep --strict --verbose=2 "${mounted_app}"'
+        gatekeeper = 'spctl --assess --type execute --verbose=4 "${mounted_app}"'
+        launch = 'APP_PATH="${mounted_app}" \\\n  bash "${SCRIPT_DIR}/smoke-launch-app.sh"'
+
+        self.assertIn(codesign, mounted_section)
+        self.assertIn(gatekeeper, mounted_section)
+        self.assertIn(launch, mounted_section)
+        self.assertLess(mounted_section.index(codesign), mounted_section.index(gatekeeper))
+        self.assertLess(mounted_section.index(gatekeeper), mounted_section.index(launch))
+
     def test_launch_smoke_delegates_to_nsworkspace_helper(self) -> None:
         self.assertTrue(SMOKE_SCRIPT.is_file(), f"missing launch smoke script: {SMOKE_SCRIPT}")
         self.assertTrue(SMOKE_HELPER.is_file(), f"missing launch smoke helper: {SMOKE_HELPER}")
