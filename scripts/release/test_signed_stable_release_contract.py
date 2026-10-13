@@ -8,6 +8,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"
+PUBLISHER_EXAMPLE = REPO_ROOT / "examples/app-release-publisher.yml"
 REUSABLE_RELEASE = REPO_ROOT / ".github/workflows/reusable-macos-release.yml"
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
 RELEASE_DOC = REPO_ROOT / "docs/RELEASE.md"
@@ -79,6 +80,27 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         self.assertIn("set -euo pipefail", block)
         self.assertIn("MACOS_SIGNING_IDENTITY//[[:space:]]/", block)
         self.assertRegex(block, r"(?m)^\s+exit 1$")
+
+    def test_copyable_publisher_example_uses_same_signed_stable_configuration(self) -> None:
+        example = PUBLISHER_EXAMPLE.read_text(encoding="utf-8")
+        validate = job_block(example, "validate")
+        publish = job_block(example, "sign-and-publish")
+
+        self.assertIn("Require signing identity configuration", validate)
+        self.assertIn(
+            "MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}",
+            validate,
+        )
+        self.assertIn("MACOS_SIGNING_IDENTITY//[[:space:]]/", validate)
+        self.assertIn("sign_release: true", publish)
+        self.assertIn(
+            "signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}",
+            publish,
+        )
+        self.assertNotIn(
+            'signing_identity: "Developer ID Application: Example Developer (TEAMID)"',
+            publish,
+        )
 
     def test_reusable_release_has_secret_free_policy_job(self) -> None:
         text = REUSABLE_RELEASE.read_text(encoding="utf-8")
