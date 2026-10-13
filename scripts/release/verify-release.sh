@@ -85,6 +85,12 @@ APP_PATH="${mounted_app}" \
   EXECUTABLE_NAME="${executable_name}" \
   bash "${SCRIPT_DIR}/verify-app-executable.sh"
 verify_app_resources "${mounted_app}"
+
+if [[ "${RELEASE_SIGNED}" == "true" ]]; then
+  codesign --verify --deep --strict --verbose=2 "${mounted_app}"
+  spctl --assess --type execute --verbose=4 "${mounted_app}"
+fi
+
 APP_PATH="${mounted_app}" \
   bash "${SCRIPT_DIR}/smoke-launch-app.sh"
 for frame in 1 2 3 4; do
@@ -92,10 +98,6 @@ for frame in 1 2 3 4; do
     "${APP_PATH}/${RESOURCE_RELATIVE_DIR}/walk_${frame}.png" \
     "${mounted_app}/${RESOURCE_RELATIVE_DIR}/walk_${frame}.png"
 done
-
-if [[ "${RELEASE_SIGNED}" == "true" ]]; then
-  codesign --verify --deep --strict --verbose=2 "${mounted_app}"
-fi
 
 CHECKSUM_PATH="${DMG_PATH}.sha256"
 (
