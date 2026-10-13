@@ -224,7 +224,8 @@ class ReleasePublisherWorkflowContractTests(unittest.TestCase):
             "app_path: MyApp.app",
             "bundle_id: com.example.MyApp",
             "dmg_name: MyApp-${{ needs.validate.outputs.source_version }}.dmg",
-            'signing_identity: "Developer ID Application: Example Developer (TEAMID)"',
+            "sign_release: true",
+            "signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}",
             'entitlements_path: ""',
             "publish_github_release: true",
         ):
