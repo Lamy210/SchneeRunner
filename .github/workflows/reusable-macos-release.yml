@@ -273,12 +273,25 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: bash scripts/release/import-certificate.sh
 
+      - name: Verify imported signing identity
+        if: ${{ inputs.sign_release }}
+        shell: bash
+        env:
+          EXPECTED_SIGNING_IDENTITY: ${{ inputs.signing_identity }}
+          IMPORTED_SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}
+        run: |
+          set -euo pipefail
+          if [[ "${IMPORTED_SIGNING_IDENTITY}" != "${EXPECTED_SIGNING_IDENTITY}" ]]; then
+            echo "Configured signing identity does not match imported certificate identity." >&2
+            exit 1
+          fi
+
       - name: Sign application
         if: ${{ inputs.sign_release }}
         shell: bash
         env:
           APP_PATH: release-input/${{ inputs.app_path }}
-          SIGNING_IDENTITY: ${{ inputs.signing_identity }}
+          SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}
           KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
           ENTITLEMENTS_PATH: ${{ inputs.entitlements_path }}
         run: bash scripts/release/sign-app.sh
@@ -296,7 +309,7 @@ jobs:
         shell: bash
         env:
           DMG_PATH: release-output/${{ inputs.dmg_name }}
-          SIGNING_IDENTITY: ${{ inputs.signing_identity }}
+          SIGNING_IDENTITY: ${{ steps.certificate.outputs.signing-identity }}
           KEYCHAIN_PATH: ${{ steps.certificate.outputs.keychain-path }}
         run: |
           set -euo pipefail
