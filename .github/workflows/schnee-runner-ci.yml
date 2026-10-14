@@ -58,8 +58,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$(plutil -extract com.apple.security.app-sandbox raw -o - build/actual-entitlements.plist)" == "true" ]]
-          [[ "$(plutil -extract com.apple.security.files.user-selected.read-write raw -o - build/actual-entitlements.plist)" == "true" ]]
+          /usr/bin/python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          path = Path("build/actual-entitlements.plist")
+          with path.open("rb") as handle:
+              entitlements = plistlib.load(handle)
+
+          expected = {
+              "com.apple.security.app-sandbox": True,
+              "com.apple.security.files.user-selected.read-write": True,
+          }
+          for key, expected_value in expected.items():
+              actual = entitlements.get(key)
+              if actual != expected_value:
+                  raise SystemExit(
+                      f"expected embedded entitlement {key}={expected_value!r}, got {actual!r}"
+                  )
+          PY
 
       - name: Launch release bundle smoke artifact
         env:
