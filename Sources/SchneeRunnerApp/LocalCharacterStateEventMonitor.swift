@@ -10,11 +10,6 @@ enum LocalCharacterStateProviderEvent: Equatable {
 final class LocalCharacterStateEventMonitor: NSObject, EventProvider {
     var onEvent: ((LocalCharacterStateProviderEvent) -> Void)?
 
-    // Transitional compatibility surface. CharacterStateCoordinator still consumes
-    // these callbacks until the provider-injection migration is complete.
-    var onSet: ((String, CharacterState) -> Void)?
-    var onClear: ((String) -> Void)?
-
     private let center = DistributedNotificationCenter.default()
     private var expiryTimers: [String: Timer] = [:]
     private var isStarted = false
@@ -75,18 +70,13 @@ final class LocalCharacterStateEventMonitor: NSObject, EventProvider {
 
         switch event.action {
         case .set:
-            guard let state = event.state else {
-                return
-            }
-
-            onSet?(event.channel, state)
             scheduleExpiry(
                 for: event.channel,
                 after: event.durationSeconds
             )
 
         case .clear:
-            onClear?(event.channel)
+            break
         }
     }
 
@@ -123,6 +113,5 @@ final class LocalCharacterStateEventMonitor: NSObject, EventProvider {
 
         expiryTimers.removeValue(forKey: channel)
         onEvent?(.expired(channel: channel))
-        onClear?(channel)
     }
 }
