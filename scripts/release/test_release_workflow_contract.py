@@ -122,6 +122,7 @@ class ReleaseBuildWorkflowContractTests(unittest.TestCase):
     def test_build_does_not_call_privileged_release_or_homebrew_reusable_workflow(self) -> None:
         text = self.workflow_text()
         self.assertNotIn("reusable-macos-release.yml", text)
+        self.assertNotIn("reusable-homebrew-update.yml", text)
         self.assertNotIn("contents: write", text)
 
     def test_legacy_monolithic_example_is_migration_only(self) -> None:
