@@ -71,7 +71,7 @@ The current vertical slice supports:
 - system low-battery warning trigger driven by macOS warning levels
 - first-class local build lifecycle trigger for start / success / failure / cancel
 - state-aware animation lookup with deterministic default-animation fallback
-- portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, and GIF clips
+- portable `.schneerunner` character packs with state-specific PNG, sprite-sheet, PNG Sequence, GIF, APNG, and WebP clips
 - canonical export of the currently loaded stored Character Pack
 - Core Character Pack builder for assembling canonical packs from local clips
 - in-app Character Pack builder with per-state clip selection
@@ -81,8 +81,6 @@ The current vertical slice supports:
 - bounded local productivity history and optional character reactions
 - system-managed Launch at Login
 - local-only operation with no network access
-
-Additional character-pack clip kinds, additional animated image formats, and export tooling are intentionally deferred to later changes.
 
 ## Run locally
 
