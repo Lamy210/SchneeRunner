@@ -424,12 +424,21 @@ The animation timer is not restarted when a CPU sample resolves to the already-a
 
 Productivity refresh loops do not accumulate elapsed ticks into domain time. They recompute presentation from persisted deadlines, so reducing or delaying UI refresh frequency changes visual freshness rather than timer correctness. Transient productivity reactions use one-shot timers only while a transient signal is active.
 
-## 9. Deferred decisions
+## 9. App Sandbox boundary
+
+Signed SchneeRunner distributions run with App Sandbox enabled. The checked-in `SchneeRunner.entitlements` is the capability source of truth and is deliberately limited to App Sandbox plus user-selected read/write file access. The application does not request network, temporary-exception, broad home-directory, Downloads, or Documents entitlements.
+
+User-selected file authority is acquired only at the existing AppKit boundaries: imports through `NSOpenPanel` and Character Pack exports through a save panel. Imported assets are copied into SchneeRunner-owned Application Support storage, so normal operation does not depend on retaining access to arbitrary source paths. Application-owned persistence remains under the user-domain Application Support location, which resolves inside the sandbox container when sandboxing is active.
+
+Local character/build automation remains a same-user Distributed Notification protocol. Payload data is carried in the notification `object`; `userInfo` remains nil. This transport is not an authentication boundary and must be re-evaluated before changing its sandbox-sensitive payload shape.
+
+The privileged release publisher applies the same entitlement file during Developer ID signing. Pull-request CI uses ad-hoc signing with that file, verifies the resulting signature and embedded entitlement values, then launch-smokes the sandboxed packaged application. A release contract test parses the plist as a closed two-key capability set, so widening the sandbox requires an explicit reviewed contract change. See `docs/APP_SANDBOX.md` for the detailed capability and verification policy.
+
+## 10. Deferred decisions
 
 The following remain deliberately deferred:
 
 - Xcode project layout;
-- sandboxing and entitlements;
 - future Character Pack schema versions.
 
 Each should be introduced with its own focused change and verification path.
