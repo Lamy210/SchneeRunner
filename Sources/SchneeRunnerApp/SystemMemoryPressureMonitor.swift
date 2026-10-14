@@ -2,10 +2,14 @@ import Dispatch
 import SchneeRunnerCore
 
 @MainActor
-final class SystemMemoryPressureMonitor {
+final class SystemMemoryPressureMonitor: EventProvider {
     private var source: (any DispatchSourceMemoryPressure)?
 
-    var onChange: ((MemoryPressureLevel) -> Void)?
+    var onEvent: ((MemoryPressureLevel) -> Void)?
+    var onChange: ((MemoryPressureLevel) -> Void)? {
+        get { onEvent }
+        set { onEvent = newValue }
+    }
 
     func start() {
         guard source == nil else {
@@ -39,7 +43,7 @@ final class SystemMemoryPressureMonitor {
             return
         }
 
-        onChange?(level)
+        onEvent?(level)
     }
 
     private static func level(
