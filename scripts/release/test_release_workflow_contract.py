@@ -13,6 +13,7 @@ from scripts.release.test_bootstrap_release_publisher import (
 from scripts.release.test_bootstrap_v0_1_2_release_contract import (
     V012HistoricalDistributionContractTests,
 )
+from scripts.release.test_fetch_actions_artifact import FetchActionsArtifactTests
 from scripts.release.test_packaged_app_launch_smoke_contract import (
     PackagedAppLaunchSmokeContractTests,
 )
