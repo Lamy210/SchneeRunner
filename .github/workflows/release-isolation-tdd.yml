@@ -150,7 +150,9 @@ jobs:
             exit 1
           fi
 
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}" >artifact-metadata.json
+          python3 scripts/release/fetch_actions_artifact.py \
+            --endpoint "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}" \
+            --output artifact-metadata.json
           api_digest="$(python3 - <<'PY'
           import json
           import re
@@ -165,7 +167,9 @@ jobs:
           )"
           test "${api_digest}" = "${canonical_digest}"
 
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip" >artifact-api.zip
+          python3 scripts/release/fetch_actions_artifact.py \
+            --endpoint "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip" \
+            --output artifact-api.zip
           actual_digest="$(python3 - <<'PY'
           import hashlib
 
@@ -260,7 +264,9 @@ jobs:
           REPOSITORY_ID: ${{ github.repository_id }}
         run: |
           set -euo pipefail
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}" >artifact.json
+          python3 scripts/release/fetch_actions_artifact.py \
+            --endpoint "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}" \
+            --output artifact.json
           python3 scripts/release/verify-verified-release-artifact.py \
             --metadata artifact.json \
             --artifact-id "${ARTIFACT_ID}" \
