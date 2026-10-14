@@ -72,7 +72,7 @@ final class LocalCharacterStateEventMonitorTests: XCTestCase {
             [
                 .received(fast),
                 .received(slow),
-                .expired(channel: "fast"),
+                .expired(channel: "fast")
             ]
         )
     }
