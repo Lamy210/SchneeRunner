@@ -94,6 +94,7 @@ final class ReminderApplicationController {
         launchReconciliationTask?.cancel()
         launchReconciliationTask = nil
         fallbackScheduler?.stop()
+        coordinator = nil
     }
 
     @discardableResult
