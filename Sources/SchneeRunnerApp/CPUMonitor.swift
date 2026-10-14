@@ -61,6 +61,9 @@ final class CPUMonitor: NSObject, MetricProvider {
     func stop() {
         timer?.invalidate()
         timer = nil
+        calculator = CPUUsageCalculator()
+        hasProducedUpdate = false
+        resetDerivedState()
     }
 
     @objc
