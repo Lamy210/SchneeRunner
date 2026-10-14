@@ -28,6 +28,7 @@ from scripts.release.test_v0_1_1_distribution_contract import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BUILD_WORKFLOW = REPO_ROOT / "examples/app-release-build.yml"
 LEGACY_WORKFLOW = REPO_ROOT / "examples/app-release.yml"
+RELEASE_ISOLATION_WORKFLOW = REPO_ROOT / ".github/workflows/release-isolation-tdd.yml"
 SCHNEE_RUNNER_CI_WORKFLOW = REPO_ROOT / ".github/workflows/schnee-runner-ci.yml"
 
 
@@ -131,6 +132,29 @@ class ReleaseBuildWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("uses: ./.github/workflows/reusable-macos-release.yml", text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("environment: release", text)
+
+
+class ReleaseIsolationArtifactAPIContractTests(unittest.TestCase):
+    def workflow_text(self) -> str:
+        self.assertTrue(
+            RELEASE_ISOLATION_WORKFLOW.is_file(),
+            f"missing workflow: {RELEASE_ISOLATION_WORKFLOW}",
+        )
+        return RELEASE_ISOLATION_WORKFLOW.read_text(encoding="utf-8")
+
+    def test_artifact_metadata_and_zip_use_bounded_retry_helper(self) -> None:
+        text = self.workflow_text()
+        helper = "python3 scripts/release/fetch_actions_artifact.py"
+
+        self.assertEqual(text.count(helper), 2)
+        self.assertNotIn(
+            'gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}"',
+            text,
+        )
+        self.assertNotIn(
+            'gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip"',
+            text,
+        )
 
 
 class SchneeRunnerReleaseBundleCIContractTests(unittest.TestCase):
