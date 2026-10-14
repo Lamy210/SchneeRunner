@@ -6,10 +6,6 @@ final class SystemMemoryPressureMonitor: EventProvider {
     private var source: (any DispatchSourceMemoryPressure)?
 
     var onEvent: ((MemoryPressureLevel) -> Void)?
-    var onChange: ((MemoryPressureLevel) -> Void)? {
-        get { onEvent }
-        set { onEvent = newValue }
-    }
 
     func start() {
         guard source == nil else {
