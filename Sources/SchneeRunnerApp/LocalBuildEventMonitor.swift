@@ -1,8 +1,17 @@
 import Foundation
 import SchneeRunnerCore
 
+enum BuildLifecycleProviderEvent: Equatable {
+    case received(LocalBuildEvent)
+    case expired
+}
+
 @MainActor
-final class LocalBuildEventMonitor: NSObject {
+final class LocalBuildEventMonitor: NSObject, EventProvider {
+    var onEvent: ((BuildLifecycleProviderEvent) -> Void)?
+
+    // Transitional compatibility surface. CharacterStateCoordinator still consumes
+    // these callbacks until the provider-injection migration is complete.
     var onSet: ((CharacterState) -> Void)?
     var onClear: (() -> Void)?
 
@@ -54,12 +63,14 @@ final class LocalBuildEventMonitor: NSObject {
             return
         }
 
-        handle(event)
+        process(event)
     }
 
-    private func handle(_ event: LocalBuildEvent) {
+    func process(_ event: LocalBuildEvent) {
         expiryTimer?.invalidate()
         expiryTimer = nil
+
+        onEvent?(.received(event))
 
         let effect = statePolicy.effect(for: event.phase)
         guard let state = effect.state else {
@@ -90,6 +101,7 @@ final class LocalBuildEventMonitor: NSObject {
     @objc
     private func expireEvent() {
         expiryTimer = nil
+        onEvent?(.expired)
         onClear?()
     }
 }
