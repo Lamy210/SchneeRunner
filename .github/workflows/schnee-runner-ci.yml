@@ -36,6 +36,16 @@ jobs:
           RELEASE_VERSION: 0.0.0
         run: bash scripts/ci/build-release-artifact.sh
 
+      - name: Ad-hoc sign sandboxed release bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          codesign --force --sign - --entitlements SchneeRunner.entitlements build/SchneeRunner.app
+          codesign --verify --deep --strict build/SchneeRunner.app
+          codesign --display --entitlements :- build/SchneeRunner.app >build/actual-entitlements.plist 2>/dev/null
+          [[ "$(plutil -extract com.apple.security.app-sandbox raw -o - build/actual-entitlements.plist)" == "true" ]]
+          [[ "$(plutil -extract com.apple.security.files.user-selected.read-write raw -o - build/actual-entitlements.plist)" == "true" ]]
+
       - name: Launch release bundle smoke artifact
         env:
           APP_PATH: build/SchneeRunner.app
