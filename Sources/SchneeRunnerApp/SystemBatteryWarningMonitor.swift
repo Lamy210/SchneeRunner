@@ -2,11 +2,15 @@ import IOKit.ps
 import SchneeRunnerCore
 
 @MainActor
-final class SystemBatteryWarningMonitor {
+final class SystemBatteryWarningMonitor: MetricProvider {
     private var runLoopSource: CFRunLoopSource?
     private var currentLevel: BatteryWarningLevel?
 
-    var onChange: ((BatteryWarningLevel) -> Void)?
+    var onUpdate: ((BatteryWarningLevel) -> Void)?
+    var onChange: ((BatteryWarningLevel) -> Void)? {
+        get { onUpdate }
+        set { onUpdate = newValue }
+    }
 
     func start() {
         guard runLoopSource == nil else {
@@ -63,6 +67,6 @@ final class SystemBatteryWarningMonitor {
         }
 
         currentLevel = level
-        onChange?(level)
+        onUpdate?(level)
     }
 }
