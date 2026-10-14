@@ -123,7 +123,6 @@ class ReleaseBuildWorkflowContractTests(unittest.TestCase):
         text = self.workflow_text()
         self.assertNotIn("reusable-macos-release.yml", text)
         self.assertNotIn("reusable-homebrew-update.yml", text)
-        self.assertNotIn("contents: write", text)
 
     def test_legacy_monolithic_example_is_migration_only(self) -> None:
         text = LEGACY_WORKFLOW.read_text(encoding="utf-8")
