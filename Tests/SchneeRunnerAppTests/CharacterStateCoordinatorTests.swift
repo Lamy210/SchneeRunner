@@ -111,15 +111,17 @@ final class CharacterStateCoordinatorTests: XCTestCase {
             channel: "second"
         )
 
-        local.emit(.received(first))
-        local.emit(.received(second))
-        XCTAssertEqual(playbackController.requestedState, .sprint)
+        withExtendedLifetime(coordinator) {
+            local.emit(.received(first))
+            local.emit(.received(second))
+            XCTAssertEqual(playbackController.requestedState, .sprint)
 
-        local.emit(.expired(channel: "second"))
-        XCTAssertEqual(playbackController.requestedState, .dash)
+            local.emit(.expired(channel: "second"))
+            XCTAssertEqual(playbackController.requestedState, .dash)
 
-        local.emit(.expired(channel: "first"))
-        XCTAssertEqual(playbackController.requestedState, .run)
+            local.emit(.expired(channel: "first"))
+            XCTAssertEqual(playbackController.requestedState, .run)
+        }
     }
 
     func testLocalProviderClearUsesEventChannel() throws {
@@ -137,12 +139,17 @@ final class CharacterStateCoordinatorTests: XCTestCase {
             state: .sprint,
             channel: "second"
         )
+        let clear = try LocalCharacterStateEvent.clear(
+            channel: "second"
+        )
 
-        local.emit(.received(first))
-        local.emit(.received(second))
-        local.emit(.received(try LocalCharacterStateEvent.clear(channel: "second")))
+        withExtendedLifetime(coordinator) {
+            local.emit(.received(first))
+            local.emit(.received(second))
+            local.emit(.received(clear))
 
-        XCTAssertEqual(playbackController.requestedState, .dash)
+            XCTAssertEqual(playbackController.requestedState, .dash)
+        }
     }
 
     func testManualOverrideRemainsAuthoritativeWhileProvidersEmit() throws {
@@ -154,17 +161,14 @@ final class CharacterStateCoordinatorTests: XCTestCase {
             build: build,
             local: local
         )
+        let automationEvent = try LocalCharacterStateEvent.set(
+            state: .sprint,
+            channel: "automation"
+        )
 
         coordinator.setManualOverride(.idle)
         build.emit(.received(LocalBuildEvent(phase: .succeeded)))
-        local.emit(
-            .received(
-                try LocalCharacterStateEvent.set(
-                    state: .sprint,
-                    channel: "automation"
-                )
-            )
-        )
+        local.emit(.received(automationEvent))
 
         XCTAssertEqual(playbackController.requestedState, .idle)
 
