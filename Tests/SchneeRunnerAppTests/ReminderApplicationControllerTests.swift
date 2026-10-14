@@ -50,6 +50,33 @@ final class ReminderApplicationControllerTests: XCTestCase {
         )
     }
 
+    func testCreateReminderAfterStopThrowsNotStartedAndDoesNotPersist() async throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+        fixture.controller.start(now: now)
+        fixture.controller.stop()
+        let request = ReminderEditRequest(
+            title: "Should not persist",
+            body: nil,
+            enabled: true,
+            schedule: .once(now.addingTimeInterval(3600))
+        )
+
+        do {
+            _ = try await fixture.controller.createReminder(
+                request,
+                now: now
+            )
+            XCTFail("Expected createReminder to reject mutations after stop")
+        } catch let error as ReminderApplicationControllerError {
+            XCTAssertEqual(error, .notStarted)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertTrue(try fixture.stateStore.load().reminders.isEmpty)
+    }
+
     func testStopCancelsInFlightLaunchReconciliation() async throws {
         let scheduler = ReminderApplicationScheduler(
             reconcileDelayNanoseconds: 100_000_000
