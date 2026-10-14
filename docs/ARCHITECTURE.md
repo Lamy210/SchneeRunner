@@ -194,6 +194,7 @@ Owns macOS integration:
 - requested-state playback coordination;
 - manual character-state override menu coordination;
 - system-managed login-item registration and approval-state presentation;
+- typed `MetricProvider` / `EventProvider` acquisition and lifecycle boundaries for system and local event sources;
 - local Distributed Notification state-event reception with per-channel TTL expiry;
 - local build lifecycle event reception and terminal-state expiry;
 - IOKit power-source notification and low-battery warning monitoring;
@@ -334,9 +335,9 @@ Reconciliation may remove obsolete requests only under those owned prefixes and 
 
 `ProductivityCharacterStateCoordinator` publishes through exactly one `productivity` trigger at `.event` priority. It does not add new global priority classes or mutate the metric/system/manual ordering. Its internal signal precedence is reminder fired > timer completed > final minute > Pomodoro focus > active countdown > break. Reminder and completion reactions are transient and own a one-shot common/event-tracking run-loop expiry timer so they clear even when no countdown or Pomodoro refresh loop is active. Disabling reactions clears that single productivity trigger immediately.
 
-## 5. Planned boundaries
+## 5. Provider and renderer boundaries
 
-The target model remains:
+The implemented provider model is:
 
 ```text
 MetricProvider ----+
@@ -355,6 +356,8 @@ These concepts must remain separable:
 ```text
 CharacterAsset != AnimationClip != Trigger != Metric != ProductivityState != Renderer
 ```
+
+`MetricProvider<Metric>` and `EventProvider<Event>` are `@MainActor`, class-bound App-layer acquisition/lifecycle boundaries. Metric providers expose value updates through `onUpdate`; event providers expose source events through `onEvent`; both expose `start()` and `stop()`. `CharacterStateCoordinator` consumes battery, memory-pressure, build-lifecycle, and local-state providers through constrained existentials and owns the mapping from those values/events into Core policies and trigger IDs. Concrete build/local providers retain Distributed Notification decoding and timer ownership, so transport and expiry lifecycle do not leak into the coordinator. `CPUMonitor` also conforms to the metric boundary but intentionally remains owned by `AppDelegate` because one CPU update drives both animation pace and the CPU-derived state trigger.
 
 A metric provider emits values. It must not directly manipulate a renderer. Productivity state similarly publishes only through its narrow coordinator/trigger boundary and must not manipulate a renderer directly.
 
@@ -427,8 +430,6 @@ The following remain deliberately deferred:
 
 - Xcode project layout;
 - sandboxing and entitlements;
-- character-pack export and future schema versions;
-- signed/notarized release configuration;
-- generalized metric/event provider protocols.
+- future Character Pack schema versions.
 
 Each should be introduced with its own focused change and verification path.

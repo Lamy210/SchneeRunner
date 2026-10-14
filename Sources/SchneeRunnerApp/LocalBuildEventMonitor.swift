@@ -1,10 +1,14 @@
 import Foundation
 import SchneeRunnerCore
 
+enum BuildLifecycleProviderEvent: Equatable {
+    case received(LocalBuildEvent)
+    case expired
+}
+
 @MainActor
-final class LocalBuildEventMonitor: NSObject {
-    var onSet: ((CharacterState) -> Void)?
-    var onClear: (() -> Void)?
+final class LocalBuildEventMonitor: NSObject, EventProvider {
+    var onEvent: ((BuildLifecycleProviderEvent) -> Void)?
 
     private let center = DistributedNotificationCenter.default()
     private let statePolicy = BuildStatePolicy()
@@ -54,20 +58,16 @@ final class LocalBuildEventMonitor: NSObject {
             return
         }
 
-        handle(event)
+        process(event)
     }
 
-    private func handle(_ event: LocalBuildEvent) {
+    func process(_ event: LocalBuildEvent) {
         expiryTimer?.invalidate()
         expiryTimer = nil
 
-        let effect = statePolicy.effect(for: event.phase)
-        guard let state = effect.state else {
-            onClear?()
-            return
-        }
+        onEvent?(.received(event))
 
-        onSet?(state)
+        let effect = statePolicy.effect(for: event.phase)
         scheduleExpiry(
             after: effect.durationSeconds
         )
@@ -90,6 +90,6 @@ final class LocalBuildEventMonitor: NSObject {
     @objc
     private func expireEvent() {
         expiryTimer = nil
-        onClear?()
+        onEvent?(.expired)
     }
 }

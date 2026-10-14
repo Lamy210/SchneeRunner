@@ -1,10 +1,14 @@
 import Foundation
 import SchneeRunnerCore
 
+enum LocalCharacterStateProviderEvent: Equatable {
+    case received(LocalCharacterStateEvent)
+    case expired(channel: String)
+}
+
 @MainActor
-final class LocalCharacterStateEventMonitor: NSObject {
-    var onSet: ((String, CharacterState) -> Void)?
-    var onClear: ((String) -> Void)?
+final class LocalCharacterStateEventMonitor: NSObject, EventProvider {
+    var onEvent: ((LocalCharacterStateProviderEvent) -> Void)?
 
     private let center = DistributedNotificationCenter.default()
     private var expiryTimers: [String: Timer] = [:]
@@ -57,26 +61,22 @@ final class LocalCharacterStateEventMonitor: NSObject {
             return
         }
 
-        handle(event)
+        process(event)
     }
 
-    private func handle(_ event: LocalCharacterStateEvent) {
+    func process(_ event: LocalCharacterStateEvent) {
         cancelExpiry(for: event.channel)
+        onEvent?(.received(event))
 
         switch event.action {
         case .set:
-            guard let state = event.state else {
-                return
-            }
-
-            onSet?(event.channel, state)
             scheduleExpiry(
                 for: event.channel,
                 after: event.durationSeconds
             )
 
         case .clear:
-            onClear?(event.channel)
+            break
         }
     }
 
@@ -112,6 +112,6 @@ final class LocalCharacterStateEventMonitor: NSObject {
         }
 
         expiryTimers.removeValue(forKey: channel)
-        onClear?(channel)
+        onEvent?(.expired(channel: channel))
     }
 }

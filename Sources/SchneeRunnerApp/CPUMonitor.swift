@@ -13,7 +13,7 @@ enum CPUMonitorError: Error, Equatable, LocalizedError {
 }
 
 @MainActor
-final class CPUMonitor: NSObject {
+final class CPUMonitor: NSObject, MetricProvider {
     struct Update {
         let utilization: Double
         let pace: AnimationPace

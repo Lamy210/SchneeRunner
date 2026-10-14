@@ -14,53 +14,53 @@ final class CharacterStateCoordinator {
     private let cpuStatePolicy = CharacterStatePolicy()
     private let batteryWarningPolicy = BatteryWarningStatePolicy()
     private let memoryPressurePolicy = MemoryPressureStatePolicy()
-    private let batteryWarningMonitor = SystemBatteryWarningMonitor()
-    private let buildEventMonitor = LocalBuildEventMonitor()
-    private let localEventMonitor = LocalCharacterStateEventMonitor()
-    private let memoryPressureMonitor = SystemMemoryPressureMonitor()
+    private let buildStatePolicy = BuildStatePolicy()
+    private let batteryWarningProvider: any MetricProvider<BatteryWarningLevel>
+    private let buildEventProvider: any EventProvider<BuildLifecycleProviderEvent>
+    private let localEventProvider: any EventProvider<LocalCharacterStateProviderEvent>
+    private let memoryPressureProvider: any EventProvider<MemoryPressureLevel>
 
     private var triggerEngine = CharacterStateTriggerEngine()
 
     init(
-        playbackController: CharacterPlaybackController
+        playbackController: CharacterPlaybackController,
+        batteryWarningProvider: any MetricProvider<BatteryWarningLevel> = SystemBatteryWarningMonitor(),
+        memoryPressureProvider: any EventProvider<MemoryPressureLevel> = SystemMemoryPressureMonitor(),
+        buildEventProvider: any EventProvider<BuildLifecycleProviderEvent> = LocalBuildEventMonitor(),
+        localEventProvider: any EventProvider<LocalCharacterStateProviderEvent> = LocalCharacterStateEventMonitor()
     ) {
         self.playbackController = playbackController
+        self.batteryWarningProvider = batteryWarningProvider
+        self.memoryPressureProvider = memoryPressureProvider
+        self.buildEventProvider = buildEventProvider
+        self.localEventProvider = localEventProvider
 
-        batteryWarningMonitor.onChange = { [weak self] level in
+        self.batteryWarningProvider.onUpdate = { [weak self] level in
             self?.updateBatteryWarning(level)
         }
-        buildEventMonitor.onSet = { [weak self] state in
-            self?.setBuildEvent(state)
-        }
-        buildEventMonitor.onClear = { [weak self] in
-            self?.clearBuildEvent()
-        }
-        localEventMonitor.onSet = { [weak self] channel, state in
-            self?.setLocalEvent(
-                state,
-                channel: channel
-            )
-        }
-        localEventMonitor.onClear = { [weak self] channel in
-            self?.clearLocalEvent(channel: channel)
-        }
-        memoryPressureMonitor.onChange = { [weak self] level in
+        self.memoryPressureProvider.onEvent = { [weak self] level in
             self?.updateMemoryPressure(level)
+        }
+        self.buildEventProvider.onEvent = { [weak self] event in
+            self?.handleBuildProviderEvent(event)
+        }
+        self.localEventProvider.onEvent = { [weak self] event in
+            self?.handleLocalProviderEvent(event)
         }
     }
 
     func start() {
-        batteryWarningMonitor.start()
-        buildEventMonitor.start()
-        localEventMonitor.start()
-        memoryPressureMonitor.start()
+        batteryWarningProvider.start()
+        buildEventProvider.start()
+        localEventProvider.start()
+        memoryPressureProvider.start()
     }
 
     func stop() {
-        batteryWarningMonitor.stop()
-        buildEventMonitor.stop()
-        localEventMonitor.stop()
-        memoryPressureMonitor.stop()
+        batteryWarningProvider.stop()
+        buildEventProvider.stop()
+        localEventProvider.stop()
+        memoryPressureProvider.stop()
     }
 
     func updateCPUState(for pace: AnimationPace) {
@@ -191,6 +191,51 @@ final class CharacterStateCoordinator {
         }
 
         applyResolvedState()
+    }
+
+    private func handleBuildProviderEvent(
+        _ event: BuildLifecycleProviderEvent
+    ) {
+        switch event {
+        case let .received(buildEvent):
+            let effect = buildStatePolicy.effect(
+                for: buildEvent.phase
+            )
+            if let state = effect.state {
+                setBuildEvent(state)
+            } else {
+                clearBuildEvent()
+            }
+
+        case .expired:
+            clearBuildEvent()
+        }
+    }
+
+    private func handleLocalProviderEvent(
+        _ event: LocalCharacterStateProviderEvent
+    ) {
+        switch event {
+        case let .received(localEvent):
+            switch localEvent.action {
+            case .set:
+                guard let state = localEvent.state else {
+                    return
+                }
+                setLocalEvent(
+                    state,
+                    channel: localEvent.channel
+                )
+
+            case .clear:
+                clearLocalEvent(
+                    channel: localEvent.channel
+                )
+            }
+
+        case let .expired(channel):
+            clearLocalEvent(channel: channel)
+        }
     }
 
     private static func localEventTriggerID(
