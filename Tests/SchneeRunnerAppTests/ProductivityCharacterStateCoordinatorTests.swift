@@ -77,6 +77,25 @@ final class ProductivityCharacterCoordinatorTests: XCTestCase {
         XCTAssertEqual(fixture.playbackController.requestedState, .walk)
     }
 
+    func testStopDiscardsTransientReactionBeforeLaterUpdates() throws {
+        let fixture = try makeFixture(transientReactionDuration: 3)
+        defer { fixture.cleanup() }
+        let now = Date(timeIntervalSince1970: 1000)
+
+        fixture.characterStateCoordinator.updateCPUState(for: .walk)
+        fixture.coordinator.recordReminderFired(at: now)
+        XCTAssertEqual(fixture.playbackController.requestedState, .idle)
+
+        fixture.coordinator.stop()
+        XCTAssertEqual(fixture.playbackController.requestedState, .walk)
+
+        fixture.coordinator.updateTimers(
+            [],
+            now: now.addingTimeInterval(1)
+        )
+        XCTAssertEqual(fixture.playbackController.requestedState, .walk)
+    }
+
     func testPomodoroFocusWinsOrdinaryCountdown() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
