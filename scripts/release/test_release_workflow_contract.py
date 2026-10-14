@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import plistlib
 import re
 import unittest
 
@@ -30,6 +31,8 @@ BUILD_WORKFLOW = REPO_ROOT / "examples/app-release-build.yml"
 LEGACY_WORKFLOW = REPO_ROOT / "examples/app-release.yml"
 RELEASE_ISOLATION_WORKFLOW = REPO_ROOT / ".github/workflows/release-isolation-tdd.yml"
 SCHNEE_RUNNER_CI_WORKFLOW = REPO_ROOT / ".github/workflows/schnee-runner-ci.yml"
+RELEASE_BUNDLE_BUILDER = REPO_ROOT / "scripts/ci/build-release-artifact.sh"
+SANDBOX_MIGRATION_MANIFEST = REPO_ROOT / "container-migration.plist"
 
 
 class ReleaseBuildWorkflowContractTests(unittest.TestCase):
@@ -183,6 +186,38 @@ class SchneeRunnerReleaseBundleCIContractTests(unittest.TestCase):
         self.assertIn("      - name: Launch release bundle smoke artifact\n", text)
         self.assertIn("          APP_PATH: build/SchneeRunner.app\n", text)
         self.assertIn("        run: bash scripts/release/smoke-launch-app.sh\n", text)
+
+    def test_sandbox_migration_manifest_preserves_existing_application_support(self) -> None:
+        self.assertTrue(
+            SANDBOX_MIGRATION_MANIFEST.is_file(),
+            "App Sandbox adoption must ship a container migration manifest",
+        )
+        manifest = plistlib.loads(SANDBOX_MIGRATION_MANIFEST.read_bytes())
+        self.assertEqual(
+            {"Move": ["${ApplicationSupport}/SchneeRunner"]},
+            manifest,
+        )
+
+    def test_release_bundle_packages_sandbox_migration_manifest(self) -> None:
+        builder = RELEASE_BUNDLE_BUILDER.read_text(encoding="utf-8")
+        self.assertIn("container-migration.plist", builder)
+        self.assertIn(
+            '"${OUTPUT_APP}/Contents/Resources/container-migration.plist"',
+            builder,
+        )
+
+    def test_app_ci_exercises_first_launch_application_support_migration(self) -> None:
+        text = self.workflow_text()
+        prepare = text.find("      - name: Prepare legacy sandbox migration fixture\n")
+        launch = text.find("      - name: Launch release bundle smoke artifact\n")
+        verify = text.find("      - name: Verify sandbox Application Support migration\n")
+
+        self.assertGreaterEqual(prepare, 0, "migration fixture setup is required")
+        self.assertGreater(launch, prepare, "legacy fixture must exist before first sandbox launch")
+        self.assertGreater(verify, launch, "migration must be verified after first sandbox launch")
+        self.assertIn("Library/Application Support/SchneeRunner", text)
+        self.assertIn("Library/Containers/io.github.Lamy210.SchneeRunner", text)
+        self.assertIn("sandbox-migration-smoke", text)
 
 
 if __name__ == "__main__":
