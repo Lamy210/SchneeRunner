@@ -28,6 +28,9 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      - name: Run Swift tests
+        run: swift test
+
       - name: Build release bundle smoke artifact
         env:
           RELEASE_VERSION: 0.0.0
