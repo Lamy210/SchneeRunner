@@ -21,6 +21,7 @@ final class CharacterStateCoordinator {
     private let memoryPressureProvider: any EventProvider<MemoryPressureLevel>
 
     private var triggerEngine = CharacterStateTriggerEngine()
+    private var activeLocalEventChannels: Set<String> = []
 
     init(
         playbackController: CharacterPlaybackController,
@@ -61,6 +62,7 @@ final class CharacterStateCoordinator {
         buildEventProvider.stop()
         localEventProvider.stop()
         memoryPressureProvider.stop()
+        clearProviderOwnedState()
     }
 
     func updateCPUState(for pace: AnimationPace) {
@@ -139,6 +141,7 @@ final class CharacterStateCoordinator {
         _ state: CharacterState,
         channel: String = LocalCharacterStateEvent.defaultChannel
     ) {
+        activeLocalEventChannels.insert(channel)
         triggerEngine.set(
             CharacterStateTrigger(
                 id: Self.localEventTriggerID(for: channel),
@@ -152,6 +155,7 @@ final class CharacterStateCoordinator {
     func clearLocalEvent(
         channel: String = LocalCharacterStateEvent.defaultChannel
     ) {
+        activeLocalEventChannels.remove(channel)
         triggerEngine.remove(
             id: Self.localEventTriggerID(for: channel)
         )
@@ -236,6 +240,20 @@ final class CharacterStateCoordinator {
         case let .expired(channel):
             clearLocalEvent(channel: channel)
         }
+    }
+
+    private func clearProviderOwnedState() {
+        triggerEngine.remove(id: Self.batteryWarningTriggerID)
+        triggerEngine.remove(id: Self.memoryPressureTriggerID)
+        triggerEngine.remove(id: Self.buildTriggerID)
+
+        for channel in activeLocalEventChannels {
+            triggerEngine.remove(
+                id: Self.localEventTriggerID(for: channel)
+            )
+        }
+        activeLocalEventChannels.removeAll()
+        applyResolvedState()
     }
 
     private static func localEventTriggerID(
