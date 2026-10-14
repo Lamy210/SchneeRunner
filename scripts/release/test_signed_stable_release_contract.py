@@ -116,14 +116,15 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         )
         self.assertIn("codesign --display --entitlements", extract)
         self.assertIn("build/actual-entitlements.plist", extract)
+        self.assertIn("/usr/bin/python3 - <<'PY'", verify_entitlements)
+        self.assertIn("import plistlib", verify_entitlements)
+        self.assertIn('"com.apple.security.app-sandbox": True', verify_entitlements)
         self.assertIn(
-            "plutil -extract com.apple.security.app-sandbox raw -o - build/actual-entitlements.plist",
+            '"com.apple.security.files.user-selected.read-write": True',
             verify_entitlements,
         )
-        self.assertIn(
-            "plutil -extract com.apple.security.files.user-selected.read-write raw -o - build/actual-entitlements.plist",
-            verify_entitlements,
-        )
+        self.assertIn("entitlements.get(key)", verify_entitlements)
+        self.assertNotIn("plutil -extract", verify_entitlements)
 
     def test_publisher_rejects_blank_signing_identity(self) -> None:
         publisher = PUBLISHER.read_text(encoding="utf-8")
