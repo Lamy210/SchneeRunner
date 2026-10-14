@@ -30,4 +30,22 @@ final class ProviderProtocolsTests: XCTestCase {
 
         XCTAssertTrue((provider as AnyObject) === concrete)
     }
+
+    func testBuildMonitorAdoptsEventProvider() {
+        let concrete = LocalBuildEventMonitor()
+        let provider: any EventProvider<BuildLifecycleProviderEvent> = concrete
+
+        provider.onEvent = { _ in }
+
+        XCTAssertTrue((provider as AnyObject) === concrete)
+    }
+
+    func testLocalStateMonitorAdoptsEventProvider() {
+        let concrete = LocalCharacterStateEventMonitor()
+        let provider: any EventProvider<LocalCharacterStateProviderEvent> = concrete
+
+        provider.onEvent = { _ in }
+
+        XCTAssertTrue((provider as AnyObject) === concrete)
+    }
 }
