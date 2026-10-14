@@ -57,6 +57,45 @@ final class ProductivityCharacterCoordinatorTests: XCTestCase {
         XCTAssertEqual(fixture.playbackController.requestedState, .sprint)
     }
 
+    func testStopClearsOwnedProductivityTriggerAndPreservesExternalState() throws {
+        let fixture = try makeFixture()
+        defer { fixture.cleanup() }
+        let now = Date(timeIntervalSince1970: 1000)
+        let timer = try ProductivityCountdownTimer(
+            id: UUID(),
+            title: "Build",
+            duration: 45,
+            startedAt: now
+        )
+
+        fixture.characterStateCoordinator.updateCPUState(for: .walk)
+        fixture.coordinator.updateTimers([timer], now: now)
+        XCTAssertEqual(fixture.playbackController.requestedState, .sprint)
+
+        fixture.coordinator.stop()
+
+        XCTAssertEqual(fixture.playbackController.requestedState, .walk)
+    }
+
+    func testStopDiscardsTransientReactionBeforeLaterUpdates() throws {
+        let fixture = try makeFixture(transientReactionDuration: 3)
+        defer { fixture.cleanup() }
+        let now = Date(timeIntervalSince1970: 1000)
+
+        fixture.characterStateCoordinator.updateCPUState(for: .walk)
+        fixture.coordinator.recordReminderFired(at: now)
+        XCTAssertEqual(fixture.playbackController.requestedState, .idle)
+
+        fixture.coordinator.stop()
+        XCTAssertEqual(fixture.playbackController.requestedState, .walk)
+
+        fixture.coordinator.updateTimers(
+            [],
+            now: now.addingTimeInterval(1)
+        )
+        XCTAssertEqual(fixture.playbackController.requestedState, .walk)
+    }
+
     func testPomodoroFocusWinsOrdinaryCountdown() throws {
         let fixture = try makeFixture()
         defer { fixture.cleanup() }
@@ -170,6 +209,7 @@ final class ProductivityCharacterCoordinatorTests: XCTestCase {
 private extension ProductivityCharacterCoordinatorTests {
     struct Fixture {
         let playbackController: CharacterPlaybackController
+        let characterStateCoordinator: CharacterStateCoordinator
         let coordinator: ProductivityCharacterStateCoordinator
         let reactionStore: ProductivityCharacterReactionStore
         let defaults: UserDefaults
@@ -204,6 +244,7 @@ private extension ProductivityCharacterCoordinatorTests {
         )
         return Fixture(
             playbackController: playbackController,
+            characterStateCoordinator: characterStateCoordinator,
             coordinator: coordinator,
             reactionStore: reactionStore,
             defaults: defaults,

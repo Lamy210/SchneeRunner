@@ -88,6 +88,9 @@ final class ProductivityCharacterStateCoordinator: NSObject {
 
     func stop() {
         cancelTransientRefresh()
+        timerCompletionAt = nil
+        reminderFiredAt = nil
+        characterStateCoordinator.setProductivityState(nil)
     }
 }
 
