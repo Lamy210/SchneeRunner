@@ -226,4 +226,46 @@ final class CPUMonitorTests: XCTestCase {
             .idle
         )
     }
+
+    func testRestartBeginsFreshSamplingWindow() {
+        var snapshots = [
+            CPUTickSnapshot(
+                user: 100,
+                system: 0,
+                idle: 900,
+                nice: 0
+            ),
+            CPUTickSnapshot(
+                user: 200,
+                system: 0,
+                idle: 900,
+                nice: 0
+            ),
+            CPUTickSnapshot(
+                user: 210,
+                system: 0,
+                idle: 990,
+                nice: 0
+            )
+        ]
+        let monitor = CPUMonitor(
+            snapshotProvider: {
+                snapshots.removeFirst()
+            }
+        )
+        var updates: [CPUMonitor.Update] = []
+        monitor.onUpdate = { updates.append($0) }
+
+        monitor.start()
+        monitor.sampleNow()
+        monitor.stop()
+
+        XCTAssertEqual(updates.count, 1)
+
+        updates.removeAll()
+        monitor.start()
+        monitor.stop()
+
+        XCTAssertTrue(updates.isEmpty)
+    }
 }
