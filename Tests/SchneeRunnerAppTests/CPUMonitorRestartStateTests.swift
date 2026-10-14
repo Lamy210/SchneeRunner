@@ -27,7 +27,7 @@ final class CPUMonitorRestartStateTests: XCTestCase {
             CPUTickSnapshot(
                 user: 226,
                 system: 0,
-                idle: 1_074,
+                idle: 1074,
                 nice: 0
             )
         ]
