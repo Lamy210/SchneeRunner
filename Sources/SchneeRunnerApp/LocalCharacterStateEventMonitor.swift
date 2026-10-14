@@ -1,8 +1,17 @@
 import Foundation
 import SchneeRunnerCore
 
+enum LocalCharacterStateProviderEvent: Equatable {
+    case received(LocalCharacterStateEvent)
+    case expired(channel: String)
+}
+
 @MainActor
-final class LocalCharacterStateEventMonitor: NSObject {
+final class LocalCharacterStateEventMonitor: NSObject, EventProvider {
+    var onEvent: ((LocalCharacterStateProviderEvent) -> Void)?
+
+    // Transitional compatibility surface. CharacterStateCoordinator still consumes
+    // these callbacks until the provider-injection migration is complete.
     var onSet: ((String, CharacterState) -> Void)?
     var onClear: ((String) -> Void)?
 
@@ -57,11 +66,12 @@ final class LocalCharacterStateEventMonitor: NSObject {
             return
         }
 
-        handle(event)
+        process(event)
     }
 
-    private func handle(_ event: LocalCharacterStateEvent) {
+    func process(_ event: LocalCharacterStateEvent) {
         cancelExpiry(for: event.channel)
+        onEvent?(.received(event))
 
         switch event.action {
         case .set:
@@ -112,6 +122,7 @@ final class LocalCharacterStateEventMonitor: NSObject {
         }
 
         expiryTimers.removeValue(forKey: channel)
+        onEvent?(.expired(channel: channel))
         onClear?(channel)
     }
 }
