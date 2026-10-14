@@ -87,29 +87,42 @@ class SignedStableReleaseContractTests(unittest.TestCase):
 
     def test_ci_launch_smoke_exercises_ad_hoc_signed_sandbox_bundle(self) -> None:
         workflow = SCHNEERUNNER_CI.read_text(encoding="utf-8")
-        build_marker = "      - name: Build release bundle smoke artifact\n"
-        sign_marker = "      - name: Ad-hoc sign sandboxed release bundle\n"
-        launch_marker = "      - name: Launch release bundle smoke artifact\n"
+        ordered_steps = (
+            "Build release bundle smoke artifact",
+            "Ad-hoc sign sandboxed release bundle",
+            "Verify sandboxed release signature",
+            "Extract sandboxed release entitlements",
+            "Verify sandboxed release entitlements",
+            "Launch release bundle smoke artifact",
+        )
+        markers = [f"      - name: {name}\n" for name in ordered_steps]
 
-        self.assertIn(sign_marker, workflow)
-        self.assertLess(workflow.index(build_marker), workflow.index(sign_marker))
-        self.assertLess(workflow.index(sign_marker), workflow.index(launch_marker))
+        for marker in markers:
+            self.assertIn(marker, workflow)
+        for previous, following in zip(markers, markers[1:]):
+            self.assertLess(workflow.index(previous), workflow.index(following))
+
         sign = step_block(workflow, "Ad-hoc sign sandboxed release bundle")
+        verify_signature = step_block(workflow, "Verify sandboxed release signature")
+        extract = step_block(workflow, "Extract sandboxed release entitlements")
+        verify_entitlements = step_block(workflow, "Verify sandboxed release entitlements")
         self.assertIn(
             "codesign --force --sign - --entitlements SchneeRunner.entitlements build/SchneeRunner.app",
             sign,
         )
         self.assertIn(
             "codesign --verify --deep --strict build/SchneeRunner.app",
-            sign,
+            verify_signature,
         )
+        self.assertIn("codesign --display --entitlements", extract)
+        self.assertIn("build/actual-entitlements.plist", extract)
         self.assertIn(
             "plutil -extract com.apple.security.app-sandbox raw -o - build/actual-entitlements.plist",
-            sign,
+            verify_entitlements,
         )
         self.assertIn(
             "plutil -extract com.apple.security.files.user-selected.read-write raw -o - build/actual-entitlements.plist",
-            sign,
+            verify_entitlements,
         )
 
     def test_publisher_rejects_blank_signing_identity(self) -> None:
