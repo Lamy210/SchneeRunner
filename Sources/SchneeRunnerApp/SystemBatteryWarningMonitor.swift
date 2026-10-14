@@ -7,10 +7,6 @@ final class SystemBatteryWarningMonitor: MetricProvider {
     private var currentLevel: BatteryWarningLevel?
 
     var onUpdate: ((BatteryWarningLevel) -> Void)?
-    var onChange: ((BatteryWarningLevel) -> Void)? {
-        get { onUpdate }
-        set { onUpdate = newValue }
-    }
 
     func start() {
         guard runLoopSource == nil else {
