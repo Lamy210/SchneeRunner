@@ -41,8 +41,23 @@ jobs:
         run: |
           set -euo pipefail
           codesign --force --sign - --entitlements SchneeRunner.entitlements build/SchneeRunner.app
+
+      - name: Verify sandboxed release signature
+        shell: bash
+        run: |
+          set -euo pipefail
           codesign --verify --deep --strict build/SchneeRunner.app
+
+      - name: Extract sandboxed release entitlements
+        shell: bash
+        run: |
+          set -euo pipefail
           codesign --display --entitlements :- build/SchneeRunner.app >build/actual-entitlements.plist 2>/dev/null
+
+      - name: Verify sandboxed release entitlements
+        shell: bash
+        run: |
+          set -euo pipefail
           [[ "$(plutil -extract com.apple.security.app-sandbox raw -o - build/actual-entitlements.plist)" == "true" ]]
           [[ "$(plutil -extract com.apple.security.files.user-selected.read-write raw -o - build/actual-entitlements.plist)" == "true" ]]
 
