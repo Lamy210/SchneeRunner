@@ -133,12 +133,24 @@ class ReleaseBuildWorkflowContractTests(unittest.TestCase):
 
 
 class SchneeRunnerReleaseBundleCIContractTests(unittest.TestCase):
-    def test_app_ci_exercises_release_bundle_build_path(self) -> None:
+    def workflow_text(self) -> str:
         self.assertTrue(
             SCHNEE_RUNNER_CI_WORKFLOW.is_file(),
             f"missing workflow: {SCHNEE_RUNNER_CI_WORKFLOW}",
         )
-        text = SCHNEE_RUNNER_CI_WORKFLOW.read_text(encoding="utf-8")
+        return SCHNEE_RUNNER_CI_WORKFLOW.read_text(encoding="utf-8")
+
+    def test_app_ci_runs_swift_tests_before_release_bundle_build(self) -> None:
+        text = self.workflow_text()
+        test_step = text.find("      - name: Run Swift tests\n")
+        build_step = text.find("      - name: Build release bundle smoke artifact\n")
+
+        self.assertGreaterEqual(test_step, 0, "app CI must run Swift tests")
+        self.assertGreater(build_step, test_step, "Swift tests must run before release bundle build")
+        self.assertIn("        run: swift test\n", text)
+
+    def test_app_ci_exercises_release_bundle_build_path(self) -> None:
+        text = self.workflow_text()
 
         self.assertIn("      - name: Build release bundle smoke artifact\n", text)
         self.assertIn("          RELEASE_VERSION: 0.0.0\n", text)
