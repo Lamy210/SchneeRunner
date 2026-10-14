@@ -40,6 +40,8 @@ final class SystemBatteryWarningMonitor: MetricProvider {
     }
 
     func stop() {
+        currentLevel = nil
+
         guard let runLoopSource else {
             return
         }
