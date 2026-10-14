@@ -10,11 +10,6 @@ enum BuildLifecycleProviderEvent: Equatable {
 final class LocalBuildEventMonitor: NSObject, EventProvider {
     var onEvent: ((BuildLifecycleProviderEvent) -> Void)?
 
-    // Transitional compatibility surface. CharacterStateCoordinator still consumes
-    // these callbacks until the provider-injection migration is complete.
-    var onSet: ((CharacterState) -> Void)?
-    var onClear: (() -> Void)?
-
     private let center = DistributedNotificationCenter.default()
     private let statePolicy = BuildStatePolicy()
     private var expiryTimer: Timer?
@@ -73,12 +68,6 @@ final class LocalBuildEventMonitor: NSObject, EventProvider {
         onEvent?(.received(event))
 
         let effect = statePolicy.effect(for: event.phase)
-        guard let state = effect.state else {
-            onClear?()
-            return
-        }
-
-        onSet?(state)
         scheduleExpiry(
             after: effect.durationSeconds
         )
@@ -102,6 +91,5 @@ final class LocalBuildEventMonitor: NSObject, EventProvider {
     private func expireEvent() {
         expiryTimer = nil
         onEvent?(.expired)
-        onClear?()
     }
 }
