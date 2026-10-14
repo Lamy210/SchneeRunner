@@ -79,6 +79,22 @@ final class CharacterStateCoordinatorTests: XCTestCase {
         XCTAssertEqual(playbackController.requestedState, .walk)
     }
 
+    func testBuildFailureMapsToIdleAndExpiryRestoresFallback() {
+        let playbackController = makePlaybackController()
+        let build = FakeEventProvider<BuildLifecycleProviderEvent>()
+        let coordinator = makeCoordinator(
+            playbackController: playbackController,
+            build: build
+        )
+
+        coordinator.updateCPUState(for: .walk)
+        build.emit(.received(LocalBuildEvent(phase: .failed)))
+        XCTAssertEqual(playbackController.requestedState, .idle)
+
+        build.emit(.expired)
+        XCTAssertEqual(playbackController.requestedState, .walk)
+    }
+
     func testBuildCancellationClearsOnlyBuildTrigger() {
         let playbackController = makePlaybackController()
         let build = FakeEventProvider<BuildLifecycleProviderEvent>()
