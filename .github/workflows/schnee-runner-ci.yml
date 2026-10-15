@@ -81,28 +81,4 @@ jobs:
       - name: Launch release bundle smoke artifact
         env:
           APP_PATH: build/SchneeRunner.app
-        shell: bash
-        run: |
-          set -euo pipefail
-          if bash scripts/release/smoke-launch-app.sh; then
-            exit 0
-          fi
-
-          echo "::group::Recent SchneeRunner launch diagnostics"
-          /usr/bin/log show \
-            --style compact \
-            --last 3m \
-            --info \
-            --debug \
-            --predicate 'process == "SchneeRunner" OR eventMessage CONTAINS[c] "SchneeRunner"' \
-            || true
-
-          reports_dir="${HOME}/Library/Logs/DiagnosticReports"
-          if [[ -d "${reports_dir}" ]]; then
-            while IFS= read -r -d '' report; do
-              echo "--- ${report} ---"
-              sed -n '1,240p' "${report}" || true
-            done < <(find "${reports_dir}" -type f -mmin -5 -iname '*SchneeRunner*' -print0)
-          fi
-          echo "::endgroup::"
-          exit 1
+        run: bash scripts/release/smoke-launch-app.sh
