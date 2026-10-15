@@ -61,6 +61,17 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
         self.assertIn('"SCHNEERUNNER_LAUNCH_TRACE_FILE"', trace_text)
         self.assertIn("FileHandle(forWritingTo:", trace_text)
 
+    def test_launch_smoke_bounds_platform_failure_diagnostics(self) -> None:
+        shell_text = SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("report_launch_diagnostics", shell_text)
+        self.assertIn("grep -Ei", shell_text)
+        self.assertIn("sandbox|deny|container|termination|killed|crash|codesign|signature|launch", shell_text)
+        self.assertIn("tail -n 40", shell_text)
+        self.assertIn("grep -Eio", shell_text)
+        self.assertIn("head -n 40", shell_text)
+        self.assertNotIn("sed -n '1,200p'", shell_text)
+
     def test_unsigned_release_bundle_explicitly_disables_system_notifications(self) -> None:
         text = BUILD_SCRIPT.read_text(encoding="utf-8")
 
