@@ -35,7 +35,9 @@ if [[ ! -f "${executable_path}" || -L "${executable_path}" || ! -x "${executable
 fi
 
 report_launch_diagnostics() {
-  echo "--- Recent SchneeRunner macOS diagnostics ---" >&2
+  local diagnostic_pattern='sandbox|deny|container|termination|killed|crash|codesign|signature|launch'
+
+  echo "--- Recent SchneeRunner macOS diagnostics (bounded) ---" >&2
   /usr/bin/log show \
     --style compact \
     --last 2m \
@@ -43,7 +45,8 @@ report_launch_diagnostics() {
     --debug \
     --predicate 'process == "SchneeRunner" OR eventMessage CONTAINS[c] "SchneeRunner"' \
     2>/dev/null |
-    tail -n 120 >&2 ||
+    grep -Ei "${diagnostic_pattern}" |
+    tail -n 40 >&2 ||
     true
 
   local reports_dir="${HOME}/Library/Logs/DiagnosticReports"
@@ -58,8 +61,10 @@ report_launch_diagnostics() {
   } || true)"
 
   if [[ -n "${latest_report}" && -f "${latest_report}" ]]; then
-    echo "--- ${latest_report} ---" >&2
-    sed -n '1,200p' "${latest_report}" >&2 || true
+    echo "--- Recent SchneeRunner crash summary: ${latest_report} ---" >&2
+    grep -Eio '.{0,120}(sandbox|deny|container|termination|killed|crash|codesign|signature|exception|signal|reason|namespace).{0,180}' "${latest_report}" |
+      head -n 40 >&2 ||
+      true
   fi
 }
 
