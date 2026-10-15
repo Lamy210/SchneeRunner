@@ -42,19 +42,19 @@ report_launch_diagnostics() {
     --info \
     --debug \
     --predicate 'process == "SchneeRunner" OR eventMessage CONTAINS[c] "SchneeRunner"' \
-    2>/dev/null \
-    | tail -n 120 >&2 \
-    || true
+    2>/dev/null |
+    tail -n 120 >&2 ||
+    true
 
   local reports_dir="${HOME}/Library/Logs/DiagnosticReports"
   [[ -d "${reports_dir}" ]] || return 0
 
   local latest_report
   latest_report="$({
-    find "${reports_dir}" -type f -mmin -5 -iname '*SchneeRunner*' -exec stat -f '%m %N' {} \; 2>/dev/null \
-      | sort -rn \
-      | head -n 1 \
-      | cut -d' ' -f2-
+    find "${reports_dir}" -type f -mmin -5 -iname '*SchneeRunner*' -exec stat -f '%m %N' {} \; 2>/dev/null |
+      sort -rn |
+      head -n 1 |
+      cut -d' ' -f2-
   } || true)"
 
   if [[ -n "${latest_report}" && -f "${latest_report}" ]]; then
