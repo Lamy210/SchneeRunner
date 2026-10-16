@@ -79,7 +79,11 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
 
         self.assertIn("LAUNCH_DIAGNOSTICS_PATH", shell_text)
         self.assertIn("LAUNCH_DIAGNOSTICS_PATH: build/sandbox-launch-diagnostics.txt", workflow_text)
-        self.assertIn("if: failure()", workflow_text)
+        self.assertIn("id: launch-smoke", workflow_text)
+        self.assertIn(
+            "if: failure() && steps.launch-smoke.outcome == 'failure'",
+            workflow_text,
+        )
         self.assertIn(
             "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
             workflow_text,
