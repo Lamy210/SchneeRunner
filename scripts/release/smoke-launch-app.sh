@@ -34,10 +34,10 @@ if [[ ! -f "${executable_path}" || -L "${executable_path}" || ! -x "${executable
   exit 1
 fi
 
-report_launch_diagnostics() {
+collect_launch_diagnostics() {
   local diagnostic_pattern='sandbox|deny|container|termination|killed|crash|codesign|signature|launch'
 
-  echo "--- Recent SchneeRunner macOS diagnostics (bounded) ---" >&2
+  echo "--- Recent SchneeRunner macOS diagnostics (bounded) ---"
   /usr/bin/log show \
     --style compact \
     --last 2m \
@@ -46,7 +46,7 @@ report_launch_diagnostics() {
     --predicate 'process == "SchneeRunner" OR eventMessage CONTAINS[c] "SchneeRunner"' \
     2>/dev/null |
     grep -Ei "${diagnostic_pattern}" |
-    tail -n 40 >&2 ||
+    tail -n 40 ||
     true
 
   local reports_dir="${HOME}/Library/Logs/DiagnosticReports"
@@ -61,10 +61,20 @@ report_launch_diagnostics() {
   } || true)"
 
   if [[ -n "${latest_report}" && -f "${latest_report}" ]]; then
-    echo "--- Recent SchneeRunner crash summary: ${latest_report} ---" >&2
+    echo "--- Recent SchneeRunner crash summary: ${latest_report} ---"
     grep -Eio '.{0,120}(sandbox|deny|container|termination|killed|crash|codesign|signature|exception|signal|reason|namespace).{0,180}' "${latest_report}" |
-      head -n 40 >&2 ||
+      head -n 40 ||
       true
+  fi
+}
+
+report_launch_diagnostics() {
+  local diagnostics_path="${LAUNCH_DIAGNOSTICS_PATH:-}"
+
+  if [[ -n "${diagnostics_path}" ]]; then
+    collect_launch_diagnostics | tee "${diagnostics_path}" >&2 || true
+  else
+    collect_launch_diagnostics >&2 || true
   fi
 }
 
