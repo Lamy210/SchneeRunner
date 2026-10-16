@@ -7,6 +7,7 @@ VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
 SMOKE_SCRIPT = REPO_ROOT / "scripts/release/smoke-launch-app.sh"
 SMOKE_HELPER = REPO_ROOT / "scripts/release/smoke-launch-app.swift"
 BUILD_SCRIPT = REPO_ROOT / "scripts/ci/build-release-artifact.sh"
+CI_WORKFLOW = REPO_ROOT / ".github/workflows/schnee-runner-ci.yml"
 LAUNCH_TRACE = REPO_ROOT / "Sources/SchneeRunnerApp/LaunchTrace.swift"
 
 
@@ -71,6 +72,22 @@ class PackagedAppLaunchSmokeContractTests(unittest.TestCase):
         self.assertIn("grep -Eio", shell_text)
         self.assertIn("head -n 40", shell_text)
         self.assertNotIn("sed -n '1,200p'", shell_text)
+
+    def test_ci_persists_bounded_launch_diagnostics_as_failure_artifact(self) -> None:
+        workflow_text = CI_WORKFLOW.read_text(encoding="utf-8")
+        shell_text = SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("LAUNCH_DIAGNOSTICS_PATH", shell_text)
+        self.assertIn("LAUNCH_DIAGNOSTICS_PATH: build/sandbox-launch-diagnostics.txt", workflow_text)
+        self.assertIn("if: failure()", workflow_text)
+        self.assertIn(
+            "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+            workflow_text,
+        )
+        self.assertIn("name: sandbox-launch-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}", workflow_text)
+        self.assertIn("path: build/sandbox-launch-diagnostics.txt", workflow_text)
+        self.assertIn("if-no-files-found: error", workflow_text)
+        self.assertIn("retention-days: 1", workflow_text)
 
     def test_unsigned_release_bundle_explicitly_disables_system_notifications(self) -> None:
         text = BUILD_SCRIPT.read_text(encoding="utf-8")
