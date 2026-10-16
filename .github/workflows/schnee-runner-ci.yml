@@ -81,4 +81,14 @@ jobs:
       - name: Launch release bundle smoke artifact
         env:
           APP_PATH: build/SchneeRunner.app
+          LAUNCH_DIAGNOSTICS_PATH: build/sandbox-launch-diagnostics.txt
         run: bash scripts/release/smoke-launch-app.sh
+
+      - name: Upload sandbox launch diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sandbox-launch-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/sandbox-launch-diagnostics.txt
+          if-no-files-found: error
+          retention-days: 1
