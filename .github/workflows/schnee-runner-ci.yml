@@ -36,7 +36,60 @@ jobs:
           RELEASE_VERSION: 0.0.0
         run: bash scripts/ci/build-release-artifact.sh
 
+      - name: Ad-hoc sign sandboxed release bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          codesign --force --sign - --entitlements SchneeRunner.entitlements build/SchneeRunner.app
+
+      - name: Verify sandboxed release signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          codesign --verify --deep --strict build/SchneeRunner.app
+
+      - name: Extract sandboxed release entitlements
+        shell: bash
+        run: |
+          set -euo pipefail
+          codesign --display --entitlements :- build/SchneeRunner.app >build/actual-entitlements.plist 2>/dev/null
+
+      - name: Verify sandboxed release entitlements
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          path = Path("build/actual-entitlements.plist")
+          with path.open("rb") as handle:
+              entitlements = plistlib.load(handle)
+
+          expected = {
+              "com.apple.security.app-sandbox": True,
+              "com.apple.security.files.user-selected.read-write": True,
+          }
+          for key, expected_value in expected.items():
+              actual = entitlements.get(key)
+              if actual != expected_value:
+                  raise SystemExit(
+                      f"expected embedded entitlement {key}={expected_value!r}, got {actual!r}"
+                  )
+          PY
+
       - name: Launch release bundle smoke artifact
+        id: launch-smoke
         env:
           APP_PATH: build/SchneeRunner.app
+          LAUNCH_DIAGNOSTICS_PATH: build/sandbox-launch-diagnostics.txt
         run: bash scripts/release/smoke-launch-app.sh
+
+      - name: Upload sandbox launch diagnostics
+        if: failure() && steps.launch-smoke.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sandbox-launch-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/sandbox-launch-diagnostics.txt
+          if-no-files-found: error
+          retention-days: 1

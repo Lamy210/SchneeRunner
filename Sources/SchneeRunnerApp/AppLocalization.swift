@@ -11,10 +11,12 @@ struct AppLocalization {
 
     init(
         localeIdentifier: String? = nil,
-        resourceBundle: Bundle = .module
+        resourceBundle: Bundle? = nil,
+        mainBundle: Bundle = .main
     ) {
         self.localeIdentifier = localeIdentifier
         self.resourceBundle = resourceBundle
+            ?? BuiltInCharacterResources.runtimeBundle(mainBundle: mainBundle)
     }
 
     func string(

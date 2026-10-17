@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import plistlib
 import re
 from tempfile import TemporaryDirectory
 import unittest
@@ -10,6 +11,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PUBLISHER = REPO_ROOT / ".github/workflows/release-publisher.yml"
 PUBLISHER_EXAMPLE = REPO_ROOT / "examples/app-release-publisher.yml"
 REUSABLE_RELEASE = REPO_ROOT / ".github/workflows/reusable-macos-release.yml"
+SCHNEERUNNER_CI = REPO_ROOT / ".github/workflows/schnee-runner-ci.yml"
+ENTITLEMENTS = REPO_ROOT / "SchneeRunner.entitlements"
 VERIFY_RELEASE = REPO_ROOT / "scripts/release/verify-release.sh"
 RELEASE_DOC = REPO_ROOT / "docs/RELEASE.md"
 SETUP_DOC = REPO_ROOT / "docs/SETUP.md"
@@ -67,6 +70,61 @@ class SignedStableReleaseContractTests(unittest.TestCase):
         )
         self.assertIn("publish_github_release: true", publisher)
         self.assertNotIn("sign_release: false", publisher)
+
+    def test_schneerunner_signed_release_uses_minimal_app_sandbox_entitlements(self) -> None:
+        publisher = PUBLISHER.read_text(encoding="utf-8")
+
+        self.assertIn("entitlements_path: SchneeRunner.entitlements", publisher)
+        self.assertTrue(ENTITLEMENTS.is_file(), "missing SchneeRunner.entitlements")
+        entitlements = plistlib.loads(ENTITLEMENTS.read_bytes())
+        self.assertEqual(
+            {
+                "com.apple.security.app-sandbox": True,
+                "com.apple.security.files.user-selected.read-write": True,
+            },
+            entitlements,
+        )
+
+    def test_ci_launch_smoke_exercises_ad_hoc_signed_sandbox_bundle(self) -> None:
+        workflow = SCHNEERUNNER_CI.read_text(encoding="utf-8")
+        ordered_steps = (
+            "Build release bundle smoke artifact",
+            "Ad-hoc sign sandboxed release bundle",
+            "Verify sandboxed release signature",
+            "Extract sandboxed release entitlements",
+            "Verify sandboxed release entitlements",
+            "Launch release bundle smoke artifact",
+        )
+        markers = [f"      - name: {name}\n" for name in ordered_steps]
+
+        for marker in markers:
+            self.assertIn(marker, workflow)
+        for previous, following in zip(markers, markers[1:]):
+            self.assertLess(workflow.index(previous), workflow.index(following))
+
+        sign = step_block(workflow, "Ad-hoc sign sandboxed release bundle")
+        verify_signature = step_block(workflow, "Verify sandboxed release signature")
+        extract = step_block(workflow, "Extract sandboxed release entitlements")
+        verify_entitlements = step_block(workflow, "Verify sandboxed release entitlements")
+        self.assertIn(
+            "codesign --force --sign - --entitlements SchneeRunner.entitlements build/SchneeRunner.app",
+            sign,
+        )
+        self.assertIn(
+            "codesign --verify --deep --strict build/SchneeRunner.app",
+            verify_signature,
+        )
+        self.assertIn("codesign --display --entitlements", extract)
+        self.assertIn("build/actual-entitlements.plist", extract)
+        self.assertIn("/usr/bin/python3 - <<'PY'", verify_entitlements)
+        self.assertIn("import plistlib", verify_entitlements)
+        self.assertIn('"com.apple.security.app-sandbox": True', verify_entitlements)
+        self.assertIn(
+            '"com.apple.security.files.user-selected.read-write": True',
+            verify_entitlements,
+        )
+        self.assertIn("entitlements.get(key)", verify_entitlements)
+        self.assertNotIn("plutil -extract", verify_entitlements)
 
     def test_publisher_rejects_blank_signing_identity(self) -> None:
         publisher = PUBLISHER.read_text(encoding="utf-8")

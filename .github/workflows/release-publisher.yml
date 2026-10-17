@@ -224,5 +224,5 @@ jobs:
       dmg_name: SchneeRunner-${{ needs.validate.outputs.source_version }}.dmg
       sign_release: true
       signing_identity: ${{ vars.MACOS_SIGNING_IDENTITY }}
-      entitlements_path: ""
+      entitlements_path: SchneeRunner.entitlements
       publish_github_release: true
